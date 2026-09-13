@@ -12142,7 +12142,11 @@ class MainWindow(wx.Frame):
         arms the comparison from the second pairing onwards. After a wipe it
         is replaced for the mirror-image reason: left at the old number, the
         next pairing of THIS one would look like another divergence and wipe a
-        second time.
+        second time. The same reason keeps it on the new number when
+        _restart_sync_after_another_number_wipe() gives up its second pass —
+        at a spent wait or a shutdown: the next launch refills the database
+        with the new account, and a key moved back would have the next pairing
+        delete that.
 
         The write comes last on purpose, and only happens when the wipe really
         emptied the database. If the process is killed mid-wipe (this runs on a
@@ -12468,6 +12472,26 @@ class MainWindow(wx.Frame):
     # only whether the refill starts now or on the next reconnect.
     _ANOTHER_NUMBER_SYNC_JOIN_ROUNDS = 3
 
+    # How long _restart_sync_after_another_number_wipe() goes on waiting — for
+    # a round it has superseded (issue #199), or for a shutdown to finish or be
+    # cancelled — before it gives up. Sized on the longest stretch with no
+    # supersession check that a slow but still answering server produces: one
+    # get_remote_chats() whose five attempts all time out (30+45+60+90+120 s
+    # plus four 5 s sleeps, ~365 s), with the phase-1 get-messages workers
+    # already in flight (30 s a request) inside the margin. The RECENT wait
+    # and the media phase stop on the run id themselves since #198, so neither
+    # sets it any more.
+    #
+    # It is not a bound on every case, and does not pretend to be: after the
+    # message phase a round runs group-info lookups (10 s each, six at a time,
+    # as many as there are unnamed groups), get_remote_contacts() (up to five
+    # 90 s attempts) and one more list-chats before its next check, so a round
+    # whose every request times out there outlasts this and gets the fallback.
+    # The slice is how often the wait looks again; both are class attributes
+    # only so the tests can shrink them.
+    _ANOTHER_NUMBER_SYNC_EXIT_WAIT = 480
+    _ANOTHER_NUMBER_SYNC_EXIT_POLL = 1.0
+
     def _restart_sync_after_another_number_wipe(self, in_flight, new_digits: str,
                                                 previous_digits: str) -> None:
         """Wait out the sync that was already running, wipe again, then resync.
@@ -12520,27 +12544,111 @@ class MainWindow(wx.Frame):
         _run_sync() now refuses to commit _sync_completed either way once its
         own _sync_run_id has been superseded (see the guard just before
         "Mark sync as done", added for this same issue — #198/#199) — that
-        was the dangerous half of the residue below: a contaminated round
+        was the dangerous half of the problem: a contaminated round
         reaching that point used to overwrite this method's own
         _sync_completed=False back to True, which is not a cosmetic glitch
         but a permanent one, since trigger_sync_if_needed() would then never
         see a reason to run the corrective full sync at all.
 
-        Known residue, still left as a follow-up: the guard only covers that
-        one commit. Every earlier write in the round being waited out —
-        set_chats() and the rest — is untouched, so between the spoken
-        "as conversas foram apagadas" and the second wipe below, the list
-        still refills with the PREVIOUS account's conversations — for as
-        long as that round takes, which is minutes — and then empties again.
-        Nothing is lost by it, since both the second wipe and the full sync
-        after it run later and _sync_completed can no longer be left stuck,
-        but for somebody reading that list with a screen reader the sequence
-        is genuinely confusing: told the history was deleted, then hearing it
-        come back, then hearing it disappear a second time with nothing said.
-        Guarding every mid-round write the same way would close it, at the
-        cost of touching every one of that ~900-line method's write sites for
-        a cosmetic flicker rather than the correctness bug the commit-time
-        guard above already closes.
+        The mid-round writes are guarded too now (issue #198). _run_sync()
+        checks its run id before announcing anything, after every list-chats
+        fetch, before each self.chats assignment and set_chats(), and after
+        the media phase. The RECENT wait and the media downloads stop on it
+        by themselves, and sync_remote_chats() hands it to every
+        sync_chat_messages() task, which checks it again once its request is
+        back and before its first write. So the round being waited out stops
+        within seconds of the wipe instead of minutes, no longer refills the
+        list with the PREVIOUS account's conversations between the spoken
+        "as conversas foram apagadas" and the second wipe, records no message
+        failures and commits nothing either way.
+
+        That shortens the window. It does not close it, which is why the join
+        and the second wipe stay:
+
+          * the thread is still is_alive() while it unwinds, and
+            _try_start_sync_thread() answers True without starting anything
+            in that gap;
+          * a request already out when the bump lands still writes what it
+            brings back, because no check can interrupt a call: an in-flight
+            get_remote_chats() persists mute/pin/archive metadata through its
+            own set_metadata_json() whatever the round then does with the
+            list, get_remote_contacts() fills self.contacts, and a media
+            download already running saves its file into media/. A
+            sync_chat_messages() task discards its result instead — unless the
+            bump falls in the moment between its last check and its database
+            write, which does no I/O.
+
+        Only clear_local_data() empties what escapes, and here that is the
+        second wipe below. Its other callers have no second wipe: a confirmed
+        logout (_on_disconnect(), websocket_client's logout handling), F5, and
+        the pairing dialog's own wipes. For those, whatever escaped stays until
+        the next clear — contacts and chat metadata of the previous session,
+        and media files nothing refers to.
+
+        When _ANOTHER_NUMBER_SYNC_JOIN_ROUNDS is spent with a round still alive
+        (issue #199), this no longer wipes beside it. Leaving it to the health
+        checker would have been slow, conditional and not clean:
+        trigger_sync_if_needed() does start the corrective full sync once that
+        round exits — it is superseded by the wipe, commits nothing, and only a
+        commit clears _force_full_sync — but only while connected, only outside
+        manual offline mode, only after its cooldown (_SYNC_RETRY_COOLDOWN ×
+        _sync_retry_count, capped at 600 s, counted from that round's exit),
+        and on top of whatever the round wrote after the wipe, which is what
+        the second wipe exists to remove. So the round is superseded instead
+        (the same _sync_run_id bump clear_local_data() makes), waited for
+        within _ANOTHER_NUMBER_SYNC_EXIT_WAIT, and only then wiped over and
+        replaced by a sync that really starts.
+
+        A shutdown is waited out the same way rather than raced: the pass is a
+        5 s UI wait and a clear_local_data() that rewrites the database and
+        sweeps media/, which inside a close competes with db.close()'s drain
+        and with the Chrome profile flush WM_QUERYENDSESSION exists to protect.
+        And _shutting_down does not mean the process is ending — a shutdown
+        another app cancels resets it — so this waits for it to clear and then
+        carries on. It writes nothing while it waits. The full-sync latch is
+        already in the database from the first pass, and nothing has emptied
+        it since. The key stays on the new number the first pass recorded, and
+        must: the next launch does NOT act on it, because the startup check
+        runs only after a pairing (_just_paired). Put back on
+        ``previous_digits``, it would sit there while the latched full sync
+        refills the database with the new account, and this account's next
+        pairing — with the same new phone, after any drop that does not wipe —
+        would read a divergence and delete that whole history. What the second
+        pass would have removed is what the fallback below leaves too, and is
+        accepted for the same reason. Nothing in the teardown reads
+        _initial_sync_running or joins this thread, so holding the claim
+        through the wait delays no part of the close; when the shutdown is
+        cancelled, the claim is what keeps trigger_sync_if_needed() from
+        starting a round ahead of the second wipe, and the sync this thread
+        then starts is the resumed one.
+
+        Still open, deliberately:
+
+          * a round that does not exit inside the bound gets the old
+            behaviour: the wipe beside it and a warning in log.log. What that
+            leaves is a COMPLETE sync, not a CLEAN one. Whatever the round
+            brings back after the wipe survives it, the key already names the
+            new number, so nothing will find it, and the corrective full sync
+            merges on top. After #198 that is what an in-flight request writes
+            — contacts, mute/pin/archive metadata, media files — rather than
+            conversations, which sync_chat_messages() discards once
+            superseded. The key is not held on the previous number for it:
+            that would have this account's next pairing delete the new
+            account's whole history to remove files nothing shows. The
+            corrective sync then starts only through the health checker, under
+            every condition above; the latch makes the next launch run it in
+            full regardless.
+          * a shutdown that outlasts the bound, or begins during the wipe
+            itself, ends the pass with no corrective sync started this
+            session. The next launch runs a full one either way: from the
+            latch the first pass wrote, or, when the second wipe emptied the
+            database, from "empty-local-cache". Anything that escaped the first
+            wipe stays under the new number, exactly as in the fallback above.
+          * a round that on_messages_set() starts during the second wipe
+            makes _try_start_sync_thread() below answer True without starting
+            anything. That round is superseded by the wipe, so since #198 it
+            leaves within about a second and releases the claim, and the
+            health checker starts the corrective sync after its cooldown.
         """
         try:
             for _ in range(self._ANOTHER_NUMBER_SYNC_JOIN_ROUNDS):
@@ -12552,23 +12660,112 @@ class MainWindow(wx.Frame):
                 in_flight = nxt
             else:
                 # Every round of the bound spent on yet another sync starting
-                # in the gap. The wipe below then runs beside a live round and
-                # _try_start_sync_thread() answers True without starting
-                # anything — the exact failure this thread exists to avoid,
-                # back again. Practically unreachable, which is precisely why
+                # in the gap. Practically unreachable, which is precisely why
                 # it needs a line: without one the only way to diagnose it is
-                # to guess.
+                # to guess. The wait below takes it from here.
                 still = getattr(self, "sync_thread", None)
                 logging.warning(
-                    "[another_number_check] Gave up after %d joins — %s is "
-                    "still running, so the corrective full sync may be refused "
-                    "and never restarted.",
+                    "[another_number_check] All %d joins spent and %s is still "
+                    "running — superseding it and waiting up to %ss for it to "
+                    "exit before wiping again.",
                     self._ANOTHER_NUMBER_SYNC_JOIN_ROUNDS,
-                    getattr(still, "name", still))
+                    getattr(still, "name", still),
+                    self._ANOTHER_NUMBER_SYNC_EXIT_WAIT)
+
+            # Two things must be over before the second pass may run: every
+            # sync round (issue #199) and any shutdown in progress. On the
+            # ordinary path both already are, and the first iteration breaks
+            # without waiting, superseding or logging anything.
+            #
+            # A live round is ended rather than waited on: every round alive
+            # now is one the wipe below empties anyway, and bumping
+            # _sync_run_id is what clear_local_data() does to mark a round
+            # stale, minus the deletion — so since #198 it leaves at its next
+            # check. Bumped on every slice, not once: start_sync() and
+            # clear_local_data() both read the counter and write it back
+            # unlocked, so a round starting at that instant can overwrite a
+            # single bump and run on as current. Bounded by time rather than by
+            # rounds, so a newer round born in the gap is superseded too.
+            #
+            # A shutdown is waited out rather than raced — see the docstring
+            # for what the pass would compete with, and why _shutting_down
+            # being set is not proof the process is ending.
+            deadline = time.monotonic() + self._ANOTHER_NUMBER_SYNC_EXIT_WAIT
+            waited = False
+            shutdown_logged = False
+            while True:
+                # Claim first, then look: a round alive at this point clears
+                # the claim in its own finally, and the next pass takes it
+                # back — the same order the join loop above keeps.
+                self._initial_sync_running = True
+                nxt = getattr(self, "sync_thread", None)
+                alive = nxt is not None and nxt.is_alive()
+                shutting_down = bool(getattr(self, "_shutting_down", False))
+                if not alive and not shutting_down:
+                    if waited:
+                        logging.info(
+                            "[another_number_check] Nothing is running or "
+                            "closing any more — wiping again and starting the "
+                            "corrective full sync.")
+                    break
+                waited = True
+                if shutting_down and not shutdown_logged:
+                    shutdown_logged = True
+                    # Nothing is written while this waits — not the full-sync
+                    # latch (the first pass wrote it and nothing has emptied it
+                    # since) and not the key. Putting the key back on
+                    # previous_digits here would outlive the close: the next
+                    # launch refills the database with the new account under a
+                    # key naming the old one, and this account's next pairing
+                    # then deletes that whole history. See the docstring.
+                    logging.info(
+                        "[another_number_check] Shutting down — the second wipe "
+                        "waits for the close to finish or be cancelled.")
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    if shutting_down:
+                        logging.warning(
+                            "[another_number_check] Still shutting down after "
+                            "%ss — the second wipe is not run and no sync is "
+                            "started; this account's next pairing finds the "
+                            "divergence again.",
+                            self._ANOTHER_NUMBER_SYNC_EXIT_WAIT)
+                        # Leaked, the claim would block every sync for the
+                        # rest of a session that turns out to go on.
+                        if not alive:
+                            self._initial_sync_running = False
+                        return
+                    # The one case left as it was before #199: wipe beside the
+                    # live round. See the docstring for what survives that
+                    # and when the health checker starts the corrective sync.
+                    logging.warning(
+                        "[another_number_check] %s is still running after the "
+                        "wait — wiping beside it; the health checker starts "
+                        "the corrective full sync once it exits.",
+                        getattr(nxt, "name", nxt))
+                    break
+                slice_seconds = min(self._ANOTHER_NUMBER_SYNC_EXIT_POLL, remaining)
+                if alive:
+                    self._sync_run_id = getattr(self, "_sync_run_id", 0) + 1
+                    nxt.join(timeout=slice_seconds)
+                else:
+                    time.sleep(slice_seconds)
             self._apply_another_number_wipe(new_digits,
                                             previous_digits=previous_digits)
             self._sync_completed = False
             self._force_full_sync = True
+            if getattr(self, "_shutting_down", False):
+                # A close that began during the wipe. No latch and no start:
+                # both are work inside the close, the "Sincronizando" sound
+                # included, and the database just emptied latches full mode by
+                # itself on the next launch ("empty-local-cache").
+                logging.info(
+                    "[another_number_check] Shutting down — the database was "
+                    "wiped again, but no corrective sync is started.")
+                existing = getattr(self, "sync_thread", None)
+                if existing is None or not existing.is_alive():
+                    self._initial_sync_running = False
+                return
             # Same latch F5 sets, for the same reason — see the first call
             # site in _wipe_local_data_if_another_number_linked().
             self._persist_full_sync_pending(self._ANOTHER_NUMBER_WIPE_REASON)
@@ -13638,7 +13835,8 @@ class MainWindow(wx.Frame):
         # it and stops as soon as it changes, i.e. only when a genuinely *newer*
         # sync has taken over — it must not stop for the sync that spawned it,
         # which keeps running (media phase) long after the backfill starts.
-        self._sync_run_id = getattr(self, "_sync_run_id", 0) + 1
+        run_id = getattr(self, "_sync_run_id", 0) + 1
+        self._sync_run_id = run_id
         # Latch before _run_sync(), not after: it can bail out early (no
         # WhatsApp connection yet), and in exactly that case there is no sync
         # coming to re-fetch anything, so live events are the only source of
@@ -13646,7 +13844,14 @@ class MainWindow(wx.Frame):
         self._sync_ever_started = True
         self._last_sync_attempt_ts = time.time()
         try:
-            self._run_sync()
+            # Handed down rather than re-read inside (issue #198): a
+            # clear_local_data() landing between the assignment above and that
+            # re-read would be adopted as this round's own id, and the round
+            # would run on as current over the data it was just wiped for.
+            # The read-then-write above is still not atomic — which is why the
+            # exit wait in _restart_sync_after_another_number_wipe() bumps on
+            # every slice rather than once.
+            self._run_sync(run_id)
         except Exception:
             logging.exception("[start_sync] Unhandled error during sync")
         finally:
@@ -13920,7 +14125,7 @@ class MainWindow(wx.Frame):
         """
         return bool(getattr(self, "offline_mode", False)) and not getattr(self, "_sync_completed", False)
 
-    def _run_sync(self):
+    def _run_sync(self, run_id=None):
         # Identifies which sync_thread this particular call belongs to — see
         # the guard right before "Mark sync as done" far below, added for
         # issue #199/#198: a round superseded mid-flight by
@@ -13937,7 +14142,42 @@ class MainWindow(wx.Frame):
             # unset attribute compare unequal to each other.
             value = getattr(self, "_sync_run_id", 0)
             return value if isinstance(value, int) else 0
-        my_run_id = _current_run_id()
+        # start_sync() passes the id it just assigned; the test harnesses call
+        # this bare, and then it is read here instead.
+        my_run_id = run_id if isinstance(run_id, int) else _current_run_id()
+
+        # The early-exit half of the same guard (issue #198). A superseded
+        # round used to run on for minutes after the wipe, and every
+        # self.chats assignment and set_chats() in it put the PREVIOUS
+        # account's conversations back on screen right after the user was
+        # told they had been deleted. Checked right before each of those
+        # writes and after each long I/O step, not on every write site: the
+        # writes that make the list visible are a handful, and between them
+        # the round only holds locals.
+        #
+        # A superseded round returns WITHOUT writing _sync_completed or
+        # _sync_retry_count either way — unlike the offline aborts, which
+        # own the round and set False. The newer run owns those now, and
+        # the corrective sync after an another-number wipe depends on its
+        # own False surviving. start_sync()'s finally still clears
+        # _initial_sync_running on the way out, which is what the join loop
+        # in _restart_sync_after_another_number_wipe() waits for.
+        #
+        # start_sync() assigns _sync_run_id and hands the same value down, so
+        # a round can never see its own start as a supersession — and a bump
+        # landing between the two is seen as one.
+        def _superseded_at(stage):
+            current = _current_run_id()
+            if current == my_run_id:
+                return False
+            logging.info(
+                "[start_sync] Abandoning sync run %s %s: a newer run (%s) "
+                "took over (clear_local_data or a new start_sync). Writing "
+                "nothing further, not even _sync_completed.",
+                my_run_id, stage, current,
+            )
+            return True
+
         logging.info("[start_sync] Checking WhatsApp connection status...")
         self.check_wa_connection_http()
         for _ in range(25):
@@ -13959,6 +14199,13 @@ class MainWindow(wx.Frame):
         # Give WPPConnect/WA-JS internal stores 1s to settle if needed
         logging.info("[start_sync] WhatsApp connected. Proceeding to sync...")
         time.sleep(1)
+        # Before anything this round says or latches. A wipe landing during the
+        # connection wait above would otherwise find self.chats empty, latch
+        # full mode under the wrong reason ("empty-local-cache") and speak
+        # "synchronization_started" with interrupt=True — over the very
+        # announcement that the previous number's conversations were deleted.
+        if _superseded_at("before announcing the round"):
+            return
 
         # Capture the warm local cache BEFORE list-chats updates its timestamps
         # and lastReceivedKey fields. Ordinary startup/reconnect rounds compare
@@ -14089,6 +14336,12 @@ class MainWindow(wx.Frame):
             result   = self.get_remote_chats(dict(self.chats), persist_full=False,
                                              prune_stale=True, notify_errors=False,
                                              defer_chat_save=True)
+            # After the fetch, not before it: `result` is merged over the
+            # dict(self.chats) taken before the call, so a clear_local_data()
+            # that ran while list-chats was in flight would be undone by the
+            # assignment just below.
+            if _superseded_at("after list-chats"):
+                return
             if result is None:
                 if getattr(self, "_last_chat_fetch_disconnected", False):
                     # WhatsApp went down mid-sync: stop immediately, stay
@@ -14354,7 +14607,13 @@ class MainWindow(wx.Frame):
                 self.i18n.t("error").format(app_name=self.app_name),
                 wx.OK | wx.ICON_ERROR,
             )
-        self.chats = self.normalize_chats(self.chats)
+        # Computed, then checked, then assigned: normalize_chats() reads
+        # self.chats, and a wipe landing between that read and the assignment
+        # would be undone by it.
+        normalized = self.normalize_chats(self.chats)
+        if _superseded_at("after normalizing the chat list"):
+            return
+        self.chats = normalized
 
         # Quick initial contacts fetch — may be incomplete on first QR pairing
         # because WhatsApp delivers contacts to the WPPConnect concurrently
@@ -14370,6 +14629,8 @@ class MainWindow(wx.Frame):
         # (get_remote_chats() only touches chat-list metadata, not per-message
         # data) could have added anything new for it to find — a full rescan
         # of every message in every chat would just reproduce the same cache.
+        if _superseded_at("before showing the chat list"):
+            return
         wx.CallAfter(self.set_chats)
 
         # ── Phase 1: sync only chats that need message I/O ────────────────
@@ -14388,7 +14649,17 @@ class MainWindow(wx.Frame):
         if force_full:
             unblock_result = self.unblock_history_sync()
             if self._recent_history_needs_wait(unblock_result):
-                if not self.wait_for_restarted_history_sync():
+                # should_stop lets the wait itself end on a supersession instead
+                # of sitting out its ten-minute budget — the one step here long
+                # enough to hold a wiped round alive on its own. It compares
+                # the id without logging, since the wait polls every 2 s.
+                waited = self.wait_for_restarted_history_sync(
+                    should_stop=lambda: _current_run_id() != my_run_id)
+                # Before the session_gone branch writes _sync_completed, and
+                # before the list-chats refresh below spends another request.
+                if _superseded_at("after the RECENT history wait"):
+                    return
+                if not waited:
                     if getattr(self, "_history_wait_outcome", "") == "session_gone":
                         logging.warning(
                             "[start_sync] The session went away during the RECENT "
@@ -14444,7 +14715,13 @@ class MainWindow(wx.Frame):
                                                   notify_errors=False,
                                                   defer_chat_save=True)
                 if refreshed is not None:
-                    self.chats = self.normalize_chats(refreshed)
+                    refreshed = self.normalize_chats(refreshed)
+                # The refresh is a request of its own: same reason as the check
+                # after the settle loop's fetch.
+                if _superseded_at("after the post-wait list-chats refresh"):
+                    return
+                if refreshed is not None:
+                    self.chats = refreshed
                     wx.CallAfter(self.set_chats)
         else:
             logging.info(
@@ -14572,13 +14849,19 @@ class MainWindow(wx.Frame):
 
         _sync_phase1_started = time.time()
         message_failures = set()
+        # expected_run_id makes the phase itself stop, not just this method
+        # after it: phase 1 is where a round spends its minutes, and every
+        # chat it finishes lands in self.chats. See sync_remote_chats() for
+        # why a superseded phase reports no failures at all.
         if full_targets:
             message_failures.update(
-                self.sync_remote_chats(full_targets, incremental=False) or set()
+                self.sync_remote_chats(full_targets, incremental=False,
+                                       expected_run_id=my_run_id) or set()
             )
         if incremental_targets:
             message_failures.update(
-                self.sync_remote_chats(incremental_targets, incremental=True) or set()
+                self.sync_remote_chats(incremental_targets, incremental=True,
+                                       expected_run_id=my_run_id) or set()
             )
         message_sync_ok = not message_failures
         logging.info(
@@ -14592,7 +14875,17 @@ class MainWindow(wx.Frame):
         # so @lid ↔ @s.whatsapp.net duplicates (introduced because the API
         # returned both JID formats before messages were fetched) can now be
         # fully resolved and merged.
-        self.chats = self.deduplicate_chats(self.chats)
+        #
+        # Checked after deduplicate_chats() and before the assignment, for the
+        # reason given at normalize_chats() above — and this is also the check
+        # that ends a round superseded during the message phase, before its
+        # message_sync_ok can decide anything (CLAUDE.md, "Sync completion —
+        # the trap that keeps being rediscovered") and before the three
+        # requests below.
+        deduplicated = self.deduplicate_chats(self.chats)
+        if _superseded_at("after the message phase"):
+            return
+        self.chats = deduplicated
 
         # Re-resolve group names that were still empty right after pairing.
         # WPPConnect doesn't have every group's metadata (subject) cached
@@ -14622,6 +14915,10 @@ class MainWindow(wx.Frame):
         # is already True so server-reported counts are accepted as truth.
         refreshed = self.get_remote_chats(dict(self.chats), persist_full=False,
                                           notify_errors=False, defer_chat_save=True)
+        # Same reason as the check after the settle loop's fetch; nothing
+        # between here and the set_chats() below does I/O.
+        if _superseded_at("after the chat-state refresh"):
+            return
         if refreshed is not None:
             self.chats = refreshed
 
@@ -14739,11 +15036,20 @@ class MainWindow(wx.Frame):
         # over the account it was just wiped for switching away from —
         # silently undoing the wipe's own _sync_completed=False and leaving
         # trigger_sync_if_needed() with no reason left to ever start the
-        # corrective full sync. A stale False commit here is comparatively
-        # harmless (self-corrects on the next trigger), which is why only
-        # this one write — not every self.chats write earlier in this round
-        # — is guarded; see _restart_sync_after_another_number_wipe()'s
-        # docstring for the mid-round residue this does not close.
+        # corrective full sync. The earlier _superseded_at() checks make
+        # reaching here superseded rare (a bump in the few local steps since
+        # the last one), but this is the one write that must never slip
+        # through. What none of those checks can stop — a request already
+        # under way when the bump lands — is listed in
+        # _restart_sync_after_another_number_wipe()'s docstring, together
+        # with the clear_local_data() callers (a confirmed logout among them)
+        # that have no second wipe to empty it afterwards.
+        #
+        # It returns rather than falling through: everything below belongs
+        # to the round that owns the account. _backfill_empty_chats() in
+        # particular captures _sync_run_id when it STARTS, so a backfill
+        # spawned from here would adopt the newer run's id and keep writing
+        # the previous account's history as if it were current.
         current_run_id = _current_run_id()
         if current_run_id != my_run_id:
             logging.info(
@@ -14752,6 +15058,7 @@ class MainWindow(wx.Frame):
                 "either way; the newer round owns _sync_completed now.",
                 current_run_id, my_run_id,
             )
+            return
         elif (len(self.chats) > 0 and getattr(self, "_wa_connected", False)
                 and chat_list_ok and chat_list_settled and message_sync_ok):
             self._sync_completed = True
@@ -14910,8 +15217,21 @@ class MainWindow(wx.Frame):
                         announced = True
                         wx.CallAfter(self.output, self.i18n.t("sync_media_started"))
 
-                count = self.sync_media_for_all_chats(media_scope_jids)
+                # Only a round that committed as current gets here, but a wipe,
+                # F5 or logout can still land during a phase that runs for
+                # minutes, and every file fetched after that lands in media/
+                # with nothing on disk referring to it any more.
+                count = self.sync_media_for_all_chats(
+                    media_scope_jids,
+                    should_stop=lambda: _current_run_id() != my_run_id)
                 logging.info("[start_sync] Phase 2 downloaded %d media file(s).", count)
+                if _superseded_at("during the media phase"):
+                    # Neither "concluído" nor "falhou": the start was spoken
+                    # for data that is gone now, and whatever superseded this
+                    # round speaks for itself (F5 and the corrective sync
+                    # announce their own start). The finally below still
+                    # clears the status text.
+                    return
                 # Announce the outcome iff the start was announced, so the two
                 # always come in pairs — a screen-reader user left with a
                 # "iniciado" and no ending has no way to tell a finished phase
@@ -19330,7 +19650,23 @@ class MainWindow(wx.Frame):
         except Exception as exc:
             logging.warning("[sync] failed to persist chat_verified_at: %s", exc)
 
-    def sync_remote_chats(self, target_chats=None, incremental: bool = False):
+    def sync_remote_chats(self, target_chats=None, incremental: bool = False,
+                          expected_run_id=None):
+        # expected_run_id is passed only by _run_sync() (issue #198); the
+        # periodic poll leaves it None and behaves exactly as before.
+        def _superseded():
+            if expected_run_id is None:
+                return False
+            # Normalized the way _run_sync()'s _current_run_id() is, for the
+            # same test-stub hazard.
+            value = getattr(self, "_sync_run_id", 0)
+            return (value if isinstance(value, int) else 0) != expected_run_id
+
+        if _superseded():
+            logging.info(
+                "[sync_remote_chats] Sync run %s was superseded before this "
+                "pass started — skipping it.", expected_run_id)
+            return set()
         chats = list(target_chats) if target_chats is not None else list(self.chats.values())
         if not chats:
             return set()
@@ -19370,14 +19706,17 @@ class MainWindow(wx.Frame):
         logging.info("[sync_remote_chats] %s pass: %d target chat(s).", mode, len(valid_chats))
 
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            # Handing sync_chat_messages() the run id is what makes the phase
+            # stop within seconds: every chat still queued returns at its first
+            # line. Only the few already fetching finish their write.
             if incremental:
                 futures = {
-                    pool.submit(self.sync_chat_messages, chat, None, "incremental"): chat
+                    pool.submit(self.sync_chat_messages, chat, expected_run_id, "incremental"): chat
                     for chat in valid_chats
                 }
             else:
                 futures = {
-                    pool.submit(self.sync_chat_messages, chat): chat
+                    pool.submit(self.sync_chat_messages, chat, expected_run_id): chat
                     for chat in valid_chats
                 }
 
@@ -19394,6 +19733,34 @@ class MainWindow(wx.Frame):
                 except Exception as exc:
                     failed_jids.add(jid)
                     logging.warning("[sync_remote_chats] failed for %s: %s", jid, exc)
+
+        if _superseded():
+            # Every chat skipped by the stale check above came back False, which
+            # the latch below would record as a failed fetch and persist — a
+            # durable retry list of the previous account's chats, or for F5 of
+            # this one's, holding the next round "not synced". Nothing a
+            # superseded pass saw is evidence about the account now, so it
+            # reports nothing. The in-flight workers' _sync_failed_chats entries
+            # go too, or the next round would read them as its own failures.
+            # The persist calls are skipped for the same reason; the run that
+            # superseded this one already persisted its own state.
+            lock = getattr(self, "_sync_failures_lock", None)
+            if lock is not None:
+                with lock:
+                    target_ids = {
+                        normalize_jid(chat.get("remoteJid", "")) or chat.get("remoteJid", "")
+                        for chat in valid_chats
+                    }
+                    self._sync_failed_chats = {
+                        jid for jid in (getattr(self, "_sync_failed_chats", set()) or set())
+                        if (normalize_jid(jid) or jid) not in target_ids
+                    }
+            logging.info(
+                "[sync_remote_chats] Sync run %s was superseded during the %s "
+                "pass — discarding its outcome (%d of %d chat(s) reported "
+                "failed, none recorded).",
+                expected_run_id, mode, len(failed_jids), len(valid_chats))
+            return set()
 
         # Keep a durable retry latch for message I/O failures. list-chats may
         # already have advanced `t`/lastReceivedKey before this query failed;
@@ -19669,7 +20036,8 @@ class MainWindow(wx.Frame):
     #: (if slow) first pairing get reported as a sync regression.
     _HISTORY_WAIT_PROGRESS_SECONDS = 15
 
-    def wait_for_restarted_history_sync(self, timeout: int = 600) -> bool:
+    def wait_for_restarted_history_sync(self, timeout: int = 600,
+                                        should_stop=None) -> bool:
         """Wait until a manually restarted RECENT pass is actually complete.
 
         A read that merely *failed* must not be mistaken for a pass that will
@@ -19690,11 +20058,17 @@ class MainWindow(wx.Frame):
             phase (see _run_sync()).
           * ``"session_gone"`` — offline, or the session is really gone. There
             is nothing to query and the caller should stop.
+          * ``"superseded"`` — ``should_stop()`` answered True: the round
+            waiting here is no longer current (issue #198), and nothing it
+            does next matters. Asked once per poll, before the request.
         """
         self._history_wait_outcome = ""
         deadline = time.monotonic() + timeout
         last_progress_log = 0.0
         while time.monotonic() < deadline:
+            if should_stop is not None and should_stop():
+                self._history_wait_outcome = "superseded"
+                return False
             if self._should_abort_sync_for_offline():
                 self._history_wait_outcome = "session_gone"
                 return False
@@ -20885,7 +21259,7 @@ class MainWindow(wx.Frame):
         threading.Thread(
             target=_run, daemon=True, name="deferred-media-sync").start()
 
-    def sync_media_for_all_chats(self, jids=None) -> int:
+    def sync_media_for_all_chats(self, jids=None, should_stop=None) -> int:
         """Download not-yet-stored media, optionally limited to changed chats.
 
         Returns the number of files **actually downloaded**, not the number of
@@ -20896,6 +21270,11 @@ class MainWindow(wx.Frame):
         1579 "tasks" completed in 71 ms having downloaded nothing — and the
         caller, seeing a count above zero, announced "download de mídias
         concluído" to the user. See start_sync()'s Phase 2.
+
+        ``should_stop``, when given, is asked before each download starts and
+        once more at the end (issue #198): a queue of thousands left running
+        for a round that has been superseded fills media/ with files nothing on
+        disk refers to. Downloads already running finish.
         """
         _MEDIA_TYPES = {"audioMessage", "documentMessage", "imageMessage",
                         "stickerMessage", "videoMessage",
@@ -20913,14 +21292,28 @@ class MainWindow(wx.Frame):
 
         downloaded = 0
         timeout = self._MEDIA_SYNC_TIMEOUT
+        def _download(msg):
+            if should_stop is not None and should_stop():
+                return False
+            return self.sync_if_media(msg, timeout)
+
         with ThreadPoolExecutor(max_workers=self._MEDIA_SYNC_WORKERS) as pool:
-            futs = {pool.submit(self.sync_if_media, msg, timeout): msg for msg in tasks}
+            futs = {pool.submit(_download, msg): msg for msg in tasks}
             for fut in as_completed(futs):
                 try:
                     if fut.result():
                         downloaded += 1
                 except Exception:
                     pass
+
+        if should_stop is not None and should_stop():
+            # Not saved: the run that superseded this one has emptied or
+            # replaced media_failed.json for its own data, and this run's
+            # expired ids stay in memory for the next save that is current.
+            logging.info(
+                "[sync_media_for_all_chats] Superseded — stopped after %d "
+                "download(s) of %d candidate(s).", downloaded, len(tasks))
+            return downloaded
 
         # Persist the set of expired IDs accumulated during this sync run.
         self._save_media_failed_ids()
@@ -21108,7 +21501,7 @@ class MainWindow(wx.Frame):
         if (expected_run_id is not None
                 and getattr(self, "_sync_run_id", 0) != expected_run_id):
             logging.info(
-                "[sync_chat_messages] Skipping stale backfill task from sync run %s.",
+                "[sync_chat_messages] Skipping stale backfill/sync task from sync run %s.",
                 expected_run_id)
             return False
         remote_jid = self._normalize_jid(chat.get("remoteJid", ""))
@@ -21182,7 +21575,7 @@ class MainWindow(wx.Frame):
                 if (expected_run_id is not None
                         and getattr(self, "_sync_run_id", 0) != expected_run_id):
                     logging.info(
-                        "[sync_chat_messages] Cancelling stale backfill retry for %s.",
+                        "[sync_chat_messages] Cancelling stale backfill/sync retry for %s.",
                         remote_jid)
                     return False
                 if not getattr(self, "_wa_connected", False):
@@ -21399,6 +21792,26 @@ class MainWindow(wx.Frame):
         else:
             logging.info(f"[sync_chat_messages] Session disconnected, using cached messages for {remote_jid}")
 
+        # Re-checked once the fetch is back (issue #198). The checks above only
+        # stop a task that has not fetched yet, and everything from here on
+        # writes: the gap set, sender names and the @lid bridge, self.chats,
+        # the backfill queues and their files, the failure, empty-delta and
+        # absent-chat sets, and last the database. A task whose round was
+        # superseded while its request was out would put the previous
+        # account's chat back into all of them — and on a confirmed logout
+        # there is no second wipe to take it out again.
+        def _superseded_while_fetching():
+            if (expected_run_id is None
+                    or getattr(self, "_sync_run_id", 0) == expected_run_id):
+                return False
+            logging.info(
+                "[sync_chat_messages] Discarding %s: sync run %s was superseded "
+                "while it was being fetched.", remote_jid, expected_run_id)
+            return True
+
+        if _superseded_while_fetching():
+            return False
+
         # ── History-gap repair ───────────────────────────────────────────────
         # The page above is always the newest `limit` messages and nothing
         # else, so a chat that outran that window while WinZapp was closed
@@ -21440,6 +21853,10 @@ class MainWindow(wx.Frame):
                     remote_jid, len(all_messages), len(gap_reference))
                 wider = self._refetch_history_gap(
                     remote_jid, fetch_jid, headers, page_size, gap_reference, hole_top_ts)
+                # The widening is more requests. Nothing after this line waits
+                # on the network before the database write at the end.
+                if _superseded_while_fetching():
+                    return False
                 if len(wider) > len(all_messages):
                     all_messages = wider
                 if not history_gap_closed(all_messages, gap_reference, hole_top_ts):

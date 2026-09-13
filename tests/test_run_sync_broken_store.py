@@ -135,7 +135,8 @@ class _Stub:
     def _restart_wpp_session(self):
         self.restarted = True
 
-    def sync_remote_chats(self, target_chats=None, incremental=False):
+    def sync_remote_chats(self, target_chats=None, incremental=False,
+                          expected_run_id=None):
         self.message_sync_ran += 1
 
     def _chats_needing_deep_history(self):
@@ -166,7 +167,7 @@ class _Stub:
     def refresh_history_still_landing(self, context=""):
         return False
 
-    def sync_media_for_all_chats(self, jids=None):
+    def sync_media_for_all_chats(self, jids=None, should_stop=None):
         self.media_sync_ran += 1
         return 0
 
