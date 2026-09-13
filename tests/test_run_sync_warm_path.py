@@ -70,7 +70,7 @@ def _instrumented(stub):
         # gate, both counters below would move instead of staying at zero.
         return {"restarted": True, "recentCompleted": False}
 
-    def _wait(timeout=600):
+    def _wait(timeout=600, should_stop=None):
         stub.waits += 1
         stub._history_wait_outcome = "completed"
         return True
@@ -90,7 +90,7 @@ def _instrumented(stub):
         stub._history_still_landing = landing
         return landing
 
-    def _sync_remote(target_chats=None, incremental=False):
+    def _sync_remote(target_chats=None, incremental=False, expected_run_id=None):
         stub.message_sync_ran += 1
         # Captured here rather than after the run: refresh_history_still_landing()
         # re-reads the flag from the API later on, so the value the message
@@ -102,7 +102,7 @@ def _instrumented(stub):
         ))
         return set(stub.failing_jids)
 
-    def _media(jids=None):
+    def _media(jids=None, should_stop=None):
         stub.media_sync_ran += 1
         stub.media_scopes.append(None if jids is None else set(jids))
         return 0
@@ -567,8 +567,8 @@ class TestARestoredShortChatIsNotRetiredEarly:
 
         inner = stub.sync_remote_chats
 
-        def _sync_and_report(target_chats=None, incremental=False):
-            failures = inner(target_chats, incremental)
+        def _sync_and_report(target_chats=None, incremental=False, expected_run_id=None):
+            failures = inner(target_chats, incremental, expected_run_id)
             # What the real sync_chat_messages() does at the end of every chat:
             # hand the answer it got to the queue bookkeeping.
             for chat in target_chats or []:

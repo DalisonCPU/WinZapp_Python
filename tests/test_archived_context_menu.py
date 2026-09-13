@@ -15,7 +15,7 @@ row here is archived by definition, nothing to toggle), and "Close
 conversation" is left out (there is no split conversation view to close from
 this list). create_accelerator_table() gives it the same key combos as the
 normal list's, minus Ctrl+N (nowhere to create a conversation from this list)
-and Ctrl+W (not applicable), with Ctrl+Q hardwired to unarchive instead of
+and Ctrl+W (not applicable), with Ctrl+Shift+Q hardwired to unarchive instead of
 toggling. Ctrl+F is bound too, now that this panel has its own search field
 (scoped to archived chats only — see tests/test_archived_chats_search.py).
 
