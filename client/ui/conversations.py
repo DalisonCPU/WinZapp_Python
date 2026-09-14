@@ -30,6 +30,7 @@ from core.audio_transcode import transcode_audio_to_wav
 from core.attachment_types import classify_attachment_media_type
 from core.message_edit import (
     EDIT_UI_WINDOW_SECONDS,
+    edit_kind,
     edit_window_open,
     edited_text_message,
     restore_edit_state,
@@ -2322,10 +2323,36 @@ class ConversationsPanel(wx.Panel):
             # Taken before the optimistic rewrite, so a refusal from WhatsApp
             # can put the row back — see _rollback_message_edit().
             snapshot = snapshot_edit_state(edited)
+            caption_key = next(
+                (k for k in ("imageMessage", "videoMessage", "documentMessage")
+                 if isinstance((edited.get("message") or {}).get(k), dict)),
+                None,
+            ) if edit_kind(edited) == "caption" else None
+            if caption_key is not None:
+                # A caption edit changes the caption and nothing else: the
+                # media's URL, key, measured duration and cache stay put, and
+                # the snapshot above already holds the whole body for a
+                # rollback.
+                #
+                # Mentions are deliberately not carried on a caption edit: only
+                # text rows resolve "@<phone>" back to a name
+                # (_get_message_content()), so a caption stored with the
+                # mention payload read the raw number out loud, and the send
+                # path never attaches mentions to a caption either. The caption
+                # is sent and kept exactly as typed.
+                api_text, edit_mentions = text, None
+                edited["message"][caption_key]["caption"] = text
+                # Both places a mention list can live: top-level (local sends)
+                # and inside the media body (anything normalised from sync).
+                for ctx in (edited.get("contextInfo"),
+                            edited["message"][caption_key].get("contextInfo")):
+                    if isinstance(ctx, dict):
+                        ctx.pop("mentionedJid", None)
+                        ctx.pop("mentionedJidList", None)
             # edited_text_message() keeps a reply's quote when it lives inside
             # the body (every reply that came from sync or the phone), which a
             # bare rewrite to `conversation` silently dropped from the row.
-            if edit_mentions:
+            elif edit_mentions:
                 # Same shape the send path builds for a mentioning message,
                 # so _get_message_content() rewrites @phone → @DisplayName
                 # and _extract_mentions() finds the JIDs for the hyperlinks.
@@ -2380,6 +2407,10 @@ class ConversationsPanel(wx.Panel):
         # _on_menu_pin_message() uses) only so the snapshot and the body it
         # wrote exist to hand over; a failure is reported through
         # wx.CallAfter, which cannot run before this handler returns anyway.
+        if getattr(self, "_editing_is_caption", False):
+            # Also when the row was not found above: a caption is never sent
+            # with a mention payload, or its echo would store "@<phone>".
+            api_text, edit_mentions = text, None
         threading.Thread(
             target=self._send_message_edit,
             args=(remote_jid, msg_id, api_text, edit_mentions, snapshot, applied_message),
@@ -4733,7 +4764,9 @@ class ConversationsPanel(wx.Panel):
         _is_own      = msg.get("key", {}).get("fromMe", False)
         _is_text     = msg_type in ("conversation", "extendedTextMessage")
         _can_edit    = edit_window_open(msg.get("messageTimestamp"))
-        if _is_own and _is_text and _can_edit:
+        # Text, or the caption an own image/video/document already has —
+        # see core.message_edit.edit_kind().
+        if _is_own and edit_kind(msg) is not None and _can_edit:
             edit_item = menu.Append(wx.ID_ANY, f"{i18n.t('edit_message')}\tAlt+E")
             self.Bind(
                 wx.EVT_MENU,
@@ -12384,7 +12417,7 @@ class ConversationsPanel(wx.Panel):
             return
         if not msg.get("key", {}).get("fromMe", False):
             return
-        if msg.get("messageType") not in ("conversation", "extendedTextMessage"):
+        if edit_kind(msg) is None:
             return
         if not edit_window_open(msg.get("messageTimestamp")):
             # Said out loud: a shortcut that silently does nothing reads as a
@@ -12400,13 +12433,29 @@ class ConversationsPanel(wx.Panel):
 
     def _on_menu_edit_message(self, index: int, msg: dict):
         """Enter edit mode: pre-fill message field with message text."""
-        content = self._get_message_content(msg) or ""
-        # Strip any leading quote block (from a previous reply prefix)
-        if content.startswith("> ") and "\n" in content:
-            content = content[content.index("\n") + 1:]
+        if edit_kind(msg) == "caption":
+            # The raw caption, not _get_message_content(): for media that is
+            # the row as the list reads it (type, file name, size), none of
+            # which is part of what gets edited.
+            body = msg.get("message") or {}
+            content = next(
+                ((body.get(k) or {}).get("caption") or ""
+                 for k in ("imageMessage", "videoMessage", "documentMessage")
+                 if isinstance(body.get(k), dict)),
+                "",
+            )
+        else:
+            content = self._get_message_content(msg) or ""
+            # Strip any leading quote block (from a previous reply prefix)
+            if content.startswith("> ") and "\n" in content:
+                content = content[content.index("\n") + 1:]
 
         self._editing_message_id    = msg.get("key", {}).get("id", "")
         self._editing_message_index = index
+        # Captured now, from the message the user chose: by the time the edit
+        # is saved a sync may have paginated the row out, and the caption rule
+        # (no mentions — see _apply_message_edit) must hold regardless.
+        self._editing_is_caption    = edit_kind(msg) == "caption"
 
         # Seed the pending-mention state from the message being edited. The
         # pre-filled text shows mentions as "@DisplayName" (that is what
@@ -12519,6 +12568,7 @@ class ConversationsPanel(wx.Panel):
         """Leave edit mode without saving."""
         self._editing_message_id    = None
         self._editing_message_index = -1
+        self._editing_is_caption    = False
         # Edit mode seeds these from the message being edited (see
         # _on_menu_edit_message) — drop them again, or the next ordinary message
         # typed into the field would inherit the edited message's mentions.

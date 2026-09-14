@@ -48,6 +48,8 @@ import time
 
 from urllib3.exceptions import NewConnectionError
 
+from core.utils import is_message_forwarded
+
 #: How the normaliser tags an edit inside message.protocolMessage.type.
 MESSAGE_EDIT = "MESSAGE_EDIT"
 
@@ -243,6 +245,47 @@ def apply_caption_edit(existing: dict, incoming: dict):
         existing["_edited"] = True
         return "marked"
     return None
+
+
+_TEXT_TYPES = ("conversation", "extendedTextMessage")
+
+
+def edit_kind(msg):
+    """``"text"``, ``"caption"`` or None — what WinZapp may offer to edit.
+
+    Mirrors the parts of WhatsApp Web's own rules that can be checked from a
+    stored record, read out of WAWebMsgActionCapability on the running app:
+    text is editable, and an image, video or document is editable only as a
+    caption it ALREADY has (``!!e.caption``), never when forwarded. Both
+    require the message to be ours; the edit window is checked separately
+    (edit_window_open()).
+
+    Two rules cannot be checked here, and WhatsApp stays the judge of them:
+    the message must have been created by this same client (``local`` —
+    cross-device editing is a remote config, off for this account, and
+    deliberately not forced), and a view-once media is never editable
+    (WinZapp does not keep that flag on the record). Either way WhatsApp
+    answers "Cannot edit this message", which MainWindow.edit_message() reports
+    as a refusal and the conversation panel rolls back and announces.
+    """
+    if not isinstance(msg, dict) or not (msg.get("key") or {}).get("fromMe"):
+        return None
+    mtype = msg.get("messageType")
+    if mtype in _TEXT_TYPES:
+        return "text"
+    part = _caption_part(msg)
+    if part is None or part[0] != mtype:
+        return None
+    # A GIF's row reads as a sticker and never speaks its caption, so offering
+    # to edit it would pre-fill text the user has never heard.
+    if part[0] == "videoMessage" and part[1].get("gifPlayback"):
+        return None
+    caption = part[1].get("caption")
+    if not isinstance(caption, str) or not caption.strip():
+        return None
+    if is_message_forwarded(msg):
+        return None
+    return "caption"
 
 
 _EDIT_STATE_FIELDS = ("message", "messageType", "contextInfo", "_edited")
