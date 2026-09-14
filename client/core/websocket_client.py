@@ -7,7 +7,7 @@ import wx
 import requests
 from core.api_client import api_get, api_post
 from core.i18n import I18n
-from core.message_edit import MESSAGE_EDIT, clean_message_id
+from core.message_edit import MESSAGE_EDIT, clean_message_id, server_marks_edited
 from core.sync_contracts import observe_payload
 from core.utils import looks_like_binary_blob, looks_like_jid, _slim_quoted_message, parse_bool_flag as _parse_bool_flag
 
@@ -2661,6 +2661,12 @@ class WebSocketClient:
             "messageType": mapped_type,
             "MessageUpdate": message_updates
         }
+
+        # WhatsApp Web's own record that the message was edited — without it the
+        # "Editada" marker only ever existed locally and every sync erased it
+        # (core/message_edit.server_marks_edited()).
+        if not _is_edit_event and server_marks_edited(wpp_msg):
+            normalized["_edited"] = True
 
         # Status messages: include the real sender as participant
         if status_participant:

@@ -122,6 +122,73 @@ def connection_refused(exc) -> bool:
     return isinstance(reason, NewConnectionError) or isinstance(inner, NewConnectionError)
 
 
+#: Raw WPPConnect types that must never carry the "Editada" marker: a revoke
+#: renders as "Mensagem apagada", and a protocol message is not a row at all.
+_NEVER_MARKED_EDITED_TYPES = frozenset({"revoked", "protocol"})
+
+
+def server_marks_edited(wpp_msg) -> bool:
+    """Whether WhatsApp Web itself says this message was edited.
+
+    ``_edited`` used to be set only by WinZapp (a local edit, or a live edit
+    echo), so it was lost the moment a sync replaced the stored record with
+    the server's copy — every edited message went back to looking unedited.
+    WhatsApp Web keeps the fact on the message model: read over DevTools from
+    the running app (2026-09-14), an edited reply came back from
+    WAPI.getMessages — the call get-messages uses — with ``latestEditMsgKey``
+    (an object) and ``latestEditSenderTimestampMs`` (a number), and 4 of the 60
+    messages fetched carried them. Reading it here also marks edits made on
+    another device and survives a reinstall, which no local flag can.
+
+    Measured over the whole loaded store on the same session: 2670 messages,
+    14 with ``latestEditMsgKey`` — 12 text messages and 2 image captions (a
+    caption edit is a real edit) — and none carrying ``botEditType``. Not
+    verified: Meta AI replies, which WhatsApp streams as a series of bot edits.
+    That account had no bot chat to read, so whether those models carry
+    ``latestEditMsgKey`` (and would read ", Editada") is unknown.
+    """
+    if not isinstance(wpp_msg, dict):
+        return False
+    if (wpp_msg.get("type") or "") in _NEVER_MARKED_EDITED_TYPES:
+        return False
+    return bool(wpp_msg.get("latestEditMsgKey"))
+
+
+def carry_over_edited_marker(new_msgs, old_msgs) -> int:
+    """Copy ``_edited`` from *old_msgs* onto the same message in *new_msgs*
+    when the incoming copy lacks it. Returns how many were carried.
+
+    The second line of defence behind server_marks_edited(): a sync replaces a
+    chat's records with the server's copies, so a marker the server copy does
+    not restate — an optimistic local edit whose echo has not landed, or a
+    model that simply lacks the field — would still vanish. Being edited is
+    one-way, so the marker is safe to keep for the id; the exception is a
+    message since deleted for everyone, which renders as "Mensagem apagada"
+    and must not read ", Editada" (_apply_remote_revoke() drops it for the
+    same reason). The sync writes the merged records to the database, so this
+    reaches the disk without a per-message lookup there.
+    """
+    marked = {
+        (m.get("key") or {}).get("id")
+        for m in (old_msgs or ())
+        if isinstance(m, dict) and m.get("_edited")
+    }
+    marked.discard(None)
+    marked.discard("")
+    if not marked:
+        return 0
+    carried = 0
+    for m in new_msgs or ():
+        if not isinstance(m, dict) or m.get("_edited"):
+            continue
+        if m.get("messageType") == "protocolMessage":
+            continue
+        if (m.get("key") or {}).get("id") in marked:
+            m["_edited"] = True
+            carried += 1
+    return carried
+
+
 _EDIT_STATE_FIELDS = ("message", "messageType", "contextInfo", "_edited")
 _ABSENT = "__absent__"
 

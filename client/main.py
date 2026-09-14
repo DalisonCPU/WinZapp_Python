@@ -47,7 +47,12 @@ from core.sound_system import (
 )
 from core.audio_devices import find_input_device_index, test_input_device
 from core.bulk_read_state import run_bulk_read_state
-from core.message_edit import connection_refused, is_edit_event, response_not_sent
+from core.message_edit import (
+    carry_over_edited_marker,
+    connection_refused,
+    is_edit_event,
+    response_not_sent,
+)
 from core.i18n import I18n
 from core.sync_contracts import observe_payload
 from core.incremental_sync import (
@@ -6060,6 +6065,18 @@ class MainWindow(wx.Frame):
             self._schedule_set_chats()
         return removed
 
+    def _persist_and_repaint_edit(self, existing: dict, remote_jid: str) -> None:
+        """Save an edited record and refresh what shows it."""
+        def _bg_persist():
+            try:
+                self.db.insert_message(remote_jid, existing)
+            except Exception as e:
+                logging.error(f"[_apply_possible_edit] Failed to persist edited message: {e}")
+        self._msg_bg_executor.submit(_bg_persist)
+        if hasattr(self, "conversations_panel"):
+            wx.CallAfter(self.conversations_panel.refresh_active_conversation_messages)
+        self._schedule_set_chats()
+
     def _apply_possible_edit(self, existing: dict, incoming: dict, remote_jid: str):
         """Detect and apply a text-message edit re-delivered under the same key.id.
 
@@ -6091,7 +6108,16 @@ class MainWindow(wx.Frame):
 
         old_text = _text_of(existing)
         new_text = _text_of(incoming)
-        if old_text is None or new_text is None or old_text == new_text:
+        if old_text is not None and old_text == new_text:
+            # Same text, but WhatsApp now says it was edited: a sync applied the
+            # new text before the marker existed (every install that synced
+            # before server_marks_edited() was read), and this echo is the
+            # only thing that will say so until the next sync.
+            if incoming.get("_edited") and not existing.get("_edited"):
+                existing["_edited"] = True
+                self._persist_and_repaint_edit(existing, remote_jid)
+            return
+        if old_text is None or new_text is None:
             return
 
         existing["message"]     = incoming.get("message")
@@ -22092,6 +22118,12 @@ class MainWindow(wx.Frame):
             if carried:
                 logging.info("[sync_chat_messages] %s: kept %d measured video duration(s)",
                              remote_jid, carried)
+            # Same shape for the "Editada" marker, which the server copy may
+            # not restate (core/message_edit.carry_over_edited_marker()).
+            carried_edits = carry_over_edited_marker(all_messages, local_records)
+            if carried_edits:
+                logging.info("[sync_chat_messages] %s: kept %d edited marker(s)",
+                             remote_jid, carried_edits)
             api_ids = {r.get("key", {}).get("id") for r in all_messages}
             # A copy an edit event was once stored as is local-only by
             # construction — keeping it is the duplicate (core/message_edit.py).
