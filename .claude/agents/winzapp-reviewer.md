@@ -197,6 +197,11 @@ release before.
   messages — wrong status, wrong audio played.
 - **Five locales.** Any user-facing string exists in all five files, with
   matching `{}` placeholders and `&&` for a literal ampersand.
+- **Established terminology.** A new or changed value uses the words its own
+  locale file already uses for that concept — grep the file to check. Flag a
+  synonym that diverges (e.g. Polish `rozmowa` where `pl.json` settled on
+  `czat` in f292049f): existing terms were chosen by native speakers, and no
+  test catches the drift.
 - **Screen reader.** Plain wx controls; all speech through
   `main_window.speak_output`; multi-row list mutations inside
   `Freeze()`/`try`/`finally: Thaw()`; never a raw JID in a title or list item.

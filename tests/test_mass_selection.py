@@ -115,8 +115,8 @@ class _FakeMainWindow:
     def archive_chat(self, jid, archived):
         self.archived.append((jid, archived))
 
-    def mark_conversation_as_read(self, jid, read):
-        self.marked_read.append((jid, read))
+    def mark_conversations_as_read(self, jids, force=False):
+        self.marked_read.extend((jid, force) for jid in jids)
 
     def mark_conversation_as_unread(self, jid):
         self.marked_unread.append(jid)

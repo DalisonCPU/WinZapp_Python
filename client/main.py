@@ -46,6 +46,14 @@ from core.sound_system import (
     discover_sound_packs, resolve_sound_event_path, DEFAULT_PACK_ID,
 )
 from core.audio_devices import find_input_device_index, test_input_device
+from core.bulk_read_state import run_bulk_read_state
+from core.message_edit import (
+    apply_caption_edit,
+    carry_over_edited_marker,
+    connection_refused,
+    is_edit_event,
+    response_not_sent,
+)
 from core.i18n import I18n
 from core.sync_contracts import observe_payload
 from core.incremental_sync import (
@@ -3616,15 +3624,29 @@ class MainWindow(wx.Frame):
         self.connect.show_connection_dial()
 
     def _on_mark_all_read(self, event=None):
-        """Mark every conversation with unread messages as read."""
-        def _worker():
-            for jid, chat in list(self.chats.items()):
-                if int(chat.get("unreadCount") or 0) > 0:
-                    try:
-                        self.mark_conversation_as_read(jid)
-                    except Exception:
-                        pass
-        threading.Thread(target=_worker, daemon=True).start()
+        """Mark every conversation with unread messages as read — after asking.
+
+        It is the first item of the Arquivo menu, so a stray Alt followed by
+        Enter (or Down, Enter) reaches it. Measured on a real install: an Alt
+        at 23:08:59.7 and 1.2 s later every one of 100+ unread chats was read
+        on WhatsApp too, with no way back. The dialog defaults to No for
+        exactly that keystroke.
+        """
+        unread_jids = [
+            jid for jid, chat in list(self.chats.items())
+            if int(chat.get("unreadCount") or 0) > 0
+        ]
+        if not unread_jids:
+            self.output(self.i18n.t("mark_all_read_none"), interrupt=True)
+            return
+        if wx.MessageBox(
+            self.i18n.t("mark_all_read_confirm").format(count=len(unread_jids)),
+            self.i18n.t("menu_mark_all_read"),
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+            self,
+        ) != wx.YES:
+            return
+        self.mark_conversations_as_read(unread_jids)
 
     def _apply_global_hotkey(self):
         """Register (or unregister) the global hotkey from settings."""
@@ -5958,23 +5980,130 @@ class MainWindow(wx.Frame):
         return (((msg or {}).get("messageType") or "")
                 in MainWindow._UNDECRYPTED_PLACEHOLDER_TYPES)
 
-    def _apply_possible_edit(self, existing: dict, incoming: dict, remote_jid: str):
-        """Detect and apply a text-message edit re-delivered under the same key.id.
+    def _drop_protocol_edit(self, remote_jid: str, msg: dict) -> bool:
+        """True when *msg* is an edit protocol message, which is then dropped.
 
-        WhatsApp reuses the original message's ID when a text message is
-        edited (own edits via edit_message(), or an edit made by anyone else
-        from any device) — the edited copy arrives back through the exact
-        same live-message channel as any other message, just with a
-        duplicate key.id. Without this, the dedup check right above ("already
-        stored") silently discarded it, so edits from other people never
-        appeared at all, and our own edits only showed locally because
-        conversations.py already updates them optimistically when sent.
-        Only text messages can be edited (WhatsApp's own edit window never
-        applies to media/audio/etc.), so comparing "conversation"/
-        "extendedTextMessage" text is a reliable, format-agnostic signal —
-        it never fires for a plain re-sync of an unrelated message type.
+        Not applied: the same edit also arrives under the original id through
+        onMessageEdit, carrying the full current message, and
+        _apply_possible_edit() handles that one (core/message_edit.py). A row
+        this event already left behind under its own id — every install that
+        met the bug has one per edit — is purged on the way.
+        """
+        if not is_edit_event(msg):
+            return False
+        event_id = (msg.get("key") or {}).get("id") or ""
+        target_id = ((msg.get("message") or {}).get("protocolMessage") or {}).get("key") or ""
+        logging.info("[edit] dropping edit event %s (edits %s) in %s",
+                     event_id[:22], str(target_id)[:22], remote_jid)
+        if event_id:
+            self._remember_dropped_edit_events({event_id})
+            self._purge_materialized_edit_rows(remote_jid, {event_id})
+        return True
+
+    def _remember_dropped_edit_events(self, event_ids) -> None:
+        """Record edit-event ids so sync_chat_messages()' merge never keeps a
+        local copy of one.
+
+        That merge preserves every stored record whose id the fetched page
+        lacks — and once the page stops returning the event as a row, the copy
+        stored before the fix is exactly such a record. Without this it would
+        be merged straight back into `records` on every sync, racing (and
+        undoing) _purge_materialized_edit_rows(). A bare set is enough: ids are
+        unique, set.add is atomic under the GIL, and it grows by one per edit.
+        """
+        ids = {i for i in (event_ids or ()) if i}
+        if not ids:
+            return
+        if not hasattr(self, "_dropped_edit_event_ids"):
+            self._dropped_edit_event_ids = set()
+        self._dropped_edit_event_ids.update(ids)
+
+    def _purge_materialized_edit_rows(self, remote_jid: str, event_ids) -> int:
+        """Remove rows an edit event was stored as, under the event's own id.
+
+        Main thread. Such an id can only ever belong to that bogus copy — a
+        protocol message is never a real message — so removing it cannot touch
+        anything genuine. Returns how many records were removed.
+        """
+        ids = {i for i in (event_ids or ()) if i}
+        if not ids:
+            return 0
+        candidates = [remote_jid, self._normalize_jid(remote_jid),
+                      getattr(self, "_lid_to_phone", {}).get(remote_jid, ""),
+                      getattr(self, "_phone_to_lid", {}).get(self._normalize_jid(remote_jid), "")]
+        removed = 0
+        for jid in dict.fromkeys(j for j in candidates if j):
+            chat = self.chats.get(jid) or {}
+            records = chat.get("messages", {}).get("messages", {}).get("records", [])
+            present = {(r.get("key") or {}).get("id") for r in records
+                       if isinstance(r, dict)} & ids
+            if present:
+                logging.info("[edit] removing %d row(s) stored from an edit event in %s",
+                             len(present), jid)
+                cp = getattr(self, "conversations_panel", None)
+                if (cp is not None and cp.conversation is not None
+                        and self._normalize_jid(cp.conversation.get("remoteJid", ""))
+                        == self._normalize_jid(jid)):
+                    # Also takes them out of records and the DB.
+                    cp.remove_messages_by_id(present, focus_previous=True)
+                else:
+                    records[:] = [r for r in records
+                                  if not (isinstance(r, dict)
+                                          and (r.get("key") or {}).get("id") in present)]
+                removed += len(present)
+                self._recompute_chat_last_message(jid)
+            # Unconditionally, not only for what is resident: records are
+            # capped and store-only history fetches never load what they
+            # write, so a copy can sit on disk with nothing in memory. A
+            # DELETE of a row that is not there is harmless.
+            for event_id in ids:
+                try:
+                    self.db.delete_message(jid, event_id)
+                except Exception as e:
+                    logging.error("[edit] failed to delete stored edit event %s: %s",
+                                  event_id, e)
+        if removed:
+            self._schedule_set_chats()
+        return removed
+
+    def _persist_and_repaint_edit(self, existing: dict, remote_jid: str) -> None:
+        """Save an edited record and refresh what shows it."""
+        def _bg_persist():
+            try:
+                self.db.insert_message(remote_jid, existing)
+            except Exception as e:
+                logging.error(f"[_apply_possible_edit] Failed to persist edited message: {e}")
+        self._msg_bg_executor.submit(_bg_persist)
+        if hasattr(self, "conversations_panel"):
+            wx.CallAfter(self.conversations_panel.refresh_active_conversation_messages)
+        self._schedule_set_chats()
+
+    def _apply_possible_edit(self, existing: dict, incoming: dict, remote_jid: str):
+        """Detect and apply an edit re-delivered under the same key.id.
+
+        WhatsApp reuses the original message's ID when a message is edited
+        (own edits via edit_message(), or an edit made by anyone else from any
+        device) — the edited copy arrives back through the exact same
+        live-message channel as any other message, just with a duplicate
+        key.id. Without this, the dedup check right above ("already stored")
+        silently discarded it, so edits from other people never appeared at
+        all, and our own edits only showed locally because conversations.py
+        already updates them optimistically when sent.
+
+        Text is compared directly. An image, video or document can have its
+        caption edited too (WhatsApp's getMsgEditType maps those to
+        CaptionEdit); that goes through core.message_edit.apply_caption_edit(),
+        which acts only on a copy WhatsApp itself marks as edited and changes
+        nothing but the caption.
         """
         if self._apply_remote_revoke(existing, incoming, remote_jid):
+            return
+
+        caption_result = apply_caption_edit(existing, incoming)
+        if caption_result is not None:
+            logging.info("[edit] caption edit %s for %s in %s", caption_result,
+                         ((existing.get("key") or {}).get("id") or "")[:22], remote_jid)
+            self._persist_and_repaint_edit(existing, remote_jid)
             return
 
         def _text_of(m):
@@ -5989,7 +6118,16 @@ class MainWindow(wx.Frame):
 
         old_text = _text_of(existing)
         new_text = _text_of(incoming)
-        if old_text is None or new_text is None or old_text == new_text:
+        if old_text is not None and old_text == new_text:
+            # Same text, but WhatsApp now says it was edited: a sync applied the
+            # new text before the marker existed (every install that synced
+            # before server_marks_edited() was read), and this echo is the
+            # only thing that will say so until the next sync.
+            if incoming.get("_edited") and not existing.get("_edited"):
+                existing["_edited"] = True
+                self._persist_and_repaint_edit(existing, remote_jid)
+            return
+        if old_text is None or new_text is None:
             return
 
         existing["message"]     = incoming.get("message")
@@ -6249,6 +6387,13 @@ class MainWindow(wx.Frame):
                 "[on_new_message] %s: ignoring the ciphertext placeholder for %s "
                 "— waiting for the decrypted copy under the same id.",
                 remote_jid, (key or {}).get("id", "")[:22])
+            return
+
+        # An edit's protocol message carries a NEW id, so every id-based check
+        # below would miss it and store it as its own row. Dropped here, before
+        # anything can create or restore a chat on its behalf — see
+        # core/message_edit.py.
+        if self._drop_protocol_edit(remote_jid, msg):
             return
 
         # Statuses (stories) arrive as messages on status@broadcast; they are
@@ -6934,6 +7079,11 @@ class MainWindow(wx.Frame):
 
         # Normalize Alt JID mapping if present
         self._extract_lid_mapping(msg)
+
+        # Same as on_new_message(): never a row, and never a reason to create
+        # a chat (core/message_edit.py).
+        if self._drop_protocol_edit(remote_jid, msg):
+            return
         alt_jid = self._normalize_jid(key.get("remoteJidAlt", ""))
         if alt_jid:
             self._extract_lid_mapping(msg)
@@ -21371,14 +21521,25 @@ class MainWindow(wx.Frame):
     def _normalize_fetched_messages(self, raw_messages, remote_jid: str) -> list:
         """WPPConnect get-messages payload -> WinZapp's canonical message dicts."""
         out = []
+        edit_event_ids = set()
         for wm in raw_messages or []:
             if isinstance(wm, dict) and self.ws:
                 try:
                     normalized = self.ws._normalize_wpp_message(wm)
+                    # Never a row: the message it edits carries its current
+                    # text wherever it is fetched from (core/message_edit.py).
+                    if is_edit_event(normalized):
+                        event_id = (normalized.get("key") or {}).get("id")
+                        if event_id:
+                            edit_event_ids.add(event_id)
+                        continue
                     prune_message_record(normalized)
                     out.append(normalized)
                 except Exception as e:
                     logging.error(f"[sync_chat_messages] Failed to normalize message in {remote_jid}: {e}")
+        if edit_event_ids:
+            self._remember_dropped_edit_events(edit_event_ids)
+            wx.CallAfter(self._purge_materialized_edit_rows, remote_jid, edit_event_ids)
         return out
 
     @classmethod
@@ -21967,10 +22128,20 @@ class MainWindow(wx.Frame):
             if carried:
                 logging.info("[sync_chat_messages] %s: kept %d measured video duration(s)",
                              remote_jid, carried)
+            # Same shape for the "Editada" marker, which the server copy may
+            # not restate (core/message_edit.carry_over_edited_marker()).
+            carried_edits = carry_over_edited_marker(all_messages, local_records)
+            if carried_edits:
+                logging.info("[sync_chat_messages] %s: kept %d edited marker(s)",
+                             remote_jid, carried_edits)
             api_ids = {r.get("key", {}).get("id") for r in all_messages}
+            # A copy an edit event was once stored as is local-only by
+            # construction — keeping it is the duplicate (core/message_edit.py).
+            dropped_edit_ids = getattr(self, "_dropped_edit_event_ids", set())
             extra   = [r for r in local_records
                        if r.get("key", {}).get("id") and
                           r.get("key", {}).get("id") not in api_ids
+                          and r.get("key", {}).get("id") not in dropped_edit_ids
                           # Also apply the clear-chat cutoff here: local_records
                           # comes from the on-disk cache, which can still hold
                           # pre-clear messages if the app was closed before the
@@ -22017,9 +22188,11 @@ class MainWindow(wx.Frame):
                         .get("records", []))
         if live_records:
             current_ids = {r.get("key", {}).get("id") for r in all_messages}
+            dropped_edit_ids = getattr(self, "_dropped_edit_event_ids", set())
             late_extra  = [r for r in live_records
                            if r.get("key", {}).get("id") and
                               r.get("key", {}).get("id") not in current_ids
+                              and r.get("key", {}).get("id") not in dropped_edit_ids
                               and not self._is_cleared_message(remote_jid, r)]
             if late_extra:
                 all_messages = all_messages + late_extra
@@ -25692,14 +25865,25 @@ class MainWindow(wx.Frame):
                         )
 
                 fetched_messages = []
+                edit_event_ids = set()
                 for wm in wpp_messages:
                     if isinstance(wm, dict) and self.ws:
                         try:
                             normalized = self.ws._normalize_wpp_message(wm)
                             self._extract_lid_mapping(normalized)
+                            # Same filter as _normalize_fetched_messages() —
+                            # scrolling up must not store edit events either.
+                            if is_edit_event(normalized):
+                                event_id = (normalized.get("key") or {}).get("id")
+                                if event_id:
+                                    edit_event_ids.add(event_id)
+                                continue
                             fetched_messages.append(normalized)
                         except Exception:
                             pass
+                if edit_event_ids:
+                    self._remember_dropped_edit_events(edit_event_ids)
+                    wx.CallAfter(self._purge_materialized_edit_rows, remote_jid, edit_event_ids)
                 
                 if fetched_messages:
                     if store_only:
@@ -25892,8 +26076,17 @@ class MainWindow(wx.Frame):
             return False
         return remote_jid in anchors or self._normalize_jid(remote_jid) in anchors
 
-    def mark_conversation_as_read(self, remote_jid: str, force: bool = False):
-        """Mark conversation as read locally and notify WPPConnect."""
+    def mark_conversation_as_read(
+        self, remote_jid: str, force: bool = False, batched: bool = False
+    ):
+        """Mark conversation as read locally and notify WPPConnect.
+
+        ``batched=True`` is for mark_conversations_as_read(): the local part
+        runs as usual, but the DB persist and the /send-seen are left to the
+        caller, and the remote job is returned as
+        ``(remote_jid, previous_unread, read_timestamp)`` — None when nothing
+        needs sending.
+        """
         chat = self.chats.get(remote_jid)
         if chat is None:
             return
@@ -25911,7 +26104,9 @@ class MainWindow(wx.Frame):
         # Persisted (not just in-memory): the stale server-side unread count
         # this guard exists to reject outlives the process, so the guard has
         # to as well — see prepare_sync()'s "8. locally_read_at" block.
-        self._persist_locally_read_at()
+        # A batch persists once at the end instead of one DB write per chat.
+        if not batched:
+            self._persist_locally_read_at()
         if not hasattr(self, "_new_since_read"):
             self._new_since_read = {}
         self._new_since_read[remote_jid] = 0
@@ -25929,7 +26124,13 @@ class MainWindow(wx.Frame):
         wx.CallAfter(self._schedule_set_chats)
 
         if unread == 0 and not force:
-            return
+            return None
+
+        if batched:
+            # Taken now, not at failure time: this is the value the
+            # _locally_read_at marker above was set to, which is what the
+            # rollback compares against.
+            return (remote_jid, unread, int(chat.get("t", 0) or 0))
 
         self._sync_conversation_read_state(
             remote_jid,
@@ -25942,8 +26143,83 @@ class MainWindow(wx.Frame):
             ),
         )
 
+    def mark_conversations_as_read(self, remote_jids, force: bool = False) -> int:
+        """Mark many conversations as read: locally at once, remotely paced.
+
+        Call from the main thread: it mutates self.chats. Badges clear
+        immediately; the /send-seen calls go through
+        core.bulk_read_state.run_bulk_read_state() — a small pool, retried in
+        rounds until every chat is confirmed or WhatsApp stops answering —
+        instead of one simultaneous request per chat, which timed out under
+        its own load. Chats WhatsApp never confirmed get their unread count
+        back and the user is told how many. Returns how many are being sent.
+        """
+        jobs = {}
+        for jid in remote_jids:
+            job = self.mark_conversation_as_read(jid, force=force, batched=True)
+            if job is not None:
+                jobs[job[0]] = job
+        self._persist_locally_read_at()
+        if not jobs:
+            return 0
+        logging.info("[mark_read_bulk] Sending read state for %d chats.", len(jobs))
+
+        def _worker():
+            failed = run_bulk_read_state(
+                list(jobs),
+                lambda jid: self._send_read_state_blocking(jid, False, attempts=1),
+            )
+            logging.info(
+                "[mark_read_bulk] Done: %d confirmed, %d failed.",
+                len(jobs) - len(failed), len(failed),
+            )
+            if failed:
+                wx.CallAfter(self._on_bulk_read_failed, [jobs[jid] for jid in failed])
+
+        threading.Thread(target=_worker, daemon=True).start()
+        return len(jobs)
+
+    def _on_bulk_read_failed(self, failed_jobs):
+        """Roll back the chats a bulk mark-as-read could not confirm.
+
+        One DB write and one list rebuild for the whole batch: done per chat,
+        a failed run of hundreds froze the main thread and flooded the screen
+        reader right as the failure was being announced.
+        """
+        restored = False
+        for remote_jid, previous_unread, read_timestamp in failed_jobs:
+            restored |= bool(self._restore_unread_after_send_seen_failure(
+                remote_jid, previous_unread, read_timestamp, batched=True
+            ))
+        if restored:
+            self._persist_locally_read_at()
+            self._schedule_set_chats()
+        self.output(
+            self.i18n.t("mark_read_bulk_failed").format(count=len(failed_jobs)),
+            # Can arrive up to ~2 min after the command; not worth cutting off
+            # whatever the screen reader is reading by then.
+            interrupt=False,
+        )
+
     def _sync_conversation_read_state(self, remote_jid: str, unread: bool, on_failure):
-        """Apply a read-state change remotely, trying the known JID aliases."""
+        """Apply a read-state change remotely in the background."""
+        def _do_api():
+            # Guarded here, not only inside the sender: an exception escaping
+            # it would end the thread without on_failure(), leaving the
+            # optimistic local change in place with nothing behind it.
+            try:
+                ok = self._send_read_state_blocking(remote_jid, unread)
+            except Exception:
+                logging.exception("[read_state] Unexpected send-seen failure")
+                ok = False
+            if not ok:
+                on_failure()
+        threading.Thread(target=_do_api, daemon=True).start()
+
+    def _send_read_state_blocking(
+        self, remote_jid: str, unread: bool, attempts: int = 3
+    ) -> bool:
+        """POST /send-seen, trying the known JID aliases; True once confirmed."""
         # Prefer @lid JID for WPPConnect if mapped
         target_phone = remote_jid
         if not target_phone.endswith("@lid"):
@@ -25968,66 +26244,65 @@ class MainWindow(wx.Frame):
                 payload["isLid"] = True
             return api_post(url, json=payload, headers=headers, timeout=10)
 
-        def _do_api():
-            success = False
-            try:
-                fallback_phone = remote_jid
-                if fallback_phone.endswith("@lid"):
-                    fallback_phone = getattr(self, "_lid_to_phone", {}).get(
-                        fallback_phone, fallback_phone
-                    )
-                else:
-                    fallback_phone = getattr(self, "_phone_to_lid", {}).get(
-                        self._normalize_jid(fallback_phone), fallback_phone
-                    )
-                if fallback_phone.endswith("@s.whatsapp.net"):
-                    fallback_phone = fallback_phone.rsplit("@", 1)[0] + "@c.us"
+        try:
+            fallback_phone = remote_jid
+            if fallback_phone.endswith("@lid"):
+                fallback_phone = getattr(self, "_lid_to_phone", {}).get(
+                    fallback_phone, fallback_phone
+                )
+            else:
+                fallback_phone = getattr(self, "_phone_to_lid", {}).get(
+                    self._normalize_jid(fallback_phone), fallback_phone
+                )
+            if fallback_phone.endswith("@s.whatsapp.net"):
+                fallback_phone = fallback_phone.rsplit("@", 1)[0] + "@c.us"
 
-                targets = [(target_phone, is_lid_target)]
-                if fallback_phone != target_phone:
-                    targets.append((fallback_phone, fallback_phone.endswith("@lid")))
+            targets = [(target_phone, is_lid_target)]
+            if fallback_phone != target_phone:
+                targets.append((fallback_phone, fallback_phone.endswith("@lid")))
 
-                for attempt in range(3):
-                    for phone, is_lid in targets:
-                        try:
-                            resp = _send_seen(phone, is_lid)
-                        except Exception as exc:
-                            logging.warning(
-                                "[mark_as_read] Request failed for %s (attempt %s): %s",
-                                phone, attempt + 1, exc,
-                            )
-                            continue
-                        if resp.ok:
-                            try:
-                                results = resp.json().get("response", {}).get("data")
-                            except (AttributeError, TypeError, ValueError):
-                                results = None
-                            if isinstance(results, list) and results and all(
-                                result is True for result in results
-                            ):
-                                success = True
-                                return
+            for attempt in range(attempts):
+                for phone, is_lid in targets:
+                    try:
+                        resp = _send_seen(phone, is_lid)
+                    except Exception as exc:
                         logging.warning(
-                            "[read_state] API response %s for %s (unread=%s, attempt %s): %s",
-                            resp.status_code, phone, unread, attempt + 1, resp.text[:200],
+                            "[mark_as_read] Request failed for %s (attempt %s): %s",
+                            phone, attempt + 1, exc,
                         )
-                    if attempt < 2:
-                        time.sleep(attempt + 1)
-            except Exception:
-                logging.exception("[mark_as_read] Unexpected send-seen failure")
-            finally:
-                if not success:
-                    on_failure()
-        threading.Thread(target=_do_api, daemon=True).start()
+                        continue
+                    if resp.ok:
+                        try:
+                            results = resp.json().get("response", {}).get("data")
+                        except (AttributeError, TypeError, ValueError):
+                            results = None
+                        if isinstance(results, list) and results and all(
+                            result is True for result in results
+                        ):
+                            return True
+                    logging.warning(
+                        "[read_state] API response %s for %s (unread=%s, attempt %s): %s",
+                        resp.status_code, phone, unread, attempt + 1, resp.text[:200],
+                    )
+                if attempt < attempts - 1:
+                    time.sleep(attempt + 1)
+        except Exception:
+            logging.exception("[mark_as_read] Unexpected send-seen failure")
+        return False
 
     def _restore_unread_after_send_seen_failure(
-        self, remote_jid: str, previous_unread: int, read_timestamp: int
-    ):
-        """Undo an optimistic local read when WhatsApp rejected every attempt."""
+        self, remote_jid: str, previous_unread: int, read_timestamp: int,
+        batched: bool = False,
+    ) -> bool:
+        """Undo an optimistic local read when WhatsApp rejected every attempt.
+
+        Returns whether anything was undone. ``batched=True`` leaves the DB
+        persist and the list refresh to the caller (see _on_bulk_read_failed).
+        """
         normalized = self._normalize_jid(remote_jid)
         chat = self.chats.get(normalized) or self.chats.get(remote_jid)
         if chat is None:
-            return
+            return False
         marker = getattr(self, "_locally_read_at", {}).get(normalized)
         if marker is None:
             marker = getattr(self, "_locally_read_at", {}).get(remote_jid)
@@ -26040,17 +26315,20 @@ class MainWindow(wx.Frame):
                 getattr(self, "_new_since_read", {}).get(remote_jid, 0),
             ) > 0
         ):
-            return
+            return False
         chat["unreadCount"] = max(0, int(previous_unread or 0))
         self._locally_read_at.pop(normalized, None)
         self._locally_read_at.pop(remote_jid, None)
         # The read is being undone, so the anchor it installed goes with it.
         self._drop_unread_local_read_anchor(normalized)
         self._drop_unread_local_read_anchor(remote_jid)
-        self._persist_locally_read_at()
         self._schedule_save(dirty_jid=normalized)
+        if batched:
+            return True
+        self._persist_locally_read_at()
         self._refresh_chat_row_in_list(normalized)
         self._schedule_set_chats()
+        return True
 
     def mark_conversation_as_unread(self, remote_jid: str):
         chat = self.chats.get(remote_jid)
@@ -28173,13 +28451,47 @@ class MainWindow(wx.Frame):
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json"
         }
+        # Three answers, not two. The caller rolls the optimistic edit back only
+        # on False, so False must mean "WhatsApp did not take it" — never "we
+        # do not know". An edit that did go through reaches us first through
+        # onMessageEdit (wa-js fires chat.msg_edited inside
+        # addAndSendMessageEdit, before the HTTP response is released), finds
+        # the same text already on the row and is consumed; rolling back after
+        # that leaves the row wrong with nothing left to re-apply it.
         try:
             r = api_post(url, json=payload, headers=headers, timeout=15)
-            if r.status_code not in (200, 201):
-                logging.error("[edit_message] HTTP %s for %s: %s",
-                              r.status_code, full_id, r.text[:300])
+            if r.status_code in (200, 201):
+                return True
+            logging.error("[edit_message] HTTP %s for %s: %s",
+                          r.status_code, full_id, r.text[:300])
+            # Refusals proven to happen before anything is sent: WhatsApp
+            # Web's canEditMsg() said no (measured: a 59-minute-old message),
+            # or the session was not connected and the middleware answered
+            # before any controller ran. Any other error can come after the
+            # edit was dispatched — wppconnect compares the stored body with
+            # newText once the edit is out, and wa-js trims it — so it stays
+            # unknown.
+            if "Cannot edit this message" in (r.text or ""):
+                return False
+            if response_not_sent(r.text):
+                return False
+            return None
+        except requests.exceptions.ConnectTimeout as exc:
+            logging.error("[edit_message] could not reach WPPConnect for %s: %s", full_id, exc)
+            return False
+        except requests.exceptions.ReadTimeout as exc:
+            logging.error("[edit_message] timed out for %s (outcome unknown): %s", full_id, exc)
+            return None
+        except requests.exceptions.ConnectionError as exc:
+            # Only a refused connection proves nothing was sent; the same class
+            # also carries a connection dropped after the request went out.
+            refused = connection_refused(exc)
+            logging.error("[edit_message] connection error for %s (%s): %s", full_id,
+                          "refused" if refused else "outcome unknown", exc)
+            return False if refused else None
         except Exception as exc:
-            logging.error("[edit_message] exception for %s: %s", full_id, exc)
+            logging.error("[edit_message] exception for %s (outcome unknown): %s", full_id, exc)
+            return None
 
     def delete_message_for_everyone(self, remote_jid: str, msg_key: dict) -> bool:
         """Revoke a message for everyone via POST /api/session/delete-message.

@@ -51,6 +51,7 @@ class _FakeMainWindow:
 
 class _Panel:
     _apply_message_edit = ConversationsPanel._apply_message_edit
+    _send_message_edit = ConversationsPanel._send_message_edit
 
     def __init__(self, messages=(), editing_id="m1", mentions=None, focused=-1):
         self.main_window = _FakeMainWindow()
