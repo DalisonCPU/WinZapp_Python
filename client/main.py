@@ -48,6 +48,7 @@ from core.sound_system import (
 from core.audio_devices import find_input_device_index, test_input_device
 from core.bulk_read_state import run_bulk_read_state
 from core.message_edit import (
+    apply_caption_edit,
     carry_over_edited_marker,
     connection_refused,
     is_edit_event,
@@ -6078,22 +6079,31 @@ class MainWindow(wx.Frame):
         self._schedule_set_chats()
 
     def _apply_possible_edit(self, existing: dict, incoming: dict, remote_jid: str):
-        """Detect and apply a text-message edit re-delivered under the same key.id.
+        """Detect and apply an edit re-delivered under the same key.id.
 
-        WhatsApp reuses the original message's ID when a text message is
-        edited (own edits via edit_message(), or an edit made by anyone else
-        from any device) — the edited copy arrives back through the exact
-        same live-message channel as any other message, just with a
-        duplicate key.id. Without this, the dedup check right above ("already
-        stored") silently discarded it, so edits from other people never
-        appeared at all, and our own edits only showed locally because
-        conversations.py already updates them optimistically when sent.
-        Only text messages can be edited (WhatsApp's own edit window never
-        applies to media/audio/etc.), so comparing "conversation"/
-        "extendedTextMessage" text is a reliable, format-agnostic signal —
-        it never fires for a plain re-sync of an unrelated message type.
+        WhatsApp reuses the original message's ID when a message is edited
+        (own edits via edit_message(), or an edit made by anyone else from any
+        device) — the edited copy arrives back through the exact same
+        live-message channel as any other message, just with a duplicate
+        key.id. Without this, the dedup check right above ("already stored")
+        silently discarded it, so edits from other people never appeared at
+        all, and our own edits only showed locally because conversations.py
+        already updates them optimistically when sent.
+
+        Text is compared directly. An image, video or document can have its
+        caption edited too (WhatsApp's getMsgEditType maps those to
+        CaptionEdit); that goes through core.message_edit.apply_caption_edit(),
+        which acts only on a copy WhatsApp itself marks as edited and changes
+        nothing but the caption.
         """
         if self._apply_remote_revoke(existing, incoming, remote_jid):
+            return
+
+        caption_result = apply_caption_edit(existing, incoming)
+        if caption_result is not None:
+            logging.info("[edit] caption edit %s for %s in %s", caption_result,
+                         ((existing.get("key") or {}).get("id") or "")[:22], remote_jid)
+            self._persist_and_repaint_edit(existing, remote_jid)
             return
 
         def _text_of(m):

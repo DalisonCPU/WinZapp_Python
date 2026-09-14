@@ -189,6 +189,62 @@ def carry_over_edited_marker(new_msgs, old_msgs) -> int:
     return carried
 
 
+#: Message sub-keys whose ``caption`` WhatsApp lets the sender edit
+#: (WAWebMessageEditUtils.getMsgEditType: IMAGE/VIDEO/DOCUMENT → CaptionEdit).
+_CAPTION_EDIT_KEYS = ("imageMessage", "videoMessage", "documentMessage")
+
+
+def _caption_part(msg):
+    """``(sub_key, media_dict)`` for an image/video/document record, else None."""
+    body = (msg or {}).get("message") if isinstance(msg, dict) else None
+    if not isinstance(body, dict):
+        return None
+    for key in _CAPTION_EDIT_KEYS:
+        if isinstance(body.get(key), dict):
+            return key, body[key]
+    return None
+
+
+def apply_caption_edit(existing: dict, incoming: dict):
+    """Apply a live caption edit to *existing*, in place.
+
+    Returns ``"changed"`` when the caption was replaced, ``"marked"`` when only
+    the "Editada" marker was missing, and None when nothing was done.
+
+    _apply_possible_edit() used to compare text only, and a media record has no
+    text, so an edited caption arriving live under the message's own id was
+    ignored: the old caption and no marker stayed until a later sync replaced
+    the whole record. Deliberately narrow, because a live caption edit has not
+    been observed end to end (only text edits have):
+
+    - it acts only when the incoming copy says WhatsApp marked the message
+      edited (``_edited``, set by the normaliser from ``latestEditMsgKey``), so
+      an ordinary redelivery of the same media can never rewrite anything;
+    - only the ``caption`` field changes — URL, media key, a measured duration
+      and anything else on the stored media dict stay as they are, unlike the
+      text path, which replaces the whole body;
+    - an empty incoming caption never erases one (the normaliser blanks a
+      caption that looks like binary thumbnail data, which is not an edit).
+    """
+    if not isinstance(incoming, dict) or not incoming.get("_edited"):
+        return None
+    old = _caption_part(existing)
+    new = _caption_part(incoming)
+    if old is None or new is None or old[0] != new[0]:
+        return None
+    new_caption = new[1].get("caption")
+    if not isinstance(new_caption, str) or not new_caption:
+        return None
+    if old[1].get("caption") != new_caption:
+        old[1]["caption"] = new_caption
+        existing["_edited"] = True
+        return "changed"
+    if not existing.get("_edited"):
+        existing["_edited"] = True
+        return "marked"
+    return None
+
+
 _EDIT_STATE_FIELDS = ("message", "messageType", "contextInfo", "_edited")
 _ABSENT = "__absent__"
 
