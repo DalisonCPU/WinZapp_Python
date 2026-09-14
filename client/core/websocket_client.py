@@ -7,6 +7,7 @@ import wx
 import requests
 from core.api_client import api_get, api_post
 from core.i18n import I18n
+from core.message_edit import MESSAGE_EDIT, clean_message_id
 from core.sync_contracts import observe_payload
 from core.utils import looks_like_binary_blob, looks_like_jid, _slim_quoted_message, parse_bool_flag as _parse_bool_flag
 
@@ -2374,6 +2375,7 @@ class WebSocketClient:
 
         message_content = {}
         _promoted_to_extended_text = False
+        _is_edit_event = False
         if msg_type == "chat":
             if _has_link_preview:
                 message_content = {
@@ -2547,6 +2549,23 @@ class WebSocketClient:
                     "type": 3
                 }
             }
+        elif msg_type == "protocol" and wpp_msg.get("subtype") == "message_edit":
+            # An edit's protocol message, never a message itself — see
+            # core/message_edit.py. Its `body` is the edited text, and without
+            # this branch the text fallback below rendered it as a brand-new
+            # message under an id nothing had stored (reproduced live).
+            #
+            # Deliberately limited to `message_edit`, the only subtype that has
+            # been observed. Any other `protocol` subtype keeps going through
+            # the generic handling below exactly as before: hiding one nobody
+            # has seen would be a guess, and a guess that could hide content.
+            message_content = {
+                "protocolMessage": {
+                    "type": MESSAGE_EDIT,
+                    "key": clean_message_id(wpp_msg.get("protocolMessageKey")),
+                }
+            }
+            _is_edit_event = True
         elif msg_type == "gp2":
             # Group membership/settings notifications (join, leave, removed,
             # promoted, subject/description/picture change, …). WPPConnect
@@ -2617,6 +2636,8 @@ class WebSocketClient:
         mapped_type = type_mapping.get(msg_type, msg_type)
         if _promoted_to_extended_text:
             mapped_type = "extendedTextMessage"
+        if _is_edit_event:
+            mapped_type = "protocolMessage"
 
         ack = wpp_msg.get("ack")
         message_updates = []

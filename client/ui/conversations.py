@@ -1,4 +1,5 @@
 import base64 as _b64
+import copy
 import logging
 import mimetypes
 import os
@@ -27,6 +28,13 @@ from core.audio_devices import (
 )
 from core.audio_transcode import transcode_audio_to_wav
 from core.attachment_types import classify_attachment_media_type
+from core.message_edit import (
+    EDIT_UI_WINDOW_SECONDS,
+    edit_window_open,
+    edited_text_message,
+    restore_edit_state,
+    snapshot_edit_state,
+)
 from core.sound_system import load_sound
 from core.link_preview import find_first_url, fetch_link_preview
 from ui.accessible import (
@@ -2292,20 +2300,6 @@ class ConversationsPanel(wx.Panel):
         # that already had mentions silently dropped them.
         api_text, edit_mentions = self._build_mention_payload(text)
 
-        # Call WPPConnect to update the message — on a worker thread.
-        # edit-message drives Puppeteer/WhatsApp Web and routinely takes a
-        # second or two to come back (its own timeout is 15s); running it
-        # inline here froze the whole window for that long on every edit,
-        # the one server-backed message action still doing that. Everything
-        # below is the local, optimistic update — the same shape
-        # _on_menu_pin_message() uses.
-        threading.Thread(
-            target=self.main_window.edit_message,
-            args=(remote_jid, msg_id, api_text),
-            kwargs={"mentioned_jids": edit_mentions},
-            daemon=True,
-        ).start()
-
         # Re-locate the message by ID rather than trusting the row index
         # captured when edit mode was entered: a background sync can call
         # populate_messages() at any point while the user is typing,
@@ -2322,19 +2316,26 @@ class ConversationsPanel(wx.Panel):
         )
 
         # Update local state
+        snapshot = applied_message = None
         if 0 <= idx < len(self._sorted_messages):
             edited = self._sorted_messages[idx]
+            # Taken before the optimistic rewrite, so a refusal from WhatsApp
+            # can put the row back — see _rollback_message_edit().
+            snapshot = snapshot_edit_state(edited)
+            # edited_text_message() keeps a reply's quote when it lives inside
+            # the body (every reply that came from sync or the phone), which a
+            # bare rewrite to `conversation` silently dropped from the row.
             if edit_mentions:
                 # Same shape the send path builds for a mentioning message,
                 # so _get_message_content() rewrites @phone → @DisplayName
                 # and _extract_mentions() finds the JIDs for the hyperlinks.
-                edited["message"] = {"extendedTextMessage": {"text": api_text}}
-                edited["messageType"] = "extendedTextMessage"
+                edited["message"], edited["messageType"] = edited_text_message(
+                    edited, api_text, extended=True)
                 ctx = edited.setdefault("contextInfo", {})
                 ctx["mentionedJid"] = edit_mentions
             else:
-                edited["message"] = {"conversation": text}
-                edited["messageType"] = "conversation"
+                edited["message"], edited["messageType"] = edited_text_message(
+                    edited, text)
                 # An edit that removed every mention must clear the old list
                 # too, or the stale hyperlinks stay on screen forever.
                 ctx = edited.get("contextInfo")
@@ -2342,6 +2343,7 @@ class ConversationsPanel(wx.Panel):
                     ctx.pop("mentionedJid", None)
                     ctx.pop("mentionedJidList", None)
             edited["_edited"] = True
+            applied_message = copy.deepcopy(edited.get("message"))
             self.messages_list.SetItemText(
                 idx, self._render_message_line(edited)
             )
@@ -2369,7 +2371,73 @@ class ConversationsPanel(wx.Panel):
                 )
                 self._update_mentions_panel(self._extract_mentions(edited))
 
+        # Call WPPConnect to update the message — on a worker thread.
+        # edit-message drives Puppeteer/WhatsApp Web and routinely takes a
+        # second or two to come back (its own timeout is 15s); running it
+        # inline here froze the whole window for that long on every edit,
+        # the one server-backed message action still doing that. Started
+        # after the local, optimistic update above (the same shape
+        # _on_menu_pin_message() uses) only so the snapshot and the body it
+        # wrote exist to hand over; a failure is reported through
+        # wx.CallAfter, which cannot run before this handler returns anyway.
+        threading.Thread(
+            target=self._send_message_edit,
+            args=(remote_jid, msg_id, api_text, edit_mentions, snapshot, applied_message),
+            daemon=True,
+        ).start()
+
         self._on_cancel_edit()
+
+    def _send_message_edit(self, remote_jid, msg_id, api_text, edit_mentions,
+                           snapshot, applied_message):
+        """Worker: send the edit, and undo the optimistic update if refused.
+
+        Only an explicit False is a refusal; None (a timeout, an error that may
+        have come after the edit went out) keeps the optimistic text — see
+        MainWindow.edit_message(). WhatsApp answers "Cannot edit this
+        message" once the message is past its edit window, and before this the
+        row kept the new text and the "Editada" marker while nobody else ever
+        received the edit.
+        """
+        ok = self.main_window.edit_message(
+            remote_jid, msg_id, api_text, mentioned_jids=edit_mentions)
+        if ok is False:
+            wx.CallAfter(self._rollback_message_edit, remote_jid, msg_id,
+                         snapshot, applied_message)
+
+    def _rollback_message_edit(self, remote_jid, msg_id, snapshot, applied_message):
+        """Main thread: restore a refused edit's row and say it failed."""
+        restored_idx = -1
+        if snapshot is not None:
+            candidates = [(i, m) for i, m in enumerate(self._sorted_messages)
+                          if isinstance(m, dict)
+                          and (m.get("key") or {}).get("id") == msg_id]
+            chat = self.main_window.get_chat(remote_jid)
+            records = ((chat or {}).get("messages", {}).get("messages", {})
+                       .get("records", []))
+            candidates += [(-1, r) for r in records
+                           if isinstance(r, dict)
+                           and (r.get("key") or {}).get("id") == msg_id
+                           and all(r is not m for _, m in candidates)]
+            for i, record in candidates:
+                if restore_edit_state(record, snapshot, applied_message) and i >= 0:
+                    restored_idx = i
+            if restored_idx >= 0:
+                restored = self._sorted_messages[restored_idx]
+                self.messages_list.SetItemText(
+                    restored_idx, self._render_message_line(restored))
+                # Same as the apply path: the panels under the list only follow
+                # focus changes, so a refused edit that added a mention would
+                # otherwise keep offering it.
+                if self.messages_list.GetFocusedItem() == restored_idx:
+                    self._update_links_panel(
+                        self._extract_links(self._render_message_line(restored)))
+                    self._update_mentions_panel(self._extract_mentions(restored))
+            if candidates:
+                self.main_window._schedule_save(dirty_jid=remote_jid)
+                self.main_window._schedule_set_chats()
+        self.main_window.output(
+            self.main_window.i18n.t("edit_message_failed"), interrupt=True)
 
     def _send_new_text_message(self, text: str, remote_jid: str):
         """Queue a brand-new text message and show it as pending right away.
@@ -4660,12 +4728,12 @@ class ConversationsPanel(wx.Panel):
             )
             self.Bind(wx.EVT_MENU, self._on_action_save_as, save_audio_item)
 
-        # Edit (own text messages within 3 hours)
+        # Edit (own text messages within WhatsApp's edit window — see
+        # core.message_edit.EDIT_UI_WINDOW_SECONDS for how it was measured)
         _is_own      = msg.get("key", {}).get("fromMe", False)
         _is_text     = msg_type in ("conversation", "extendedTextMessage")
-        _msg_ts      = msg.get("messageTimestamp", 0)
-        _within_3h   = (time.time() - _msg_ts) < 10800
-        if _is_own and _is_text and _within_3h:
+        _can_edit    = edit_window_open(msg.get("messageTimestamp"))
+        if _is_own and _is_text and _can_edit:
             edit_item = menu.Append(wx.ID_ANY, f"{i18n.t('edit_message')}\tAlt+E")
             self.Bind(
                 wx.EVT_MENU,
@@ -12318,7 +12386,15 @@ class ConversationsPanel(wx.Panel):
             return
         if msg.get("messageType") not in ("conversation", "extendedTextMessage"):
             return
-        if (time.time() - msg.get("messageTimestamp", 0)) >= 10800:
+        if not edit_window_open(msg.get("messageTimestamp")):
+            # Said out loud: a shortcut that silently does nothing reads as a
+            # broken shortcut to a screen-reader user, and this is by far the
+            # most common reason an own text message cannot be edited.
+            self.main_window.output(
+                self.main_window.i18n.t("edit_window_expired").format(
+                    minutes=EDIT_UI_WINDOW_SECONDS // 60),
+                interrupt=True,
+            )
             return
         self._on_menu_edit_message(index, msg)
 
@@ -15819,8 +15895,9 @@ class ConversationsPanel(wx.Panel):
 
     def _on_mass_mark_read_chats(self, event):
         if not self.selected_chats: return
-        for jid in list(self.selected_chats):
-            self.main_window.mark_conversation_as_read(jid, True)
+        # One paced batch, not one /send-seen per chat at once — see
+        # MainWindow.mark_conversations_as_read().
+        self.main_window.mark_conversations_as_read(list(self.selected_chats), force=True)
         self.selected_chats.clear()
         self.main_window.add_chats_to_ui()
 

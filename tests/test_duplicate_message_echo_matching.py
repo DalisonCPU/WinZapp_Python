@@ -182,6 +182,7 @@ class _SyncExecutor:
 
 class _Stub:
     on_new_message = MainWindow.on_new_message
+    _drop_protocol_edit = MainWindow._drop_protocol_edit
 
     def __init__(self, chat, own_sent_ids=()):
         self.chats = {REMOTE: chat}
