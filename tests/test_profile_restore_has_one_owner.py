@@ -212,6 +212,23 @@ class TestAStuckRestoreCannotSilenceTheFloodForever:
         # + ~20.5 settle (its 5 s deadline is only checked after a 15 s scan).
         assert WebSocketClient._RESTORE_FLIGHT_IGNORE_SECONDS >= 2 * (10 + 35 + 15 + 20.5)
 
+    def test_an_overdue_restore_does_not_open_the_dialog_on_a_confirmed_reading(self):
+        """Past the window the codes count again, but only towards the halt:
+        a confirmed reading must not reach the recovery (refused, it is still
+        latched) and fall through to the pairing dialog over the stalled copy."""
+        s, halts = self._handler(
+            time.monotonic() - WebSocketClient._RESTORE_FLIGHT_IGNORE_SECONDS - 1)
+        mw = s.main_window
+        mw._auto_repair_dialog_shown = False
+        dialogs = []
+        s._show_repair_dialog = lambda *a, **kw: dialogs.append(1)
+        mw._recover_suspect_profile = lambda *a, **kw: False
+
+        for _ in range(WebSocketClient._REPAIR_DIALOG_CONFIRM_EVENTS):
+            s._handle_unattended_qr()
+
+        assert dialogs == []
+
 
 class TestBothRestartPathsCheckAgainRightBeforeStarting:
     """A restore can begin while either restart is inside its close or its

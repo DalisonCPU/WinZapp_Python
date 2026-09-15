@@ -9726,6 +9726,11 @@ class MainWindow(wx.Frame):
                                     "stalled — not restoring over it.")
                     self._shutdown_audit("profile restore abandoned — halted or "
                                          "re-pairing began first")
+                    # Give back the rung this call climbed: no restore
+                    # happened, so the next launch must not reach for `.prev`
+                    # on the strength of one. (The rejected fingerprint stays
+                    # recorded — WhatsApp really did refuse that profile.)
+                    self._set_profile_recovery_generation(generation)
                     return
                 if profile_recovery.restore_snapshot(
                         global_dir, session_name, prefer_previous=prefer_previous):

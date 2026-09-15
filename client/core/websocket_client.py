@@ -265,8 +265,9 @@ class WebSocketClient:
     # deadline is only checked after a scan of up to 15 s and can start a
     # second one, ~20.5 s. A code arriving after more than twice that means the
     # browser survived all of it. taskkill itself has no timeout, which no
-    # figure here can bound — that is what the ceiling below is for. The copy itself can take
-    # longer than this on a slow disk; that does not matter, because a restore
+    # figure here can bound — that is what the ceiling below is for. The copy
+    # itself can take longer than this on a slow disk; that does not matter,
+    # because a restore
     # that got that far has no browser left to mint codes. Only a restore that
     # is slow AND still producing codes is ever counted — and for that one the
     # flood ceiling is worth more than protecting the copy.

@@ -359,3 +359,20 @@ class TestAStalledRestoreDoesNotCopyOverWhatReplacedIt:
         assert "profile_corrupted_repair_needed" not in stub.announced
         assert stub._profile_restore_in_flight is False
         assert stub._recovery_restart_active is False
+
+
+def test_an_abandoned_restore_gives_back_the_generation_it_climbed(stub, monkeypatch):
+    """Otherwise a user who quits instead of re-pairing starts the next launch
+    one rung up the ladder, restoring `.prev` for a restore that never ran."""
+    monkeypatch.setattr("core.profile_recovery.restore_snapshot",
+                        lambda *a, **kw: pytest.fail("copied over a re-pairing"))
+    stub.db.set_metadata_json(MainWindow._PROFILE_RECOVERY_GENERATION_KEY, 0)
+
+    def meanwhile(session_name, timeout=None):
+        stub._qr_flood_halted = True
+        return True
+
+    stub.wait_for_profile_release = meanwhile
+    MainWindow._recover_suspect_profile(stub)
+
+    assert stub.db.get_metadata_json(MainWindow._PROFILE_RECOVERY_GENERATION_KEY) == 0
