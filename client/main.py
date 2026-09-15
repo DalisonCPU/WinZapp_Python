@@ -1875,6 +1875,7 @@ class MainWindow(wx.Frame):
         # a session being closed and a profile being put back.
         # _handle_unattended_qr() (websocket_client.py) reads it: see there.
         self._profile_restore_in_flight = False
+        self._profile_restore_started_at = 0.0
         self._unresolvable_lids = set()
         self._unresolvable_names = set()
         self._resolving_lids = set()
@@ -4433,6 +4434,15 @@ class MainWindow(wx.Frame):
 
     def _run_recovery_attempts(self, token, cs):
         for attempt in range(1, self._RECOVERY_MAX_ATTEMPTS + 1):
+            if getattr(self, "_profile_restore_in_flight", False):
+                # A profile restore took the session over (it closes it first,
+                # which is exactly the CLOSED this loop would otherwise answer
+                # with a restart). Restarting now would start Chrome over a
+                # profile being copied back; the restore hands the session to
+                # the normal health loop when it finishes.
+                logging.info("[power] recovery: a profile restore owns the "
+                             "session — stopping before attempt %d.", attempt)
+                return
             # Before each attempt re-check: the session may have connected or
             # dropped to a user-action state during the previous settle+cooldown
             # (GPT r4 #3). Never restart something that's already good/waiting.
@@ -8927,6 +8937,11 @@ class MainWindow(wx.Frame):
             or bool(getattr(self, "_wpp_updating", False))
             or bool(getattr(self, "_recovery_restart_active", False))
             or bool(getattr(self, "_restarting_wpp_session", False))
+            # A profile restore closes this session itself, and normally sets
+            # _recovery_restart_active too — but that flag has a second owner
+            # (_force_whatsapp_session_restart), whose finally can clear it
+            # mid-restore. This one only the restore clears (issue #203 review).
+            or bool(getattr(self, "_profile_restore_in_flight", False))
         )
 
     def _reset_unattended_qr_guards(self) -> None:
@@ -9749,6 +9764,7 @@ class MainWindow(wx.Frame):
         # back, instead of tearing down on top of a half-copied leveldb.
         self._recovery_restart_active = True
         self._profile_restore_in_flight = True
+        self._profile_restore_started_at = time.monotonic()
         try:
             threading.Thread(target=_restore, daemon=True).start()
         except Exception:
@@ -9782,6 +9798,17 @@ class MainWindow(wx.Frame):
         try:
             if (getattr(self, "_profile_recovery_attempted", False)
                     or getattr(self, "_profile_restore_in_flight", False)):
+                return False
+            # Another close/start cycle already owns the session: the
+            # power-resume restart (_recovery_restart_active) or the in-place
+            # restart after a detached page (_restarting_wpp_session). Starting
+            # a restore under either gives the session two owners, and each
+            # one's next step (a restart, a /start-session once its flag
+            # clears) lands on a profile the other is copying back. Both stop
+            # on their own once the session asks for a code, so waiting costs
+            # at most the next code — the review of issue #203 found this.
+            if (getattr(self, "_recovery_restart_active", False)
+                    or getattr(self, "_restarting_wpp_session", False)):
                 return False
             session_name = (getattr(self, "token", "") or "").split(":")[0]
             global_dir = getattr(self, "global_dir", None)
@@ -13844,7 +13871,14 @@ class MainWindow(wx.Frame):
                     block = cs.auto_start_block_reason(
                         pairing_dialog_active=self._is_pairing_dialog_active(),
                         qr_flood_halted=getattr(self, "_qr_flood_halted", False),
-                        recovery_restart_active=getattr(self, "_recovery_restart_active", False),
+                        # _profile_restore_in_flight as well: _recovery_restart_active
+                        # has two owners, and the power-resume restart's finally
+                        # clears it while a profile restore it overlapped is still
+                        # copying — a /start-session here would open Chrome over
+                        # that copy (issue #203 review).
+                        recovery_restart_active=(
+                            getattr(self, "_recovery_restart_active", False)
+                            or getattr(self, "_profile_restore_in_flight", False)),
                         self_inflicted_teardown=self._self_inflicted_teardown_expected(),
                     )
                     if block:

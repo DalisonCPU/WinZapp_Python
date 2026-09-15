@@ -190,9 +190,10 @@ class WebSocketClient:
     #   * one code starts the restore;
     #   * codes during the restore's flight are not counted and trigger
     #     nothing — the restore has already closed the session, and
-    #     _handle_unattended_qr() explains why they are stragglers, at most
-    #     one or two (close-session's 10 s timeout plus the 20 s release
-    #     wait, against a ~20-30 s rotation);
+    #     _handle_unattended_qr() explains why they are stragglers, two or
+    #     three in the worst case (about a minute of close, release wait and
+    #     kill, against a ~20-30 s rotation), and never for longer than
+    #     _RESTORE_FLIGHT_IGNORE_SECONDS;
     #   * after it, a successful restore zeroes this counter on the restore
     #     thread (the burst was minted by the profile now moved aside) and a
     #     failed one leaves it where it stood, so the flood that follows is
@@ -254,6 +255,18 @@ class WebSocketClient:
     # measured 11 s between a restored profile connecting and a superseded
     # session start force-killing its browser.
     _REPAIR_DIALOG_CONFIRM_EVENTS = 2
+
+    # How long _handle_unattended_qr() leaves codes to a profile restore in
+    # flight before counting them again. A restore closes the session first and
+    # kills whatever still holds the profile about a minute in at worst
+    # (close-session's 10 s timeout, a 20 s release deadline whose polls can
+    # run past it, the kill and its settle), so a code arriving after twice
+    # that means the browser survived all of it. The copy itself can take
+    # longer than this on a slow disk; that does not matter, because a restore
+    # that got that far has no browser left to mint codes. Only a restore that
+    # is slow AND still producing codes is ever counted — and for that one the
+    # flood ceiling is worth more than protecting the copy.
+    _RESTORE_FLIGHT_IGNORE_SECONDS = 150
 
     def __init__(self, main_window, connect, instance_name):
         self.main_window = main_window
@@ -1039,22 +1052,33 @@ class WebSocketClient:
             # is already back to 0 — _update_ui() zeroes it for the same
             # condition before any branch runs.
             return
+        restore_overdue = False
         if getattr(mw, "_profile_restore_in_flight", False):
+            started = getattr(mw, "_profile_restore_started_at", 0.0) or 0.0
+            restore_overdue = (started > 0 and time.monotonic() - started
+                               >= self._RESTORE_FLIGHT_IGNORE_SECONDS)
+        if getattr(mw, "_profile_restore_in_flight", False) and not restore_overdue:
             # A profile restore owns this session right now, and it is already
             # doing everything the two outcomes below exist for — so this code
             # gets neither, and is not counted.
             #
             # It is already the halt. _recover_suspect_profile()'s thread opens
             # with /close-session and then wait_for_profile_release(), which
-            # kills whatever still holds the profile after 20 s; and for the
-            # whole flight _recovery_restart_active keeps
-            # check_wa_connection_http() from issuing /start-session, which is
-            # the only thing the halt's latch adds. A restore stuck in its copy
-            # has no browser left to mint codes with. So what can still arrive
-            # here are stragglers from the session being closed: bounded by the
-            # close-session timeout (10 s) plus that release wait (20 s), i.e.
-            # at most one or two at WhatsApp's ~20-30 s rotation, and only when
-            # close-session itself failed.
+            # kills whatever still holds the profile once its 20 s deadline
+            # passes; and for the whole flight check_wa_connection_http() will
+            # not issue /start-session, which is the only thing the halt's
+            # latch adds. That last part rests on _profile_restore_in_flight
+            # itself, not only on _recovery_restart_active: the latter has a
+            # second owner (the power-resume restart) whose finally can clear it
+            # mid-restore, so the auto-start block, the self-inflicted-teardown
+            # check and that restart's own loop all read this flag too (the
+            # review of issue #203 found the overlap). A restore stuck in its
+            # copy has no browser left to mint codes with. What can still
+            # arrive are stragglers from the session being closed: a release
+            # poll can itself take up to 15 s, then the kill and its settle, so
+            # roughly a minute and two or three codes at WhatsApp's ~20-30 s
+            # rotation in the worst case — more often none, since a
+            # close-session that answers stops the page at once.
             #
             # And each outcome would do harm here. The halt latches
             # _qr_flood_halted, which blocks /start-session until the user
@@ -1070,15 +1094,26 @@ class WebSocketClient:
             # a halt stops being evaluated (see the `>=` below). The count
             # resumes from where it stood if the restore fails, and from 0 if
             # it succeeds (the restore thread resets it).
+            #
+            # Bounded by _RESTORE_FLIGHT_IGNORE_SECONDS: a restore still in
+            # flight past that, with codes still arriving, means the close and
+            # the kill both failed to stop the browser, and an unbounded code
+            # stream is the one outcome worse than either of the above.
             logging.info("[on_qrcode_update] code arrived while a profile "
                          "restore is closing this session — ignored.")
             return
+        if restore_overdue:
+            logging.warning(
+                "[on_qrcode_update] a profile restore has been in flight for "
+                "over %ds and codes are still arriving — counting them towards "
+                "the flood ceiling again.", self._RESTORE_FLIGHT_IGNORE_SECONDS)
         seen = getattr(mw, "_unattended_qr_events", 0) + 1
         mw._unattended_qr_events = seen
         paired = bool(mw.settings.get("privateinfo", {}).get("paired"))
         confirmed = (not self._qr_within_startup_grace()
                      and seen >= self._REPAIR_DIALOG_CONFIRM_EVENTS)
         if (paired
+                and not restore_overdue
                 and not getattr(mw, "_auto_repair_dialog_shown", False)
                 and not confirmed
                 and mw._profile_restore_worth_trying()):
@@ -1119,11 +1154,15 @@ class WebSocketClient:
                            "install — the stored session could not be restored",
                     on_give_up=self._repair_gave_up):
                 return
-            # Nothing started after all (a snapshot check raced, or the latch
-            # was taken in between): not confirmed, so no dialog — the halt
-            # below still gets its say on this very event.
+            # Nothing started after all — the disk changed between the check
+            # and the recovery's own reading of it, or the recovery refused on
+            # a browser that cannot start (practically unreachable here: a code
+            # means a browser did start, and that refusal announces itself).
+            # Not confirmed, so no dialog; the halt below still gets its say on
+            # this very event.
         elif (
             paired
+            and not restore_overdue
             and not getattr(mw, "_auto_repair_dialog_shown", False)
             and confirmed
         ):
