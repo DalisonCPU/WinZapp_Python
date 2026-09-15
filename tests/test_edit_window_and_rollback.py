@@ -171,9 +171,14 @@ class _Panel:
     def _build_mention_payload(self, text):
         return text, None
 
-    def _render_message_line(self, msg, index=None, total=None):
+    def _render_message_line(self, msg, index=None, total=None, include_quoted_preview=True):
         body = msg.get("message") or {}
         return body.get("conversation") or (body.get("extendedTextMessage") or {}).get("text", "")
+
+    def _message_own_links(self, msg):
+        return self._extract_links(
+            self._render_message_line(msg, include_quoted_preview=False)
+        )
 
     def _on_cancel_edit(self):
         self.cancelled += 1
