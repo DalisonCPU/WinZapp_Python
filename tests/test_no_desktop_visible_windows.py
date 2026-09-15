@@ -94,23 +94,7 @@ class TestTheDefaultRunIsSafe:
         offenders = []
         for wf in workflows:
             for i, line in enumerate(wf.read_text(encoding="utf-8").splitlines(), 1):
-                stripped = line.strip()
-                if stripped.startswith("#"):
-                    continue
-                # Both shapes: `run: pytest ...` on one line, and a bare
-                # `pytest ...` inside a `run: |` block. Only the first exists
-                # today, but the block form is the natural way somebody adds
-                # a second command later, and a guard that misses it fails
-                # silently in the one direction that matters.
-                if stripped.startswith("run:"):
-                    command = stripped[len("run:"):].strip()
-                elif re.match(r"^(?:-\s+)?[A-Za-z_][\w-]*:(?:\s|$)", stripped):
-                    # Any other YAML key — `- name: Run pytest` names a step,
-                    # it runs nothing.
-                    continue
-                else:
-                    command = stripped
-                command = _as_pytest_invocation(command)
+                command = _pytest_command_in_workflow_line(line)
                 if command is None:
                     continue
                 if "--run-wx-gui" not in command:
@@ -146,6 +130,46 @@ class TestTheDefaultRunIsSafe:
             'python -c "import wx, pytest_asyncio"',
         ):
             assert _as_pytest_invocation(line) is None, line
+
+    def test_workflow_line_shapes(self):
+        for line in (
+            "        run: uv run pytest",
+            "      - run: uv run pytest",
+            "      - run: pytest -q",
+            "          uv run python -m pytest",
+        ):
+            assert _pytest_command_in_workflow_line(line) is not None, line
+        for line in (
+            "      - name: Run pytest",
+            "        name: Run pytest",
+            "      # run: pytest",
+        ):
+            assert _pytest_command_in_workflow_line(line) is None, line
+
+
+def _pytest_command_in_workflow_line(line):
+    """The pytest command a workflow line runs, or None.
+
+    Both shapes: `run: pytest ...` on one line, and a bare `pytest ...` inside
+    a `run: |` block — the block form is the natural way somebody adds a
+    second command later, and a guard that misses it fails silently in the one
+    direction that matters.
+    """
+    stripped = line.strip()
+    if stripped.startswith("#"):
+        return None
+    # `- run: pytest` is a step with no name; the list marker must not make it
+    # read as "some other YAML key" below.
+    if stripped.startswith("- "):
+        stripped = stripped[2:].lstrip()
+    if stripped.startswith("run:"):
+        command = stripped[len("run:"):].strip()
+    elif re.match(r"^[A-Za-z_][\w-]*:(?:\s|$)", stripped):
+        # Any other YAML key: `name: Run pytest` names a step, it runs nothing.
+        return None
+    else:
+        command = stripped
+    return _as_pytest_invocation(command)
 
 
 def _as_pytest_invocation(command):

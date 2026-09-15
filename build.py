@@ -458,7 +458,10 @@ def _resync_api_patches(out_of_sync):
 def _download_portable_node():
     """Download and checksum-verify the runtime bundled into local builds."""
     print(f"  [bootstrap] Downloading portable Node.js v{NODE_VERSION}...")
-    with tempfile.TemporaryDirectory(prefix="winzapp-node-", dir=ROOT_DIR) as tmp:
+    # ignore_cleanup_errors: a scanner briefly holding a file in the retired
+    # runtime must not fail a build whose Node.js was already replaced.
+    with tempfile.TemporaryDirectory(prefix="winzapp-node-", dir=ROOT_DIR,
+                                     ignore_cleanup_errors=True) as tmp:
         archive = os.path.join(tmp, NODE_FILENAME)
         checksums = os.path.join(tmp, "SHASUMS256.txt")
         urllib.request.urlretrieve(NODE_URL, archive)
@@ -482,6 +485,7 @@ def _download_portable_node():
         extracted = os.path.join(tmp, NODE_TOP_DIR)
         if not os.path.isfile(os.path.join(extracted, "node.exe")):
             raise RuntimeError("Node.js archive did not contain node.exe")
+        retired = None
         if os.path.isdir(NODE_DIR):
             # Rename first: it fails atomically while node.exe is running,
             # where rmtree would delete half the folder and then stop on the
@@ -494,7 +498,13 @@ def _download_portable_node():
                     f"Could not replace {NODE_DIR} ({exc}). Is a WinZapp or "
                     "node.exe started from it still running?"
                 ) from exc
-        shutil.move(extracted, NODE_DIR)
+        try:
+            shutil.move(extracted, NODE_DIR)
+        except OSError:
+            # Put the previous runtime back rather than leave none at all.
+            if retired and not os.path.exists(NODE_DIR):
+                os.rename(retired, NODE_DIR)
+            raise
     print(f"  [bootstrap] Portable Node.js ready at {NODE_DIR}")
 
 

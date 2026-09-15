@@ -34,6 +34,8 @@ client/logs/
 # from the history.
 /client/node/
 /client/node*.zip
+# build.py's Node.js download dir, left behind only by a hard-killed build
+/winzapp-node-*/
 
 # WPPConnect Server runtime (downloaded dynamically via setup_api.py)
 /client/api/

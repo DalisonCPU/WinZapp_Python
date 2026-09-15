@@ -138,10 +138,18 @@ def _windows_lock_closure() -> dict:
     """{package: version} uv installs on Windows, from the project root down."""
     from packaging.markers import Marker
 
-    packages = {
-        canonicalize_name(pkg["name"]): pkg
-        for pkg in tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8")).get("package", [])
-    }
+    entries = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8")).get("package", [])
+    packages = {canonicalize_name(pkg["name"]): pkg for pkg in entries}
+    # The walk below keys packages by name and never follows extras. Neither
+    # happens in today's lock; if either appears, say so instead of quietly
+    # comparing against the wrong version or an incomplete set.
+    assert len(packages) == len(entries), (
+        "uv.lock now records one package at several versions; teach "
+        "_windows_lock_closure() to pick by resolution marker"
+    )
+    assert not any("optional-dependencies" in pkg for pkg in entries) and not any(
+        "extra" in dep for pkg in entries for dep in pkg.get("dependencies", [])
+    ), "uv.lock now uses extras; teach _windows_lock_closure() to follow them"
     root = next(p for p in packages.values() if p.get("source", {}).get("editable") == ".")
 
     def edges(pkg):
