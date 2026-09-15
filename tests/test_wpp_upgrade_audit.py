@@ -157,3 +157,119 @@ class TestHomologatedPair:
             ("dependencies", "multer"): ("^2.2.0", "^2.4.0"),
         }
         assert audit.homologated_pair_moved(changes) == {}
+
+
+class TestRenamesAreNotABlindSpot:
+    """A rename reports only the new path in "filename". Reading just that
+    would print "flows through <new path>" and exit clean while setup_api.py
+    restored WinZapp's copy at the old path and the patch became dead code."""
+
+    def test_both_sides_of_a_rename_are_compared(self, audit):
+        files = [{
+            "filename": "src/util/tokenStore/fileTokenStore.ts",
+            "previous_filename": "src/util/tokenStore/fileTokenStory.ts",
+        }]
+        assert audit.discarded_upstream_changes(audit.compared_paths(files)) == [
+            "src/util/tokenStore/fileTokenStory.ts",
+        ]
+
+    def test_an_ordinary_change_carries_no_previous_name(self, audit):
+        files = [{"filename": "README.md"}, {"filename": "src/config.ts"}]
+        assert audit.compared_paths(files) == ["README.md", "src/config.ts"]
+
+
+class TestDroppedDependencies:
+    def test_a_removal_is_separated_from_the_benign_half(self, audit):
+        """multer is imported by WinZapp's own patched controllers and is not
+        in _PATCHED_DEPENDENCY_KEYS, so "upstream's range governs it" is the
+        wrong reading of it disappearing."""
+        changes = {("dependencies", "multer"): ("^2.2.0", None)}
+        assert audit.dropped_dependencies(changes) == changes
+
+    def test_a_moved_range_is_not_a_removal(self, audit):
+        changes = {("dependencies", "multer"): ("^2.2.0", "^2.4.0")}
+        assert audit.dropped_dependencies(changes) == {}
+
+    def test_a_newly_added_dependency_is_not_a_removal(self, audit):
+        changes = {("dependencies", "undici"): (None, "^6.0.0")}
+        assert audit.dropped_dependencies(changes) == {}
+
+
+class TestEnginesNode:
+    def test_a_matching_pin_is_silent(self, audit):
+        from client.node_download_config import NODE_VERSION
+
+        assert audit.engines_node_mismatch({"engines": {"node": NODE_VERSION}}) == ()
+
+    def test_a_moved_pin_is_reported_against_the_node_we_ship(self, audit):
+        from client.node_download_config import NODE_VERSION
+
+        assert audit.engines_node_mismatch({"engines": {"node": "24.0.0"}}) == (
+            "24.0.0", NODE_VERSION,
+        )
+
+    def test_no_declaration_is_not_a_mismatch(self, audit):
+        assert audit.engines_node_mismatch({}) == ()
+
+
+def _pkg(deps=None, engines_node=None):
+    from client.node_download_config import NODE_VERSION
+
+    return {
+        "version": "2.10.24",
+        "dependencies": dict(deps or {"express": "4.22.2"}),
+        "engines": {"node": engines_node or NODE_VERSION},
+    }
+
+
+class TestTheVerdictItself:
+    """main()'s composition is where a mislabelled finding does its damage,
+    so the decision is tested, not only the helpers feeding it."""
+
+    def test_the_real_clean_bump_reports_no_problems(self, audit):
+        result = audit.audit(
+            CHANGED_2_10_21_TO_24,
+            _pkg({"multer": "^2.2.0"}),
+            _pkg({"multer": "^2.4.0"}),
+        )
+        assert result["problems"] == []
+        assert any("No source changes at all" in line for line in result["lines"])
+
+    def test_release_noise_is_not_reported_as_a_source_change(self, audit):
+        result = audit.audit(CHANGED_2_10_21_TO_24, _pkg(), _pkg())
+        for noisy in ("CHANGELOG.md", "package.json", "yarn.lock"):
+            assert not any(line.strip().endswith(noisy) for line in result["lines"])
+
+    def test_a_discarded_file_is_a_problem(self, audit):
+        result = audit.audit(CHANGED_2_10_18_TO_21, _pkg(), _pkg())
+        assert len(result["problems"]) == 1
+        assert "src/config.ts" in result["problems"][0]
+
+    def test_a_moved_pair_is_a_problem(self, audit):
+        result = audit.audit(
+            CHANGED_2_10_21_TO_24,
+            _pkg({"@wppconnect-team/wppconnect": "^2.3.3"}),
+            _pkg({"@wppconnect-team/wppconnect": "^2.4.0"}),
+        )
+        assert len(result["problems"]) == 1
+        assert "node_modules patches" in result["problems"][0]
+
+    def test_a_dropped_dependency_is_a_problem_not_a_flow_through(self, audit):
+        result = audit.audit(
+            CHANGED_2_10_21_TO_24, _pkg({"multer": "^2.2.0"}), _pkg({})
+        )
+        assert any("Upstream removed" in p for p in result["problems"])
+        assert any("REMOVED UPSTREAM" in line for line in result["lines"])
+
+    def test_an_engines_bump_is_a_problem(self, audit):
+        result = audit.audit(
+            CHANGED_2_10_21_TO_24, _pkg(), _pkg(engines_node="24.0.0")
+        )
+        assert any("Node 24.0.0" in p for p in result["problems"])
+
+    def test_every_reported_line_survives_a_legacy_console(self, audit):
+        """cp850 is cmd.exe's default codepage on a pt-BR Windows, and it was
+        the CLEAN message that crashed there while a flagged one printed."""
+        result = audit.audit(CHANGED_2_10_18_TO_21, _pkg(), _pkg(engines_node="24.0.0"))
+        for line in result["lines"] + result["problems"]:
+            line.encode("cp850")
