@@ -670,6 +670,82 @@ def record_npm_health(marker_path: str, node_version: str) -> None:
         logging.warning("[node] Could not record the npm health marker: %s", exc)
 
 
+def pick_restore_generation(profile_recovery, global_dir, session_name,
+                             generation):
+    """Which snapshot generation a restore would put back, and whether it can.
+
+    Returns ``(prefer_previous, verdict, from_ladder)``. Reads the disk and
+    nothing else — no latch, no counter, no announcement — so it can be
+    asked before a recovery is committed to (MainWindow._profile_restore_worth_trying)
+    as well as by the recovery itself, and both get the same answer.
+
+    verdict is one of:
+      "ok"       — restore the generation prefer_previous names;
+      "climbed"  — the ladder's choice holds a refused state, `.prev` does
+                   not, so prefer_previous is now True;
+      "refused"  — every generation there is holds a refused state;
+      "missing"  — no snapshot of the chosen generation exists.
+
+    Which generation, first. A restore that did not hold means the newest
+    snapshot is itself a profile that no longer authenticates — reachable
+    from a shutdown that did everything right, see previous_snapshot_dir()
+    — so the next launch climbs to the one before it rather than restoring
+    the same failure again. `generation` is that persisted ladder
+    (_profile_recovery_generation(), cleared the moment a session reports
+    CONNECTED); from_ladder says it was what chose `.prev`.
+
+    Then whether it can help. A snapshot identical to the profile that was
+    just rejected cannot, and restoring it is worse than doing nothing: it
+    reports success, spends the launch's one recovery attempt, and leaves
+    the user offline until they happen to restart — because the ladder
+    only climbs on the NEXT launch. This is not hypothetical. Measured on a
+    real install (2026-09-10):
+
+      10:52:45  Chrome released the profile  files=21 bytes=27793052 newest=1789048351
+      10:52:46  profile snapshot refreshed
+      10:53:46  STARTUP                      files=21 bytes=27793052 newest=1789048351
+      10:53:56  Session Unpaired -> post_logout=1&logout_reason=0
+      10:55:48  profile restored from snapshot
+      10:55:56  Session Unpaired -> post_logout=1&logout_reason=0
+
+    Byte-identical fingerprints, and the restored profile was rejected on
+    the same 7.5 s timing as the one it replaced. The run that produced
+    that snapshot HAD reported CONNECTED, which is capture_snapshot()'s
+    gate — so "the session connected" is not evidence that the state it
+    leaves behind will be accepted next time, exactly as
+    previous_snapshot_dir() already says. Climbing happens here rather than
+    next launch, and only when `.prev` is genuinely different: a `.prev`
+    that also matches is no better, and "refused" is the honest answer.
+    """
+    prefer_previous = generation >= 1
+    if prefer_previous and not profile_recovery.has_snapshot(
+            global_dir, session_name, prefer_previous=True):
+        prefer_previous = False
+    from_ladder = prefer_previous
+
+    def _known_bad(previous):
+        # Would restoring this generation offer WhatsApp bytes it has
+        # already refused? Two readings of the same question: identical to
+        # what is on disk right now (this launch), or matching a
+        # fingerprint an earlier launch recorded as rejected.
+        return (profile_recovery.snapshot_matches_live_profile(
+                    global_dir, session_name, prefer_previous=previous)
+                or profile_recovery.snapshot_was_rejected(
+                    global_dir, session_name, prefer_previous=previous))
+
+    if _known_bad(prefer_previous):
+        if (not prefer_previous
+                and profile_recovery.has_snapshot(global_dir, session_name,
+                                                  prefer_previous=True)
+                and not _known_bad(True)):
+            return True, "climbed", from_ladder
+        return prefer_previous, "refused", from_ladder
+    if not profile_recovery.has_snapshot(global_dir, session_name,
+                                         prefer_previous=prefer_previous):
+        return prefer_previous, "missing", from_ladder
+    return prefer_previous, "ok", from_ladder
+
+
 def node_runtime_needs_download(node_exe, npm_cli, marker_path):
     """Whether the portable Node.js runtime has to be replaced wholesale.
 
@@ -1792,6 +1868,13 @@ class MainWindow(wx.Frame):
         # whole passive observation window), so the health loop's auto-start
         # yields to it without being suppressed for the full observation (GPT r5 #3).
         self._recovery_restart_active = False
+        # True only while _recover_suspect_profile()'s restore thread owns the
+        # profile (from before it starts to its finally). Narrower than
+        # _recovery_restart_active, which the power-resume restart also sets
+        # and which covers a session being STARTED; this one only ever covers
+        # a session being closed and a profile being put back.
+        # _handle_unattended_qr() (websocket_client.py) reads it: see there.
+        self._profile_restore_in_flight = False
         self._unresolvable_lids = set()
         self._unresolvable_names = set()
         self._resolving_lids = set()
@@ -4642,9 +4725,11 @@ class MainWindow(wx.Frame):
             # second recovery could then start mid-flood, on an event the
             # counter had already counted, and the caller (on_qrcode_update())
             # returns as soon as recovery starts — landing exactly on the
-            # event where seen == _UNATTENDED_QR_LIMIT stops the halt from
+            # event where seen == _UNATTENDED_QR_LIMIT stopped the halt from
             # ever being evaluated for the rest of that flood, since seen only
-            # grows from there (issue #202). Living here instead means both
+            # grows from there (issue #202; the halt now reads `>=` and its
+            # latch, issue #203, which closes that class of seam on its own
+            # side too). Living here instead means both
             # only ever happen together, on the one event this method already
             # treats as the real online transition.
             # Wrapped, and not defensively: its old home was inside
@@ -9529,22 +9614,12 @@ class MainWindow(wx.Frame):
         from core import profile_recovery
         self._shutdown_audit("profile suspect — %s" % reason)
 
-        # Which generation to put back. A restore that did not hold means the
-        # newest snapshot is itself a profile that no longer authenticates —
-        # reachable from a shutdown that did everything right, see
-        # previous_snapshot_dir() — so the next launch climbs to the one
-        # before it rather than restoring the same failure again. Persisted,
-        # because one launch cannot observe its own outcome; cleared the
-        # moment a session reports CONNECTED.
+        # Which generation to put back — see pick_restore_generation() (module
+        # level), which holds the whole decision so
+        # _profile_restore_worth_trying() can ask the same question without
+        # spending anything.
         generation = self._profile_recovery_generation()
-        prefer_previous = generation >= 1
-        if prefer_previous and not profile_recovery.has_snapshot(
-                global_dir, session_name, prefer_previous=True):
-            prefer_previous = False
         self._set_profile_recovery_generation(generation + 1)
-        if prefer_previous:
-            logging.warning("[profile-recovery] the newest snapshot did not hold "
-                            "— restoring the generation before it.")
 
         # WhatsApp refused to restore a session from the profile currently on
         # disk. Write that down before anything moves it: after the restore
@@ -9552,69 +9627,32 @@ class MainWindow(wx.Frame):
         # next launch would have nothing left to reason from.
         profile_recovery.note_profile_rejected(global_dir, session_name)
 
-        # A snapshot identical to the profile that was just rejected cannot
-        # help, and restoring it is worse than doing nothing: it reports
-        # success, spends the launch's one recovery attempt, and leaves the
-        # user offline until they happen to restart — because the generation
-        # ladder above only climbs on the NEXT launch.
-        #
-        # This is not hypothetical. Measured on a real install (2026-09-10):
-        #
-        #   10:52:45  Chrome released the profile  files=21 bytes=27793052 newest=1789048351
-        #   10:52:46  profile snapshot refreshed
-        #   10:53:46  STARTUP                      files=21 bytes=27793052 newest=1789048351
-        #   10:53:56  Session Unpaired -> post_logout=1&logout_reason=0
-        #   10:55:48  profile restored from snapshot
-        #   10:55:56  Session Unpaired -> post_logout=1&logout_reason=0
-        #
-        # Byte-identical fingerprints, and the restored profile was rejected on
-        # the same 7.5 s timing as the one it replaced. The run that produced
-        # that snapshot HAD reported CONNECTED, which is capture_snapshot()'s
-        # gate — so "the session connected" is not evidence that the state it
-        # leaves behind will be accepted next time, exactly as
-        # previous_snapshot_dir() already says. What was missing is acting on
-        # it before spending the attempt.
-        #
-        # Climbing here rather than next launch, and only when `.prev` is
-        # genuinely different: a `.prev` that also matches is no better, and
-        # announcing "beyond repair" is the honest answer — it sends the user
-        # to re-pair instead of leaving them watching an offline app.
-        def _known_bad(previous):
-            """Would restoring this generation offer WhatsApp bytes it has
-            already refused? Two readings of the same question: identical to
-            what is on disk right now (this launch), or matching a fingerprint
-            an earlier launch recorded as rejected."""
-            return (profile_recovery.snapshot_matches_live_profile(
-                        global_dir, session_name, prefer_previous=previous)
-                    or profile_recovery.snapshot_was_rejected(
-                        global_dir, session_name, prefer_previous=previous))
-
-        if _known_bad(prefer_previous):
+        prefer_previous, verdict, from_ladder = pick_restore_generation(
+            profile_recovery, global_dir, session_name, generation)
+        if from_ladder:
+            logging.warning("[profile-recovery] the newest snapshot did not hold "
+                            "— restoring the generation before it.")
+        if verdict in ("climbed", "refused"):
             logging.warning(
                 "[profile-recovery] the %s snapshot holds a profile state "
                 "WhatsApp has already refused — restoring it would restore "
                 "the failure.",
-                "previous" if prefer_previous else "newest",
+                "previous" if from_ladder else "newest",
             )
-            if (not prefer_previous
-                    and profile_recovery.has_snapshot(global_dir, session_name,
-                                                      prefer_previous=True)
-                    and not _known_bad(True)):
-                prefer_previous = True
-                logging.warning("[profile-recovery] climbing to the generation "
-                                "before it in this same launch.")
-            else:
-                self._shutdown_audit(
-                    "profile suspect — every snapshot holds a state WhatsApp "
-                    "has already refused, nothing to restore")
-                logging.error("[profile-recovery] no snapshot holds a state "
-                              "that has not already been refused — cannot "
-                              "recover session %s.", session_name[:12])
-                wx.CallAfter(self._announce_profile_beyond_repair)
-                return False
+        if verdict == "climbed":
+            logging.warning("[profile-recovery] climbing to the generation "
+                            "before it in this same launch.")
+        elif verdict == "refused":
+            self._shutdown_audit(
+                "profile suspect — every snapshot holds a state WhatsApp "
+                "has already refused, nothing to restore")
+            logging.error("[profile-recovery] no snapshot holds a state "
+                          "that has not already been refused — cannot "
+                          "recover session %s.", session_name[:12])
+            wx.CallAfter(self._announce_profile_beyond_repair)
+            return False
 
-        if not profile_recovery.has_snapshot(global_dir, session_name,
-                                             prefer_previous=prefer_previous):
+        if verdict == "missing":
             # Nothing to restore. Say so plainly rather than leaving the user
             # staring at "offline": this is the one outcome where the only fix
             # is a human deciding to pair again, and a blind user has no way to
@@ -9687,6 +9725,7 @@ class MainWindow(wx.Frame):
                 # next health poll starts a session on the restored profile
                 # rather than on the broken one.
                 self._recovery_restart_active = False
+                self._profile_restore_in_flight = False
 
         # This sequence is a close/kill/restore cycle that owns the browser and
         # the profile for as long as it runs — up to ~25 s of it spent inside
@@ -9709,14 +9748,54 @@ class MainWindow(wx.Frame):
         # landing mid-restore a few seconds to let the profile finish being put
         # back, instead of tearing down on top of a half-copied leveldb.
         self._recovery_restart_active = True
+        self._profile_restore_in_flight = True
         try:
             threading.Thread(target=_restore, daemon=True).start()
         except Exception:
             # A flag nobody clears blocks every future auto-start for the life
             # of the process — worse than the race it guards against.
             self._recovery_restart_active = False
+            self._profile_restore_in_flight = False
             raise
         return True
+
+    def _profile_restore_worth_trying(self) -> bool:
+        """Would _recover_suspect_profile() start a restore right now?
+
+        Asked by _handle_unattended_qr() (websocket_client.py) before it tries
+        a repair on a code that has not yet cleared the startup grace or the
+        confirmation count (issue #203). The distinction that matters there is
+        not "is the profile broken" — a code already proves that — but what the
+        attempt would *cost* if it cannot help: with nothing restorable,
+        _recover_suspect_profile() answers with
+        _announce_profile_beyond_repair() (error sound, speech and a modal
+        MessageBox), spends the once-per-launch latch and climbs the persisted
+        generation ladder, all before the gates that exist to keep a
+        conclusion like that off a single unconfirmed reading. So only a
+        restore that can actually start is attempted early; everything else
+        waits for the gates exactly as before.
+
+        Side-effect free, and conservative: any failure to read reads as
+        False, which only means "wait for the gates", never a lost repair —
+        the confirmed path still calls _recover_suspect_profile() itself.
+        """
+        try:
+            if (getattr(self, "_profile_recovery_attempted", False)
+                    or getattr(self, "_profile_restore_in_flight", False)):
+                return False
+            session_name = (getattr(self, "token", "") or "").split(":")[0]
+            global_dir = getattr(self, "global_dir", None)
+            if not session_name or not global_dir:
+                return False
+            from core import profile_recovery
+            _, verdict, _ = pick_restore_generation(
+                profile_recovery, global_dir, session_name,
+                self._profile_recovery_generation())
+            return verdict in ("ok", "climbed")
+        except Exception:
+            logging.exception("[profile-recovery] could not tell whether a "
+                              "restore is worth trying — waiting for the gates")
+            return False
 
     _PROFILE_RECOVERY_GENERATION_KEY = "profile_recovery_generation"
 

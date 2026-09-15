@@ -170,7 +170,9 @@ class _Stub:
         self.error_sound = types.SimpleNamespace(play=lambda: None)
         self.i18n = types.SimpleNamespace(t=lambda key: key)
         self._recovery_restart_active = False
+        self._profile_restore_in_flight = False
         self.flag_while_waiting = None
+        self.in_flight_while_waiting = None
 
     _PROFILE_RECOVERY_GENERATION_KEY = MainWindow._PROFILE_RECOVERY_GENERATION_KEY
     _profile_recovery_generation = MainWindow._profile_recovery_generation
@@ -192,6 +194,7 @@ class _Stub:
     def wait_for_profile_release(self, session_name, timeout=None):
         # The 20 s window the health poll landed in on the reporting install.
         self.flag_while_waiting = self._recovery_restart_active
+        self.in_flight_while_waiting = self._profile_restore_in_flight
         return True
 
     def _announce_profile_restored(self):
@@ -256,3 +259,52 @@ class TestTheRestoreOwnsTheBrowserWhileItRuns:
         MainWindow._recover_suspect_profile(stub)
         assert stub._recovery_restart_active is False
         assert "profile_corrupted_repair_needed" in stub.announced
+
+
+class TestTheUnattendedQrHandlerCanSeeTheRestoreInFlight:
+    """_handle_unattended_qr() (websocket_client.py) ignores codes while
+    _profile_restore_in_flight is set, instead of opening the pairing dialog
+    over the directory being restored or latching the halt that would keep
+    the restored profile from starting (issue #203). A flag left set would
+    silence every later code — the unbounded stream an account was banned
+    for — so it has to come down on every way out of the restore."""
+
+    def test_it_is_set_while_the_restore_owns_the_profile(self, stub, monkeypatch):
+        monkeypatch.setattr("core.profile_recovery.restore_snapshot",
+                            lambda *a, **kw: True)
+        assert MainWindow._recover_suspect_profile(stub) is True
+        assert stub.in_flight_while_waiting is True
+
+    @pytest.mark.parametrize("restored", [True, False], ids=["succeeds", "fails"])
+    def test_it_is_cleared_on_either_outcome(self, stub, monkeypatch, restored):
+        monkeypatch.setattr("core.profile_recovery.restore_snapshot",
+                            lambda *a, **kw: restored)
+        MainWindow._recover_suspect_profile(stub)
+        assert stub._profile_restore_in_flight is False
+
+    def test_it_is_cleared_when_the_restore_raises(self, stub, monkeypatch):
+        def boom(*a, **kw):
+            raise RuntimeError("disk went away")
+
+        monkeypatch.setattr("core.profile_recovery.restore_snapshot", boom)
+        MainWindow._recover_suspect_profile(stub)
+        assert stub._profile_restore_in_flight is False
+
+    def test_it_is_cleared_when_the_thread_cannot_even_start(self, stub, monkeypatch):
+        class _NoThreads:
+            def __init__(self, *a, **kw):
+                pass
+
+            def start(self):
+                raise RuntimeError("can't start new thread")
+
+        monkeypatch.setattr("main.threading.Thread", _NoThreads)
+        with pytest.raises(RuntimeError):
+            MainWindow._recover_suspect_profile(stub)
+        assert stub._profile_restore_in_flight is False
+
+    def test_it_is_never_set_when_nothing_is_restored(self, stub, monkeypatch):
+        monkeypatch.setattr("core.profile_recovery.has_snapshot",
+                            lambda *a, **kw: False)
+        assert MainWindow._recover_suspect_profile(stub) is False
+        assert stub._profile_restore_in_flight is False
