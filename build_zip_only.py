@@ -8,9 +8,24 @@ with the full WinZapp/ onedir layout — is exactly what the auto-updater consum
 to overwrite an existing install, so it's what we want for testing overwrite +
 migration on the old version.
 
-Run with the SAME interpreter/venv build.py expects:
+Picks its interpreter the same way build.py does (WINZAPP_VENV, the running
+virtual environment, then venv\\ / .venv\\), so any of these work:
   venv_build\\Scripts\\python.exe build_zip_only.py
+  set WINZAPP_VENV=venv_build && python build_zip_only.py
+  uv run python build_zip_only.py
 """
+
+import os
+import sys
+
+if __name__ == "__main__":
+    # Importing build.py never runs its own hand-over, and the import below
+    # already reads site-packages, so it has to happen here first.
+    _root = os.path.dirname(os.path.abspath(__file__))
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    from winzapp_tools.build_env import hand_over_to_build_python
+    hand_over_to_build_python(__file__, _root)
 
 import build  # noqa: E402  (build.py runs check-time module code on import)
 

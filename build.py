@@ -77,43 +77,16 @@ API_DIR       = os.path.join(CLIENT_DIR, "api")
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 from winzapp_tools.build_env import (  # noqa: E402
-    REEXEC_MARKER,
+    hand_over_to_build_python,
     portable_node_needs_replacing,
     portable_node_version,
-    same_interpreter,
-    select_build_python,
 )
 
-
-def _hand_over_to_build_python():
-    """Re-run this script under the interpreter that owns the dependencies.
-
-    Before uv, build.py hardcoded venv\\ and worked from any interpreter.
-    Now it builds with the one running it — so a bare `python build.py` must
-    still be handed to venv\\ (or .venv\\) instead of failing on a missing
-    PyInstaller. It runs before anything below touches site-packages, whose
-    location depends on the interpreter.
-    """
-    if os.environ.get(REEXEC_MARKER):
-        return
-    target = select_build_python(
-        os.environ,
-        sys.executable,
-        sys.prefix != sys.base_prefix,
-        ROOT_DIR,
-    )
-    if same_interpreter(target, sys.executable):
-        return
-    if not os.path.isfile(target):
-        print(f"[ERROR] WINZAPP_VENV points at {target}, which does not exist.")
-        sys.exit(1)
-    print(f"  [python] Building with {target}", flush=True)
-    env = dict(os.environ, **{REEXEC_MARKER: "1"})
-    sys.exit(subprocess.run([target, os.path.abspath(__file__), *sys.argv[1:]], env=env).returncode)
-
-
+# Before uv, build.py hardcoded venv\ and worked from any interpreter. Now it
+# builds with the one running it, so a bare `python build.py` is handed to
+# venv\ (or .venv\) here — before anything below reads site-packages.
 if __name__ == "__main__":
-    _hand_over_to_build_python()
+    hand_over_to_build_python(__file__, ROOT_DIR)
 
 
 def _load_node_download_config():
@@ -510,8 +483,12 @@ def _download_portable_node():
         if not os.path.isfile(os.path.join(extracted, "node.exe")):
             raise RuntimeError("Node.js archive did not contain node.exe")
         if os.path.isdir(NODE_DIR):
+            # Rename first: it fails atomically while node.exe is running,
+            # where rmtree would delete half the folder and then stop on the
+            # locked exe, leaving no working Node.js at all.
+            retired = os.path.join(tmp, "node-previous")
             try:
-                shutil.rmtree(NODE_DIR)
+                os.rename(NODE_DIR, retired)
             except OSError as exc:
                 raise RuntimeError(
                     f"Could not replace {NODE_DIR} ({exc}). Is a WinZapp or "
@@ -523,6 +500,18 @@ def _download_portable_node():
 
 def ensure_build_assets():
     """Prepare generated runtime inputs that a local build should not require manually."""
+    # Checked before the bootstrap below, which can spend minutes downloading
+    # Node.js and running setup_api.py only for check_tools() to then report
+    # that the onedir build was never possible on this machine.
+    if not ONEFILE:
+        missing_native = [t for t in (GCC_CMD, WINDRES_CMD) if shutil.which(t) is None]
+        if missing_native:
+            print(
+                f"\n[ERROR] {', '.join(missing_native)} not found in PATH. The installer "
+                "build needs MSYS2 UCRT64 (gcc + binutils); use --onefile to build "
+                "without them."
+            )
+            sys.exit(1)
     installed = portable_node_version(os.path.join(NODE_DIR, "node.exe"))
     if portable_node_needs_replacing(installed, NODE_VERSION):
         if installed:
@@ -574,11 +563,9 @@ def check_tools():
     api_main = os.path.join(API_DIR, "dist", "server.js")
     if not os.path.isfile(api_main):
         missing.append(
-            "client/api/dist/server.js  -- WPPConnect Server API not built.\n"
-            "    1. Run:  uv run setup-api  (or: python setup_api.py)\n"
-            "    2. Then inside client/api/ run:\n"
-            "         npm install\n"
-            "         npm run build"
+            "client/api/dist/server.js  -- WPPConnect Server API not built,\n"
+            "    even after running setup_api.py. Check its output above, then\n"
+            "    retry with:  uv run setup-api  (or: python setup_api.py)"
         )
 
     if OPUS_DLL:

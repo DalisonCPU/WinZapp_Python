@@ -115,6 +115,74 @@ def test_nothing_uv_installs_is_left_out_of_the_pip_workflow():
     )
 
 
+# The environment WinZapp is built and run in. Lock edges carry markers
+# (appscript and macholib only on macOS), so "what pip would install" is the
+# part of uv.lock reachable under this environment, not the whole file.
+_WINDOWS_CPYTHON_313 = {
+    "sys_platform": "win32",
+    "platform_system": "Windows",
+    "os_name": "nt",
+    "implementation_name": "cpython",
+    "platform_python_implementation": "CPython",
+    "implementation_version": "3.13.7",
+    "python_version": "3.13",
+    "python_full_version": "3.13.7",
+    "platform_machine": "AMD64",
+    "platform_release": "",
+    "platform_version": "",
+    "extra": "",
+}
+
+
+def _windows_lock_closure() -> dict:
+    """{package: version} uv installs on Windows, from the project root down."""
+    from packaging.markers import Marker
+
+    packages = {
+        canonicalize_name(pkg["name"]): pkg
+        for pkg in tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8")).get("package", [])
+    }
+    root = next(p for p in packages.values() if p.get("source", {}).get("editable") == ".")
+
+    def edges(pkg):
+        yield from pkg.get("dependencies", [])
+        for group in pkg.get("dev-dependencies", {}).values():
+            yield from group
+
+    seen = {}
+    pending = [root]
+    while pending:
+        for dep in edges(pending.pop()):
+            marker = dep.get("marker")
+            if marker and not Marker(marker).evaluate(_WINDOWS_CPYTHON_313):
+                continue
+            key = canonicalize_name(dep["name"])
+            if key in seen:
+                continue
+            seen[key] = str(Version(packages[key]["version"]))
+            pending.append(packages[key])
+    return seen
+
+
+def test_pip_pins_every_package_uv_installs_on_windows():
+    """Declared pins agreeing is not enough: a bump that pulls in a new
+    transitive dependency gets it pinned by `uv lock` and nowhere else, and
+    `pip install -r` then quietly takes whatever is newest on PyPI."""
+    if not (ROOT / "uv.lock").is_file():
+        pytest.skip("no uv.lock in this checkout")
+    pip_side = {
+        key: str(Version(_pin(req)))
+        for key, req in _read_requirements("requirements.txt").items()
+    }
+    problems = []
+    for key, version in sorted(_windows_lock_closure().items()):
+        if key not in pip_side:
+            problems.append(f"{key}=={version}: in uv.lock, not pinned in requirements.txt")
+        elif pip_side[key] != version:
+            problems.append(f"{key}: uv.lock {version} != requirements.txt {pip_side[key]}")
+    assert not problems, problems
+
+
 def test_uv_lock_resolves_the_same_pins():
     """A pip-only contributor who bumps a pin in both lists but has no uv to
     run `uv lock` would otherwise learn about it from `uv sync --locked`

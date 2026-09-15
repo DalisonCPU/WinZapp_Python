@@ -9,6 +9,7 @@ commands `uv sync` installs.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tomllib
@@ -26,9 +27,10 @@ LEGACY_VENV_PY = os.path.join(ROOT_DIR, "venv", "Scripts", "python.exe")
 UV_VENV_PY = os.path.join(ROOT_DIR, ".venv", "Scripts", "python.exe")
 
 
-def _select(environ=None, running=SYSTEM_PY, in_venv=False, existing=()):
+def _select(environ=None, running=SYSTEM_PY, in_venv=False, existing=(), has_pyinstaller=True):
     return build_env.select_build_python(
-        environ or {}, running, in_venv, ROOT_DIR, isfile=lambda p: p in existing,
+        environ or {}, running, in_venv, ROOT_DIR,
+        isfile=lambda p: p in existing, running_has_pyinstaller=has_pyinstaller,
     )
 
 
@@ -53,6 +55,18 @@ class TestSelectBuildPython:
 
     def test_bare_python_with_no_venv_uses_itself(self):
         assert _select() == SYSTEM_PY
+
+    def test_an_unrelated_active_venv_does_not_shadow_the_repository_venv(self):
+        """An editor auto-activating some other environment: build.py
+        hardcoded venv\\ before and built anyway, so it still must."""
+        other = r"C:\Users\dev\envs\scratch\Scripts\python.exe"
+        assert _select(
+            running=other, in_venv=True, existing={LEGACY_VENV_PY}, has_pyinstaller=False,
+        ) == LEGACY_VENV_PY
+
+    def test_an_active_venv_without_pyinstaller_and_nowhere_else_stays_put(self):
+        other = r"C:\Users\dev\envs\scratch\Scripts\python.exe"
+        assert _select(running=other, in_venv=True, has_pyinstaller=False) == other
 
     def test_blank_winzapp_venv_is_ignored(self):
         assert _select({"WINZAPP_VENV": "  "}, existing={LEGACY_VENV_PY}) == LEGACY_VENV_PY
@@ -123,7 +137,27 @@ def test_build_script_hands_over_before_touching_site_packages():
     """The hand-over has to happen before SITE_PACKAGES (and the ffmpeg /
     libopus preparation) is computed from the wrong interpreter."""
     source = (ROOT / "build.py").read_text(encoding="utf-8")
-    hand_over = source.index("    _hand_over_to_build_python()")
+    hand_over = source.index("    hand_over_to_build_python(__file__, ROOT_DIR)")
     assert hand_over < source.index("SITE_PACKAGES = ")
     assert hand_over < source.index("OPUS_DLL = ")
     assert hand_over < source.index("args = parser.parse_args()")
+
+
+def test_build_zip_only_hands_over_before_importing_build():
+    """`import build` never runs build.py's __main__ hand-over, and the import
+    itself already reads site-packages."""
+    source = (ROOT / "build_zip_only.py").read_text(encoding="utf-8")
+    assert source.index("hand_over_to_build_python(__file__, _root)") < source.index("\nimport build")
+
+
+def test_ci_pins_the_uv_version_it_runs():
+    offenders = []
+    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for number, line in enumerate(lines, 1):
+            if "uses: astral-sh/setup-uv@" not in line:
+                continue
+            following = "\n".join(lines[number:number + 6])
+            if not re.search(r'^\s+version:\s*"\d+\.\d+\.\d+"', following, re.M):
+                offenders.append(f"{path.name}:{number}")
+    assert not offenders, f"setup-uv without an exact `version:`: {offenders}"

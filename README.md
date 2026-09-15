@@ -50,7 +50,6 @@ WhatsApp uses several different identifier formats for the same contact (`@s.wha
 # 1. Clone the repository
 git clone https://github.com/gabrielhhaber/WinZapp_Python.git
 cd WinZapp_Python
-
 ```
 
 Then pick **one** of the two ways to set up Python. Both install the same pinned versions.
@@ -127,7 +126,7 @@ Releases are signed so that the auto-updater only installs builds the maintainer
 
 ### Local build (fallback)
 
-The build downloads the checksum-verified portable Node.js into `client/node/` and runs `setup_api.py` on its own when either is missing. The default onedir build additionally requires MSYS2 with GCC/windres in `PATH`, used to compile the C installer/uninstaller stubs.
+The build downloads the checksum-verified portable Node.js into `client/node/` when it is missing or is not exactly the version in `client/node_download_config.py`, and runs `setup_api.py` on its own when the API has not been built. The default onedir build additionally requires MSYS2 with GCC/windres in `PATH`, used to compile the C installer/uninstaller stubs.
 
 ```powershell
 # With uv (and GCC/windres in PATH for the onedir build):

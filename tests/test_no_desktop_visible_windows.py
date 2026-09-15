@@ -104,6 +104,10 @@ class TestTheDefaultRunIsSafe:
                 # silently in the one direction that matters.
                 if stripped.startswith("run:"):
                     command = stripped[len("run:"):].strip()
+                elif re.match(r"^(?:-\s+)?[A-Za-z_][\w-]*:(?:\s|$)", stripped):
+                    # Any other YAML key — `- name: Run pytest` names a step,
+                    # it runs nothing.
+                    continue
                 else:
                     command = stripped
                 command = _as_pytest_invocation(command)
@@ -124,21 +128,36 @@ class TestTheDefaultRunIsSafe:
             "pytest -q",
             "uv run pytest -q",
             "uv run test -q",
+            "uv run --locked pytest",
+            "uv run --frozen test",
+            "uv run python -m pytest",
+            "uv run -m pytest",
             r"venv\Scripts\python.exe -m pytest -q",
-            "python -m pytest",
+            r"venv\Scripts\pytest.exe -q",
+            "python -X utf8 -m pytest",
+            "py -m pytest",
         ):
             assert _as_pytest_invocation(line) is not None, line
         # The shell builtin must not be mistaken for the `uv run test` shortcut.
-        for line in ('test -s "$f" || exit 1', "pytest_asyncio", "uv sync --locked"):
+        for line in (
+            'test -s "$f" || exit 1',
+            "pip install pytest_asyncio",
+            "uv sync --locked",
+            'python -c "import wx, pytest_asyncio"',
+        ):
             assert _as_pytest_invocation(line) is None, line
 
 
 def _as_pytest_invocation(command):
-    """`command` normalised to start with `pytest` if it runs the suite, else None."""
-    if command == "uv run test" or command.startswith("uv run test "):
-        command = "pytest" + command[len("uv run test"):]
-    command = re.sub(r"^(?:uv run\s+|\S*python(?:\.exe)?\s+-m\s+)", "", command)
-    if command == "pytest" or command.startswith("pytest "):
+    """`command` if it runs the test suite, however it is launched, else None.
+
+    Matches `pytest` as a whole command token anywhere in the line rather than
+    a list of launcher prefixes: every prefix list so far (`uv run`,
+    `python -m`) missed the next idiom somebody wrote.
+    """
+    if re.search(r"(?:^|[\s\\/])pytest(?:\.exe)?(?:\s|$)", command):
+        return command
+    if re.match(r"^uv run(?:\s+--?\S+)*\s+test(?:\s|$)", command):
         return command
     return None
 
