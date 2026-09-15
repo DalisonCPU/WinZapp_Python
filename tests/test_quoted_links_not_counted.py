@@ -96,11 +96,6 @@ class TestQuotedLinksDoNotCount:
         stub = _Stub("olha https://minha.com", quoted_preview="veja https://citada.com")
         assert stub._message_own_links(_reply()) == ["https://minha.com"]
 
-    def test_one_own_link_plus_one_quoted_stays_below_the_list_threshold(self):
-        """The reported symptom: two links, so the panel built the list control."""
-        stub = _Stub("olha https://minha.com", quoted_preview="veja https://citada.com")
-        assert len(stub._message_own_links(_reply())) == 1
-
     def test_the_reply_still_reports_several_links_of_its_own(self):
         stub = _Stub(
             "https://a.com e https://b.com",
@@ -124,3 +119,47 @@ class TestTheRowItselfStillShowsTheQuote:
         line = stub._render_message_line(_reply(), include_quoted_preview=False)
         assert "mensagem citada" not in line
         assert line.startswith("Fulano, respondendo a Beltrano: corpo")
+
+
+class _ActivationStub(_Stub):
+    """The real Enter handler, so the routing itself is pinned.
+
+    Without this, re-inlining _extract_links(_render_message_line(msg)) at
+    either detection site brings the bug straight back with the rest of this
+    file still green: the helper would keep answering correctly while nothing
+    called it.
+    """
+
+    activate_message = ConversationsPanel.activate_message
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.popups = []
+
+    def _show_message_text_popup(self, msg):
+        self.popups.append(msg)
+
+
+class TestEnterDoesNotOpenTheQuotedLink:
+    def test_a_link_only_in_the_quote_shows_the_text_instead(self, monkeypatch):
+        opened = []
+        monkeypatch.setattr("ui.conversations.os.startfile", lambda url: opened.append(url))
+        stub = _ActivationStub("sem link aqui", quoted_preview="veja https://citada.com")
+        msg = _reply()
+
+        stub.activate_message(msg)
+
+        assert opened == []
+        assert stub.popups == [msg]
+
+    def test_the_replys_own_link_is_still_opened(self, monkeypatch):
+        opened = []
+        monkeypatch.setattr("ui.conversations.os.startfile", lambda url: opened.append(url))
+        stub = _ActivationStub(
+            "olha https://minha.com", quoted_preview="veja https://citada.com"
+        )
+
+        stub.activate_message(_reply())
+
+        assert opened == ["https://minha.com"]
+        assert stub.popups == []

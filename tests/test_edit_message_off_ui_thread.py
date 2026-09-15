@@ -52,6 +52,7 @@ class _FakeMainWindow:
 class _Panel:
     _apply_message_edit = ConversationsPanel._apply_message_edit
     _send_message_edit = ConversationsPanel._send_message_edit
+    _message_own_links = ConversationsPanel._message_own_links
 
     def __init__(self, messages=(), editing_id="m1", mentions=None, focused=-1):
         self.main_window = _FakeMainWindow()
@@ -69,11 +70,6 @@ class _Panel:
     def _render_message_line(self, msg, index=None, total=None, include_quoted_preview=True):
         body = msg.get("message", {})
         return body.get("conversation") or body.get("extendedTextMessage", {}).get("text", "")
-
-    def _message_own_links(self, msg):
-        return self._extract_links(
-            self._render_message_line(msg, include_quoted_preview=False)
-        )
 
     def _on_cancel_edit(self):
         self.cancel_calls += 1

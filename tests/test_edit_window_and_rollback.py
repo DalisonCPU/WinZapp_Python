@@ -138,6 +138,7 @@ class _Panel:
     _apply_message_edit = ConversationsPanel._apply_message_edit
     _send_message_edit = ConversationsPanel._send_message_edit
     _rollback_message_edit = ConversationsPanel._rollback_message_edit
+    _message_own_links = ConversationsPanel._message_own_links
 
     def __init__(self, messages, edit_result=True, records=None, focused=-1):
         self._sorted_messages = messages
@@ -174,11 +175,6 @@ class _Panel:
     def _render_message_line(self, msg, index=None, total=None, include_quoted_preview=True):
         body = msg.get("message") or {}
         return body.get("conversation") or (body.get("extendedTextMessage") or {}).get("text", "")
-
-    def _message_own_links(self, msg):
-        return self._extract_links(
-            self._render_message_line(msg, include_quoted_preview=False)
-        )
 
     def _on_cancel_edit(self):
         self.cancelled += 1
