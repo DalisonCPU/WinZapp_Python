@@ -15,7 +15,7 @@ try:
     import pyaudio
 except ImportError:
     # No wheel exists for PyAudio on Python 3.14 at the time of writing —
-    # see pyproject.toml's version marker. Voice recording degrades to a
+    # see requirements.txt's / pyproject.toml's version marker. Voice recording degrades to a
     # clear "not available" message (see _start_voice_recording()) instead
     # of the whole app failing to import.
     pyaudio = None
@@ -3329,7 +3329,7 @@ class ConversationsPanel(wx.Panel):
 
         if pyaudio is None:
             # No wheel exists for PyAudio on Python 3.14 at the time of
-            # writing — see pyproject.toml's version marker and this
+            # writing — see requirements.txt's / pyproject.toml's version marker and this
             # file's own `import pyaudio` — so recording degrades to a
             # clear message instead of crashing on the first pyaudio.*
             # reference below.

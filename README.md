@@ -39,7 +39,7 @@ WhatsApp uses several different identifier formats for the same contact (`@s.wha
 
 ### Prerequisites
 * **Python 3.13**
-* **uv** (recommended Python package and environment manager; install with `winget install --id=astral-sh.uv -e`)
+* **uv** — optional but recommended: it installs Python 3.13 and the locked dependencies for you (`winget install --id=astral-sh.uv -e`). A plain `venv` + `pip` works just as well.
 * **Node.js** (used by `setup_api.py` to build the WPPConnect Server; a portable copy can also be placed at `client/node/`)
 * **Git**
 * For building the installer locally only: **GCC** and **windres** (available via [MSYS2](https://www.msys2.org/), UCRT64 toolchain)
@@ -51,38 +51,57 @@ WhatsApp uses several different identifier formats for the same contact (`@s.wha
 git clone https://github.com/gabrielhhaber/WinZapp_Python.git
 cd WinZapp_Python
 
-# 2. Create the managed environment and install Python dependencies
-uv sync
-
-# 3. Set up the WPPConnect Server (clones and builds client/api/)
-uv run python setup_api.py
-
-# 4. Start the client in development mode
-uv run python client/main.py
 ```
 
-### Atalhos de desenvolvimento
+Then pick **one** of the two ways to set up Python. Both install the same pinned versions.
 
-Depois de executar `uv sync`, os comandos abaixo ficam disponíveis sem precisar
-lembrar caminhos de arquivos:
+**With uv** (recommended; it downloads Python 3.13 itself if needed):
 
 ```powershell
-uv run winzapp                 # inicia o aplicativo (e a API é gerenciada por ele)
-uv run api                     # inicia somente uma API WPPConnect já preparada
-uv run setup-api               # clona, aplica patches e compila a API
-uv run build-onefile           # cria o executável portátil, sem GCC/windres
-uv run build-installer         # cria instalador + ZIP; requer MSYS2/GCC/windres
-uv run test                    # executa testes sem abrir diálogos wx
+uv sync                  # creates .venv from the committed uv.lock
+uv run setup-api         # clones and builds the WPPConnect Server into client/api/
+uv run winzapp           # starts the client in development mode
 ```
 
-`uv sync` uses the committed `uv.lock` to create a reproducible `.venv`. `setup_api.py` clones WPPConnect Server into `client/api/`, restores WinZapp's own patched files on top, then installs its Node dependencies and builds it. Re-run it whenever `client/api/` needs to be rebuilt from scratch — it preserves `node_modules` across re-clones.
+**With venv and pip:**
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -r requirements-dev.txt   # adds pytest and friends, for running tests
+python setup_api.py                   # clones and builds the WPPConnect Server into client/api/
+cd client
+python main.py                        # starts the client in development mode
+```
+
+Always start the client from inside `client/` (`uv run winzapp` does that for you): in development mode its data — accounts, pairing, messages — lives in the `data/` folder of the current directory.
+
+`setup_api.py` clones WPPConnect Server into `client/api/`, restores WinZapp's own patched files on top, then installs its Node dependencies and builds it. Re-run it whenever `client/api/` needs to be rebuilt from scratch — it preserves `node_modules` across re-clones.
+
+#### uv shortcuts
+
+After `uv sync`, these run the matching script without having to remember its path:
+
+```powershell
+uv run winzapp           # the client (it starts and manages the API itself)
+uv run api               # only an already-built WPPConnect API
+uv run setup-api         # clone, patch and build the API
+uv run build-onefile     # portable single-file build, no GCC/windres needed
+uv run build-installer   # installer + ZIP; requires MSYS2 GCC/windres
+uv run test              # the test suite, without opening wx dialogs
+```
+
+#### Changing a dependency
+
+Pins live in both `pyproject.toml` and `requirements.txt` / `requirements-dev.txt`. Change both, then run `uv lock`; `tests/test_requirements_in_sync.py` fails if they disagree.
 
 ### Running tests
 
 ```powershell
-uv run test                                   # full suite, from the repository root
-uv run test tests/test_database.py            # a single file
-uv run test tests/test_database.py::TestChats::test_upsert_chat_creates_record  # a single test
+pytest                                   # full suite, from the repository root (prefix with `uv run` under uv)
+pytest tests/test_database.py            # a single file
+pytest tests/test_database.py::TestChats::test_upsert_chat_creates_record  # a single test
 ```
 
 Tests cover the async SQLite storage layer and the pure-logic pieces of the client (name resolution, notification formatting, message classification, etc.) using small stand-in objects, since the wxPython UI classes cannot be instantiated without a running `wx.App`.
@@ -108,12 +127,16 @@ Releases are signed so that the auto-updater only installs builds the maintainer
 
 ### Local build (fallback)
 
-Requires the portable Node.js runtime placed at `client/node/` and the WPPConnect Server built at `client/api/dist/server.js` (via `setup_api.py`). The default onedir build additionally requires MSYS2 with GCC/windres in `PATH`, used to compile the C installer/uninstaller stubs.
+The build downloads the checksum-verified portable Node.js into `client/node/` and runs `setup_api.py` on its own when either is missing. The default onedir build additionally requires MSYS2 with GCC/windres in `PATH`, used to compile the C installer/uninstaller stubs.
 
 ```powershell
-# With the uv environment synchronized (and GCC/windres in PATH for the onedir build):
+# With uv (and GCC/windres in PATH for the onedir build):
 uv run build-installer             # onedir build: WinZappInstaller.exe + WinZapp.zip
 uv run build-onefile               # single-file build: WinZapp.exe + WinZapp.zip (no GCC/windres needed)
+
+# Or with the venv:
+python build.py                    # onedir build
+python build.py --onefile          # single-file build
 ```
 
 The resulting files are written to the `dist/` directory.

@@ -26,6 +26,7 @@ machine somebody is actually using.
 
 import ast
 import pathlib
+import re
 
 import pytest
 
@@ -105,7 +106,8 @@ class TestTheDefaultRunIsSafe:
                     command = stripped[len("run:"):].strip()
                 else:
                     command = stripped
-                if not (command == "pytest" or command.startswith("pytest ")):
+                command = _as_pytest_invocation(command)
+                if command is None:
                     continue
                 if "--run-wx-gui" not in command:
                     offenders.append(f"{wf.name}:{i}: {command}")
@@ -113,6 +115,32 @@ class TestTheDefaultRunIsSafe:
             "these CI steps run pytest without --run-wx-gui, so the wxgui "
             f"tests are skipped there too and nothing covers them: {offenders}"
         )
+
+    def test_launcher_prefixes_do_not_blind_the_guard(self):
+        """`uv run pytest` used to read as "not pytest", which silently turned
+        the check above off the day CI moved to uv."""
+        for line in (
+            "pytest",
+            "pytest -q",
+            "uv run pytest -q",
+            "uv run test -q",
+            r"venv\Scripts\python.exe -m pytest -q",
+            "python -m pytest",
+        ):
+            assert _as_pytest_invocation(line) is not None, line
+        # The shell builtin must not be mistaken for the `uv run test` shortcut.
+        for line in ('test -s "$f" || exit 1', "pytest_asyncio", "uv sync --locked"):
+            assert _as_pytest_invocation(line) is None, line
+
+
+def _as_pytest_invocation(command):
+    """`command` normalised to start with `pytest` if it runs the suite, else None."""
+    if command == "uv run test" or command.startswith("uv run test "):
+        command = "pytest" + command[len("uv run test"):]
+    command = re.sub(r"^(?:uv run\s+|\S*python(?:\.exe)?\s+-m\s+)", "", command)
+    if command == "pytest" or command.startswith("pytest "):
+        return command
+    return None
 
 
 class TestTheMarkerIsRegisteredAndUsed:

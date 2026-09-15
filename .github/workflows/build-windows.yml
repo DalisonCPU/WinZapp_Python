@@ -47,8 +47,11 @@ on:
         type: number
         default: 14
 
+# No NODE_VERSION here: the Node.js a build bundles is the one
+# client/node_download_config.py names, read by the download step below. A
+# second copy of the number is how CI came to bundle 24.15.0 while the app
+# itself, and WPPConnect Server's exactly-pinned engines.node, said 22.22.2.
 env:
-  NODE_VERSION: "22.22.2"
   PYTHON_VERSION: "3.13"
 
 jobs:
@@ -105,16 +108,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
 
       # build.py expects client/node/node.exe — download the same portable ZIP
       # version that developers use and place it at the right path.
-      - name: Download portable Node.js v${{ env.NODE_VERSION }}
+      - name: Download portable Node.js
         shell: pwsh
         run: |
-          $version = "${{ env.NODE_VERSION }}"
+          $version = (python -c "import runpy; print(runpy.run_path('client/node_download_config.py')['NODE_VERSION'])").Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Could not read NODE_VERSION from client/node_download_config.py (got '$version')"
+            exit 1
+          }
+          Write-Output "[INFO] Node.js v$version (client/node_download_config.py)"
           $zip = "node-v${version}-win-x64.zip"
           Invoke-WebRequest "https://nodejs.org/dist/v${version}/${zip}" -OutFile $zip -UseBasicParsing
           # nodejs.org publishes a signed checksum manifest for every release —

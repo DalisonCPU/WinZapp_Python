@@ -27,8 +27,9 @@ def main():
     import os
     import sys
     problems = []
-    if not os.path.isfile(build.PYINSTALLER_CMD):
-        problems.append(f"pyinstaller missing at {build.PYINSTALLER_CMD}")
+    import importlib.util
+    if importlib.util.find_spec("PyInstaller") is None:
+        problems.append(f"pyinstaller not installed for {build.PYTHON_CMD}")
     if not os.path.isfile(os.path.join(build.NODE_DIR, "node.exe")):
         problems.append("client/node/node.exe missing")
     if not os.path.isfile(os.path.join(build.API_DIR, "dist", "server.js")):
