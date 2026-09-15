@@ -31,13 +31,52 @@ from main import MainWindow
 
 
 class TestNothingStartsASessionUnderARestore:
-    def test_the_auto_start_block_reads_the_restore_flag(self):
-        src = inspect.getsource(MainWindow.check_wa_connection_http)
-        call = src[src.index("cs.auto_start_block_reason("):]
-        call = call[:call.index("if block:")]
-        assert "_profile_restore_in_flight" in call, (
-            "the CLOSED auto-start guard only reads _recovery_restart_active, "
-            "which the power-resume restart can clear mid-restore")
+    def test_the_auto_start_block_asks_whether_any_restart_owns_the_session(self):
+        """Pinned on the behaviour, not on the source text: an earlier version
+        of this test searched the call's source, which the comment beside it
+        satisfied on its own."""
+        class _Stub:
+            _session_restart_owned = MainWindow._session_restart_owned
+            _recovery_restart_active = False     # cleared by the other owner
+            _profile_restore_in_flight = True
+
+        assert _Stub()._session_restart_owned() is True
+        _Stub._profile_restore_in_flight = False
+        assert _Stub()._session_restart_owned() is False
+        _Stub._recovery_restart_active = True
+        assert _Stub()._session_restart_owned() is True
+
+    def test_the_closed_branch_passes_that_answer_to_the_block(self):
+        import ast
+        import textwrap
+
+        src = textwrap.dedent(inspect.getsource(MainWindow.check_wa_connection_http))
+        calls = [
+            node for node in ast.walk(ast.parse(src))
+            if isinstance(node, ast.Call)
+            and getattr(node.func, "attr", "") == "auto_start_block_reason"
+        ]
+        assert len(calls) == 1
+        arg = next(k.value for k in calls[0].keywords
+                   if k.arg == "recovery_restart_active")
+        assert isinstance(arg, ast.Call) and arg.func.attr == "_session_restart_owned", (
+            "the CLOSED auto-start guard does not ask _session_restart_owned(), "
+            "so a restore whose shared flag was cleared can be started over")
+
+    def test_a_quit_yields_to_a_restore_whose_shared_flag_was_cleared(self):
+        class _Stub:
+            _yield_to_in_progress_self_restart = MainWindow._yield_to_in_progress_self_restart
+            _session_restart_owned = MainWindow._session_restart_owned
+            _SELF_RESTART_YIELD_SECONDS = 0.2
+            _SELF_RESTART_YIELD_POLL_SECONDS = 0.05
+            _recovery_restart_active = False
+            _restarting_wpp_session = False
+            _profile_restore_in_flight = True
+
+        started = time.monotonic()
+        _Stub()._yield_to_in_progress_self_restart()
+        assert time.monotonic() - started >= 0.15, (
+            "the quit did not wait for a restore still in flight")
 
     def test_a_restore_in_flight_is_a_self_inflicted_teardown(self):
         class _Stub:
@@ -165,8 +204,57 @@ class TestAStuckRestoreCannotSilenceTheFloodForever:
         assert halts == [1]
 
     def test_the_window_covers_the_restores_own_worst_case(self):
-        """close-session (10 s) + a release deadline whose polls can run past
-        it (20 s + up to 15 s) + the kill (up to 15 s) + its settle (5 s):
-        about a minute. The window must clear that with room to spare, or a
-        healthy slow restore would have its stragglers counted."""
-        assert WebSocketClient._RESTORE_FLIGHT_IGNORE_SECONDS >= 2 * (10 + 20 + 15 + 15 + 5)
+        """The restore's own worst case to stop a browser, about 81 s, read
+        off wait_for_profile_release(), _chrome_pids_owning_session() and the
+        kill. The window must clear it with room to spare, or a healthy slow
+        restore would have its stragglers counted."""
+        # 10 close + (20 + 15 last scan) release + 15 scan before the kill
+        # + ~20.5 settle (its 5 s deadline is only checked after a 15 s scan).
+        assert WebSocketClient._RESTORE_FLIGHT_IGNORE_SECONDS >= 2 * (10 + 35 + 15 + 20.5)
+
+
+class TestBothRestartPathsCheckAgainRightBeforeStarting:
+    """A restore can begin while either restart is inside its close or its
+    release wait — a tracker or confirmed-path restore, at a moment no code is
+    flowing. The flag is read at the last moment before each start-session."""
+
+    def _posts(self, monkeypatch):
+        posts = []
+
+        class _Resp:
+            status_code = 200
+
+        def fake_post(url, *a, **kw):
+            posts.append(url.rsplit("/", 1)[-1])
+            return _Resp()
+
+        monkeypatch.setattr("main.api_post", fake_post)
+        monkeypatch.setattr("main.requests.post", fake_post)
+        monkeypatch.setattr("main.time.sleep", lambda *_: None)
+        return posts
+
+    def test_the_power_resume_restart(self, monkeypatch):
+        posts = self._posts(monkeypatch)
+
+        class _Stub:
+            _restart_session_once = MainWindow._restart_session_once
+            _RECOVERY_CLOSE_WAIT = MainWindow._RECOVERY_CLOSE_WAIT
+            wpp_server = "http://127.0.0.1"
+            wpp_port = 6300
+            token = "sess:tok"
+            _profile_restore_in_flight = False
+
+            def _wait_for_status(self, predicate, timeout, stop_when_connected=True):
+                return "CLOSED"
+
+            def _kill_orphaned_chrome_for_session(self, *a, **kw):
+                pass
+
+            def wait_for_profile_release(self, session_name, timeout=20.0):
+                self._profile_restore_in_flight = True   # a restore began meanwhile
+                return True
+
+        _Stub()._restart_session_once("sess:tok", 1)
+
+        assert "close-session" in posts
+        assert "start-session" not in posts

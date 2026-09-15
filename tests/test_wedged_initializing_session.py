@@ -178,6 +178,11 @@ class _Stub:
     _profile_recovery_generation = MainWindow._profile_recovery_generation
     _set_profile_recovery_generation = MainWindow._set_profile_recovery_generation
 
+    def _is_pairing_dialog_active(self):
+        # _restore() now refuses to copy over a re-pairing that began while
+        # it was stalled (issue #203 review); nobody is pairing here.
+        return False
+
     def browser_payload_blocks_startup(self):
         """A healthy browser by default. _recover_suspect_profile() now refuses
         outright when the bundled Chromium cannot start, because a failed
@@ -308,3 +313,49 @@ class TestTheUnattendedQrHandlerCanSeeTheRestoreInFlight:
                             lambda *a, **kw: False)
         assert MainWindow._recover_suspect_profile(stub) is False
         assert stub._profile_restore_in_flight is False
+
+
+class TestAStalledRestoreDoesNotCopyOverWhatReplacedIt:
+    """_handle_unattended_qr() leaves codes to a restore for at most
+    _RESTORE_FLIGHT_IGNORE_SECONDS, and that bound needs the start time
+    recorded; past it the halt can fire and the pairing dialog open. A restore
+    that finally gets to its copy after that must not write the profile a new
+    pairing is using — nor fail on its open files and announce "no saved
+    copy" over a freshly paired session."""
+
+    def test_the_flight_records_when_it_started(self, stub, monkeypatch):
+        seen = {}
+        monkeypatch.setattr("core.profile_recovery.restore_snapshot",
+                            lambda *a, **kw: True)
+        original = stub.wait_for_profile_release
+
+        def record(session_name, timeout=None):
+            seen["started_at"] = stub._profile_restore_started_at
+            return original(session_name, timeout)
+
+        stub.wait_for_profile_release = record
+        MainWindow._recover_suspect_profile(stub)
+        assert seen["started_at"] > 0
+
+    @pytest.mark.parametrize("what_happened", ["halted", "dialog", "pairing"])
+    def test_it_gives_up_quietly(self, stub, monkeypatch, what_happened):
+        copies = []
+        monkeypatch.setattr("core.profile_recovery.restore_snapshot",
+                            lambda *a, **kw: copies.append(1) or True)
+
+        def meanwhile(session_name, timeout=None):
+            if what_happened == "halted":
+                stub._qr_flood_halted = True
+            elif what_happened == "dialog":
+                stub._is_pairing_dialog_active = lambda: True
+            else:
+                stub._pairing_in_progress = True
+            return True
+
+        stub.wait_for_profile_release = meanwhile
+        assert MainWindow._recover_suspect_profile(stub) is True
+
+        assert copies == []
+        assert "profile_corrupted_repair_needed" not in stub.announced
+        assert stub._profile_restore_in_flight is False
+        assert stub._recovery_restart_active is False

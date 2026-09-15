@@ -190,9 +190,9 @@ class WebSocketClient:
     #   * one code starts the restore;
     #   * codes during the restore's flight are not counted and trigger
     #     nothing — the restore has already closed the session, and
-    #     _handle_unattended_qr() explains why they are stragglers, two or
-    #     three in the worst case (about a minute of close, release wait and
-    #     kill, against a ~20-30 s rotation), and never for longer than
+    #     _handle_unattended_qr() explains why they are stragglers, three or
+    #     four in the worst case (about 81 s of close, release wait, kill and
+    #     settle, against a ~20-30 s rotation), and never for longer than
     #     _RESTORE_FLIGHT_IGNORE_SECONDS;
     #   * after it, a successful restore zeroes this counter on the restore
     #     thread (the burst was minted by the profile now moved aside) and a
@@ -258,15 +258,19 @@ class WebSocketClient:
 
     # How long _handle_unattended_qr() leaves codes to a profile restore in
     # flight before counting them again. A restore closes the session first and
-    # kills whatever still holds the profile about a minute in at worst
-    # (close-session's 10 s timeout, a 20 s release deadline whose polls can
-    # run past it, the kill and its settle), so a code arriving after twice
-    # that means the browser survived all of it. The copy itself can take
+    # kills whatever still holds the profile within about 81 s at worst:
+    # close-session's 10 s timeout; a 20 s release deadline whose last profile
+    # scan (_chrome_pids_owning_session, 15 s timeout) can overrun it, 35 s;
+    # the 15 s scan before the kill; and the post-kill settle, whose 5 s
+    # deadline is only checked after a scan of up to 15 s and can start a
+    # second one, ~20.5 s. A code arriving after more than twice that means the
+    # browser survived all of it. taskkill itself has no timeout, which no
+    # figure here can bound — that is what the ceiling below is for. The copy itself can take
     # longer than this on a slow disk; that does not matter, because a restore
     # that got that far has no browser left to mint codes. Only a restore that
     # is slow AND still producing codes is ever counted — and for that one the
     # flood ceiling is worth more than protecting the copy.
-    _RESTORE_FLIGHT_IGNORE_SECONDS = 150
+    _RESTORE_FLIGHT_IGNORE_SECONDS = 180
 
     def __init__(self, main_window, connect, instance_name):
         self.main_window = main_window
@@ -1074,11 +1078,10 @@ class WebSocketClient:
             # check and that restart's own loop all read this flag too (the
             # review of issue #203 found the overlap). A restore stuck in its
             # copy has no browser left to mint codes with. What can still
-            # arrive are stragglers from the session being closed: a release
-            # poll can itself take up to 15 s, then the kill and its settle, so
-            # roughly a minute and two or three codes at WhatsApp's ~20-30 s
-            # rotation in the worst case — more often none, since a
-            # close-session that answers stops the page at once.
+            # arrive are stragglers from the session being closed: about 81 s
+            # in the worst case (see _RESTORE_FLIGHT_IGNORE_SECONDS), so three
+            # or four codes at WhatsApp's ~20-30 s rotation — more often none,
+            # since a close-session that answers stops the page at once.
             #
             # And each outcome would do harm here. The halt latches
             # _qr_flood_halted, which blocks /start-session until the user

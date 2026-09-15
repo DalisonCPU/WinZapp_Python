@@ -4549,6 +4549,13 @@ class MainWindow(wx.Frame):
         # accepted. See closeBrowserGracefully() in createSessionUtil.ts.
         self.wait_for_profile_release(
             (getattr(self, "token", "") or "").split(":")[0], timeout=10.0)
+        if getattr(self, "_profile_restore_in_flight", False):
+            # A profile restore began during the close or the release wait
+            # above; starting now would open Chrome over the copy. The restore
+            # hands the session back to the health loop when it is done.
+            logging.info("[power] zombie recovery: a profile restore took the "
+                         "session over — not starting it (attempt %d).", attempt)
+            return
         try:
             api_post(
                 f"{self.wpp_server}:{self.wpp_port}/api/{token}/start-session",
@@ -8944,6 +8951,19 @@ class MainWindow(wx.Frame):
             or bool(getattr(self, "_profile_restore_in_flight", False))
         )
 
+    def _session_restart_owned(self) -> bool:
+        """Whether a close/start cycle of ours owns this session right now.
+
+        Not just _recovery_restart_active: that flag has two owners — the
+        profile restore and the power-resume restart — and the latter's
+        finally clears it while a restore it overlapped is still copying the
+        profile back (found reviewing issue #203). _profile_restore_in_flight
+        is cleared by the restore alone, so reading both is what keeps the
+        health loop's CLOSED auto-start from opening Chrome over that copy.
+        """
+        return bool(getattr(self, "_recovery_restart_active", False)
+                    or getattr(self, "_profile_restore_in_flight", False))
+
     def _reset_unattended_qr_guards(self) -> None:
         """Drop both unattended-QR guards: a human is looking at the pairing
         UI, so the codes WPPConnect produces are wanted again.
@@ -9486,12 +9506,12 @@ class MainWindow(wx.Frame):
     _SELF_RESTART_YIELD_POLL_SECONDS = 0.2
 
     def _yield_to_in_progress_self_restart(self):
-        if not (getattr(self, "_recovery_restart_active", False)
+        if not (self._session_restart_owned()
                 or getattr(self, "_restarting_wpp_session", False)):
             return
         deadline = time.monotonic() + self._SELF_RESTART_YIELD_SECONDS
         while time.monotonic() < deadline:
-            if not (getattr(self, "_recovery_restart_active", False)
+            if not (self._session_restart_owned()
                     or getattr(self, "_restarting_wpp_session", False)):
                 return
             time.sleep(self._SELF_RESTART_YIELD_POLL_SECONDS)
@@ -9690,6 +9710,23 @@ class MainWindow(wx.Frame):
                         logging.warning("[profile-recovery] close-session failed: %s: %s",
                                         type(e).__name__, redact_credentials(str(e)))
                 self.wait_for_profile_release(session_name, timeout=20.0)
+                if (getattr(self, "_qr_flood_halted", False)
+                        or self._is_pairing_dialog_active()
+                        or getattr(self, "_pairing_in_progress", False)):
+                    # Only reachable through a restore that overstayed
+                    # _RESTORE_FLIGHT_IGNORE_SECONDS (websocket_client.py): its
+                    # codes were counted again, the halt fired, and on a paired
+                    # install the pairing dialog opened. Copying now would write
+                    # the profile a new pairing is about to use — or, once one
+                    # has succeeded, fail on its open files and announce "no
+                    # saved copy" over a freshly paired session. Leaving the
+                    # profile as it is costs nothing: the user is re-pairing.
+                    logging.warning("[profile-recovery] the session was halted "
+                                    "or re-pairing began while the restore was "
+                                    "stalled — not restoring over it.")
+                    self._shutdown_audit("profile restore abandoned — halted or "
+                                         "re-pairing began first")
+                    return
                 if profile_recovery.restore_snapshot(
                         global_dir, session_name, prefer_previous=prefer_previous):
                     self._shutdown_audit("profile restored from snapshot")
@@ -13410,6 +13447,12 @@ class MainWindow(wx.Frame):
                         session_name[:12], self._RESTART_PROFILE_RELEASE_WAIT,
                     )
 
+            if getattr(self, "_profile_restore_in_flight", False):
+                # Same reason as _restart_session_once(): a restore that began
+                # during the close or the release wait owns the profile now.
+                logging.info("[_restart_wpp_session] a profile restore took "
+                             "the session over — not starting it.")
+                return
             start_url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/start-session"
             try:
                 api_post(start_url, json={"waitQrCode": False}, headers=headers, timeout=15)
@@ -13871,14 +13914,7 @@ class MainWindow(wx.Frame):
                     block = cs.auto_start_block_reason(
                         pairing_dialog_active=self._is_pairing_dialog_active(),
                         qr_flood_halted=getattr(self, "_qr_flood_halted", False),
-                        # _profile_restore_in_flight as well: _recovery_restart_active
-                        # has two owners, and the power-resume restart's finally
-                        # clears it while a profile restore it overlapped is still
-                        # copying — a /start-session here would open Chrome over
-                        # that copy (issue #203 review).
-                        recovery_restart_active=(
-                            getattr(self, "_recovery_restart_active", False)
-                            or getattr(self, "_profile_restore_in_flight", False)),
+                        recovery_restart_active=self._session_restart_owned(),
                         self_inflicted_teardown=self._self_inflicted_teardown_expected(),
                     )
                     if block:
