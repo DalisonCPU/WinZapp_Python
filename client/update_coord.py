@@ -110,7 +110,24 @@ def _default_proc_create_time(pid: int):
             if kernel32.GetExitCodeProcess(h, ctypes.byref(code)):
                 if code.value != STILL_ACTIVE:
                     return None  # already exited
-            return _CT_UNKNOWN  # alive, unknown create_time
+            # The REAL creation time, not the sentinel. psutil is not shipped,
+            # so this branch is what every installed WinZapp runs, and returning
+            # _CT_UNKNOWN here made every lease and claim record 0.0 — which
+            # lease_alive() accepts for ANY process holding that pid. Windows
+            # reuses pids quickly (measured on one install: svchost,
+            # RuntimeBroker and msedgewebview2 sitting on the pids of WinZapps
+            # that had long exited), so a claim left behind by a finished
+            # update looked alive forever, and "check for updates" said a
+            # dialog was open in another account on machines with one account.
+            # Same conversion as psutil: FILETIME 100 ns ticks since 1601.
+            ft_create, ft_exit, ft_kernel, ft_user = (
+                wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME())
+            if kernel32.GetProcessTimes(h, ctypes.byref(ft_create), ctypes.byref(ft_exit),
+                                        ctypes.byref(ft_kernel), ctypes.byref(ft_user)):
+                ticks = (ft_create.dwHighDateTime << 32) | ft_create.dwLowDateTime
+                if ticks > 116444736000000000:
+                    return (ticks - 116444736000000000) / 10_000_000
+            return _CT_UNKNOWN  # alive, create_time could not be read
         finally:
             kernel32.CloseHandle(h)
     try:
@@ -133,6 +150,28 @@ def lease_alive(pid: int, create_time: float,
         return False
     if ct == 0.0 or create_time == 0.0:
         return True
+    return abs(ct - create_time) < 1e-6
+
+
+def prompt_owner_alive(pid: int, create_time: float,
+                       proc_create_time: Callable[[int], Optional[float]] = _default_proc_create_time) -> bool:
+    """Liveness for the update-PROMPT claim: alive only on a positive match.
+
+    lease_alive() fails CLOSED — unknown counts as alive — because a lease
+    guards the install, and installing under a running account corrupts it.
+    The prompt claim guards against nothing worse than a second dialog, and its
+    reader already fails open for that reason (_read_prompt). Letting an
+    unknown create_time count as alive there is what kept a claim left behind
+    by an update alive for as long as ANY process sat on its old pid, telling
+    people with a single account that another account's dialog was open. So
+    here both sides must be known and equal; a claim recorded as 0.0 by an
+    older build is never trusted, which also clears the ones already stuck.
+    """
+    if create_time == _CT_UNKNOWN:
+        return False
+    ct = proc_create_time(pid)
+    if ct is None or ct == _CT_UNKNOWN:
+        return False
     return abs(ct - create_time) < 1e-6
 
 
@@ -422,7 +461,7 @@ def _prompt_holder_locked(global_dir: str,
 def try_claim_update_prompt(global_dir: str, version: str,
                             pid: Optional[int] = None,
                             create_time: Optional[float] = None,
-                            is_alive: Callable[[int, float], bool] = lease_alive):
+                            is_alive: Callable[[int, float], bool] = prompt_owner_alive):
     """Claim the right to ask the user about an update. Returns an owner-token
     dict, or None when another live process is already asking.
 
@@ -464,7 +503,7 @@ def release_update_prompt(global_dir: str, token: dict) -> bool:
 
 
 def update_prompt_holder(global_dir: str,
-                         is_alive: Callable[[int, float], bool] = lease_alive) -> "dict | None":
+                         is_alive: Callable[[int, float], bool] = prompt_owner_alive) -> "dict | None":
     with updater_lock(global_dir):
         return _prompt_holder_locked(global_dir, is_alive)
 

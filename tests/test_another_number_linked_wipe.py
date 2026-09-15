@@ -45,6 +45,7 @@ happens, and the round keeps writing until it exits.
 import inspect
 import logging
 import threading
+import time
 
 import connection_state as cs
 import main as main_module
@@ -253,6 +254,11 @@ class _Stub:
         MainWindow._restart_sync_after_another_number_wipe
     )
     _ANOTHER_NUMBER_SYNC_JOIN_ROUNDS = MainWindow._ANOTHER_NUMBER_SYNC_JOIN_ROUNDS
+    # Mirrored, not left to getattr: a test reaching the exit wait without
+    # them gets an AttributeError that the method's own `except` swallows,
+    # and would look like it passed.
+    _ANOTHER_NUMBER_SYNC_EXIT_WAIT = MainWindow._ANOTHER_NUMBER_SYNC_EXIT_WAIT
+    _ANOTHER_NUMBER_SYNC_EXIT_POLL = MainWindow._ANOTHER_NUMBER_SYNC_EXIT_POLL
     _ANOTHER_NUMBER_WIPE_REASON = MainWindow._ANOTHER_NUMBER_WIPE_REASON
 
     @property
@@ -1129,11 +1135,11 @@ class TestTheRoundThatWasAlreadyRunningWhenPairingEnded:
 
     def test_giving_up_after_the_bound_leaves_a_line_in_the_log(
             self, monkeypatch, caplog):
-        """Three rounds born back to back in the gaps and the bound is spent:
-        the second wipe then runs beside a live round, _try_start_sync_thread()
-        answers "there is already one running" and starts nothing, and the
-        corrective full sync never happens — the bug this whole thread exists
-        to fix, back again.
+        """Three rounds born back to back in the gaps and the bound is spent.
+        Past the extra wait below (shrunk to nothing here) the second wipe
+        still runs beside a live round, _try_start_sync_thread() answers
+        "there is already one running" and starts nothing, and only the
+        health checker is left to start the corrective full sync.
 
         Practically unreachable, which is exactly why the line matters: with
         the loop falling out silently, the only way to diagnose it afterwards
@@ -1141,6 +1147,7 @@ class TestTheRoundThatWasAlreadyRunningWhenPairingEnded:
         """
         stub = self._diverged()
         stub._ANOTHER_NUMBER_SYNC_JOIN_ROUNDS = 1
+        stub._ANOTHER_NUMBER_SYNC_EXIT_WAIT = 0
         first = _InFlightSync(stub)
 
         _run_live(stub, monkeypatch)
@@ -1178,6 +1185,284 @@ class TestTheRoundThatWasAlreadyRunningWhenPairingEnded:
 
         assert stub.wipe_calls == 1
         assert stub.sync_starts == 1
+
+
+class _SupersedableSync(_InFlightSync):
+    """A round that honours _sync_run_id the way _run_sync() does since #198:
+    it notices a bump and leaves. ``honours=False`` is a round hung somewhere
+    no check reaches, which only finish() ends."""
+
+    def __init__(self, stub, name, honours=True):
+        self._honours = honours
+        self._name = name
+        super().__init__(stub)
+        self.thread.name = name
+
+    def _run(self):
+        start_id = getattr(self._stub, "_sync_run_id", 0)
+        try:
+            while not self._release.wait(timeout=0.005):
+                if (self._honours
+                        and getattr(self._stub, "_sync_run_id", 0) != start_id):
+                    break
+        finally:
+            self._stub.events.append(self._name + "-ended")
+            self._stub._initial_sync_running = False
+
+
+class _LostBumpSync(_SupersedableSync):
+    """A round that loses the first bump it sees to start_sync()'s unlocked
+    read-then-write of _sync_run_id: it writes its own value back over it, so
+    it runs on as current, and only a later bump makes it leave."""
+
+    def __init__(self, stub, name):
+        self.overwrote = False
+        super().__init__(stub, name)
+
+    def _run(self):
+        own = getattr(self._stub, "_sync_run_id", 0)
+        try:
+            while not self._release.wait(timeout=0.005):
+                if getattr(self._stub, "_sync_run_id", 0) == own:
+                    continue
+                if not self.overwrote:
+                    self.overwrote = True
+                    self._stub._sync_run_id = own
+                    continue
+                break
+        finally:
+            self._stub.events.append(self._name + "-ended")
+            self._stub._initial_sync_running = False
+
+
+def _wait_until(predicate, timeout=5):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.005)
+    return predicate()
+
+
+class TestTheSpentBoundStillEndsInACorrectiveSync:
+    """Issue #199: with _ANOTHER_NUMBER_SYNC_JOIN_ROUNDS spent, the thread
+    used to wipe beside the round still alive and ask for a sync that
+    _try_start_sync_thread() refused. It now supersedes that round, waits for
+    it — bounded — and only then wipes and starts.
+
+    The bound and the poll slice are shrunk on the stub so nothing here
+    sleeps for real.
+    """
+
+    def _exhausted(self, monkeypatch, *, honours=True, wait=5,
+                   shutting_down=False, round_factory=None):
+        stub = _Stub(ui_ready=True,
+                     probe=(cs.LINK_PROBE_LINKED, "5521988887777@c.us"))
+        stub._ANOTHER_NUMBER_SYNC_JOIN_ROUNDS = 1
+        stub._ANOTHER_NUMBER_SYNC_EXIT_WAIT = wait
+        stub._ANOTHER_NUMBER_SYNC_EXIT_POLL = 0.01
+        first = _InFlightSync(stub)
+        _run_live(stub, monkeypatch)
+        worker = _resync_thread()
+        assert worker is not None
+        # Born in the gap: the one join of the bound is spent on `first`.
+        if round_factory is None:
+            second = _SupersedableSync(stub, "gap-round", honours=honours)
+        else:
+            second = round_factory(stub, "gap-round")
+        # Before `first` ends, or the worker could be past the wait already.
+        stub._shutting_down = shutting_down
+        first.finish()
+        return stub, worker, second
+
+    def test_the_corrective_sync_really_starts_this_session(self, monkeypatch):
+        stub, worker, second = self._exhausted(monkeypatch)
+
+        worker.join(timeout=5)
+
+        assert not worker.is_alive()
+        assert not second.thread.is_alive()
+        assert stub.syncs_started == 1
+        assert stub._sync_completed is False
+        assert stub._force_full_sync is True
+        # And the claim is held for the round just started, not left cleared
+        # by the round that exited.
+        assert stub._initial_sync_running is True
+
+    def test_the_wipe_waits_for_the_round_to_exit(self, monkeypatch):
+        stub, worker, second = self._exhausted(monkeypatch)
+
+        worker.join(timeout=5)
+
+        names = [e if isinstance(e, str) else e[0] for e in stub.events]
+        wipes = [i for i, n in enumerate(names) if n == "wipe"]
+        assert len(wipes) == 2
+        assert names.index("gap-round-ended") < wipes[-1]
+        # Claimed while it wiped, as every other pass is.
+        assert stub.events[wipes[-1]] == ("wipe", True)
+
+    def test_a_round_that_never_leaves_does_not_hold_the_thread_forever(
+            self, monkeypatch, caplog):
+        """Bounded: past the wait it falls back to the wipe beside the round,
+        and says so."""
+        with caplog.at_level(logging.WARNING):
+            stub, worker, second = self._exhausted(
+                monkeypatch, honours=False, wait=0.2)
+            worker.join(timeout=5)
+
+        assert not worker.is_alive()
+        assert second.thread.is_alive()
+        assert stub.wipe_calls == 2
+        assert stub.syncs_started == 0
+        assert "still running after the wait" in caplog.text
+        second.finish()
+
+    def test_a_single_bump_lost_to_a_starting_round_does_not_strand_the_wait(
+            self, monkeypatch):
+        """Why the counter is bumped on every slice rather than once:
+        start_sync() reads _sync_run_id and writes it back unlocked, so a
+        round starting at that instant overwrites the bump and runs on as
+        current. Bumped once, this round would never leave, and the wait would
+        end in the wipe beside it with no sync started."""
+        stub, worker, second = self._exhausted(
+            monkeypatch, wait=2, round_factory=_LostBumpSync)
+
+        worker.join(timeout=5)
+
+        assert second.overwrote
+        assert not second.thread.is_alive()
+        assert stub.syncs_started == 1
+
+    def test_a_shutdown_never_runs_the_second_pass_or_a_sync(self, monkeypatch):
+        """Inside a close the pass is a 5 s UI wait and a database rewrite
+        competing with db.close() and the Chrome profile flush.
+
+        And the key is NOT moved back to the previous number. The next launch
+        refills the database with the new account under whatever the key says,
+        and runs no divergence check of its own — so a key naming the previous
+        number would have this account's next pairing, with the same new
+        phone, delete that whole history."""
+        stub, worker, second = self._exhausted(
+            monkeypatch, wait=0.3, shutting_down=True)
+
+        worker.join(timeout=5)
+
+        assert not worker.is_alive()
+        assert stub.wipe_calls == 1
+        # Nothing asked for at all: the first pass handed off to this thread
+        # instead of asking, and this thread never got as far as asking.
+        assert stub.sync_starts == 0
+        assert stub.syncs_started == 0
+        assert stub.recorded_number == "5521988887777"
+        assert stub.saved == 1  # the first pass recording B, and nothing after
+        assert stub.full_sync_latches == [MainWindow._ANOTHER_NUMBER_WIPE_REASON]
+        # Nothing is running, so the claim is not left behind.
+        assert stub._initial_sync_running is False
+
+    def test_a_cancelled_shutdown_carries_on_with_the_pass(
+            self, monkeypatch, caplog):
+        """_shutting_down is reset when another app cancels the shutdown, and
+        the app goes on running: giving up on the flag alone would abandon the
+        corrective sync in a session that never ended."""
+        caplog.set_level(logging.INFO)
+        stub, worker, second = self._exhausted(
+            monkeypatch, wait=5, shutting_down=True)
+
+        # The worker has really seen the shutdown before it is cancelled.
+        assert _wait_until(lambda: "waits for the close" in caplog.text)
+        assert _wait_until(lambda: not second.thread.is_alive())
+        assert stub.saved == 1
+        assert stub.wipe_calls == 1
+        assert worker.is_alive()
+
+        stub._shutting_down = False
+        worker.join(timeout=5)
+
+        assert not worker.is_alive()
+        assert stub.wipe_calls == 2
+        assert stub.syncs_started == 1
+        assert stub.recorded_number == "5521988887777"
+
+    def test_the_ordinary_path_waits_out_a_shutdown_too(self, monkeypatch):
+        """Not only the exhausted one: the round the first join waited for can
+        end during the close just as well."""
+        stub = _Stub(ui_ready=True,
+                     probe=(cs.LINK_PROBE_LINKED, "5521988887777@c.us"))
+        stub._ANOTHER_NUMBER_SYNC_EXIT_WAIT = 0.3
+        stub._ANOTHER_NUMBER_SYNC_EXIT_POLL = 0.01
+        in_flight = _InFlightSync(stub)
+        _run_live(stub, monkeypatch)
+        worker = _resync_thread()
+        stub._shutting_down = True
+        in_flight.finish()
+        worker.join(timeout=5)
+
+        assert not worker.is_alive()
+        assert stub.wipe_calls == 1
+        assert stub.syncs_started == 0
+        assert stub._initial_sync_running is False
+
+    def test_a_shutdown_that_begins_during_the_wipe_starts_no_sync(
+            self, monkeypatch):
+        """No "Sincronizando" and no database latch inside a close. The
+        emptied database latches full mode by itself on the next launch."""
+        stub = _Stub(ui_ready=True,
+                     probe=(cs.LINK_PROBE_LINKED, "5521988887777@c.us"))
+        in_flight = _InFlightSync(stub)
+        _run_live(stub, monkeypatch)
+        worker = _resync_thread()
+
+        def _wipe_then_close(*args, **kwargs):
+            MainWindow._apply_another_number_wipe(stub, *args, **kwargs)
+            stub._shutting_down = True
+
+        stub._apply_another_number_wipe = _wipe_then_close
+        in_flight.finish()
+        worker.join(timeout=5)
+
+        assert stub.wipe_calls == 2
+        assert stub.syncs_started == 0
+        assert stub.full_sync_latches == [MainWindow._ANOTHER_NUMBER_WIPE_REASON]
+        assert stub._initial_sync_running is False
+
+    def test_after_the_fallback_the_health_checker_starts_it(self, monkeypatch):
+        """What the fallback leans on, read off the real
+        trigger_sync_if_needed(): once the round exits and gives the claim
+        back, nothing the fallback left behind stops the corrective sync.
+
+        _last_sync_attempt_ts is zeroed, which hides the real cooldown: in the
+        app the round's own exit re-stamps it, so this start comes
+        _SYNC_RETRY_COOLDOWN × _sync_retry_count (up to 600 s) later, and only
+        while connected and outside manual offline mode."""
+        stub, worker, second = self._exhausted(
+            monkeypatch, honours=False, wait=0.2)
+        worker.join(timeout=5)
+        second.finish()
+        starts_before = stub.syncs_started
+
+        stub._wa_connected = True
+        stub._last_sync_attempt_ts = 0
+        stub._SYNC_RETRY_COOLDOWN = MainWindow._SYNC_RETRY_COOLDOWN
+        MainWindow.trigger_sync_if_needed(stub)
+
+        assert stub._initial_sync_running is False
+        assert stub.syncs_started == starts_before + 1
+        assert stub._force_full_sync is True
+
+    def test_the_ordinary_path_supersedes_nothing(self, monkeypatch):
+        """The break on the first join is untouched: no run-id bump from this
+        thread, one start."""
+        stub = _Stub(ui_ready=True,
+                     probe=(cs.LINK_PROBE_LINKED, "5521988887777@c.us"))
+        in_flight = _InFlightSync(stub)
+        _run_live(stub, monkeypatch)
+        worker = _resync_thread()
+        in_flight.finish()
+        worker.join(timeout=5)
+
+        assert getattr(stub, "_sync_run_id", 0) == 0
+        assert stub.syncs_started == 1
+        assert stub.wipe_calls == 2
 
 
 class TestTheStartupPathTouchesNoneOfThat:

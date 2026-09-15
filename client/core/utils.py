@@ -309,6 +309,15 @@ def is_voice_message(msg) -> bool:
     if msg.get("isPtt") or msg.get("ptt"):
         return True
     msg_type = msg.get("messageType") or msg.get("type")
+    if msg_type is None and isinstance(msg.get("audioMessage"), dict):
+        # A bare message BODY rather than a record: what a reply stores as
+        # contextInfo.quotedMessage when WinZapp itself builds it (the quoted
+        # message's own "message" dict). It carries no messageType, so it used
+        # to fall out here as "not a voice note" and every reply to a voice
+        # message read "mensagem citada: áudio". Only a body whose one media
+        # key is audioMessage gets here; a record always has messageType, so
+        # the guard below still keeps a stray ptt flag on a photo from counting.
+        msg_type = "audioMessage"
     if msg_type not in ("audioMessage", "audio", "ptt"):
         return False
     if msg_type == "ptt":
@@ -1097,6 +1106,10 @@ def _slim_quoted_message(quoted):
     qtype = quoted.get("type")
     slim: dict = {}
     if qtype and qtype not in ("chat", "text"):
+        # "audio" carrying a voice-note flag inside is still a voice note; the
+        # type alone would drop that flag and read "áudio" once saved.
+        if qtype == "audio" and is_voice_message(quoted):
+            qtype = "ptt"
         slim["type"] = qtype
         if text:
             slim["caption"] = text
@@ -1109,6 +1122,11 @@ def _slim_quoted_message(quoted):
                   "documentMessage", "stickerMessage", "contactMessage"):
             if k in quoted:
                 slim[k] = {}
+                # The one flag the label needs: without it a quoted voice note
+                # was stored as a generic audio file and read "áudio" even with
+                # voice messages distinguished (is_voice_message() reads it).
+                if k == "audioMessage" and is_voice_message(quoted):
+                    slim[k]["ptt"] = True
                 break
     mentioned = _extract_mentioned_jids(quoted)
     if mentioned:

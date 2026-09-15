@@ -3260,11 +3260,12 @@ export async function sendSeen(req: Request, res: Response) {
           // failures and let markIsRead() surface its own error. It is now
           // deliberately unguarded: the caller needs a definite success or
           // failure to decide whether to roll the local unread state back
-          // (_sync_conversation_read_state in client/main.py), and a find()
+          // (_send_read_state_blocking in client/main.py), and a find()
           // that failed makes the following call's outcome untrustworthy
           // rather than merely uninformative. A genuine transient failure
           // surfaces as a normal error and is retried from the Python side —
-          // 3 attempts across both JID aliases, see _sync_conversation_read_state.
+          // across both JID aliases, 3 attempts for a single chat, or in
+          // rounds for a bulk mark-as-read (client/core/bulk_read_state.py).
           if (WPP.chat.find) await WPP.chat.find(chatId);
           const operation = markUnread
             ? WPP.chat.markIsUnread

@@ -1,4 +1,5 @@
 import base64 as _b64
+import copy
 import logging
 import mimetypes
 import os
@@ -27,6 +28,14 @@ from core.audio_devices import (
 )
 from core.audio_transcode import transcode_audio_to_wav
 from core.attachment_types import classify_attachment_media_type
+from core.message_edit import (
+    EDIT_UI_WINDOW_SECONDS,
+    edit_kind,
+    edit_window_open,
+    edited_text_message,
+    restore_edit_state,
+    snapshot_edit_state,
+)
 from core.sound_system import load_sound
 from core.link_preview import find_first_url, fetch_link_preview
 from ui.accessible import (
@@ -2292,20 +2301,6 @@ class ConversationsPanel(wx.Panel):
         # that already had mentions silently dropped them.
         api_text, edit_mentions = self._build_mention_payload(text)
 
-        # Call WPPConnect to update the message — on a worker thread.
-        # edit-message drives Puppeteer/WhatsApp Web and routinely takes a
-        # second or two to come back (its own timeout is 15s); running it
-        # inline here froze the whole window for that long on every edit,
-        # the one server-backed message action still doing that. Everything
-        # below is the local, optimistic update — the same shape
-        # _on_menu_pin_message() uses.
-        threading.Thread(
-            target=self.main_window.edit_message,
-            args=(remote_jid, msg_id, api_text),
-            kwargs={"mentioned_jids": edit_mentions},
-            daemon=True,
-        ).start()
-
         # Re-locate the message by ID rather than trusting the row index
         # captured when edit mode was entered: a background sync can call
         # populate_messages() at any point while the user is typing,
@@ -2322,19 +2317,52 @@ class ConversationsPanel(wx.Panel):
         )
 
         # Update local state
+        snapshot = applied_message = None
         if 0 <= idx < len(self._sorted_messages):
             edited = self._sorted_messages[idx]
-            if edit_mentions:
+            # Taken before the optimistic rewrite, so a refusal from WhatsApp
+            # can put the row back — see _rollback_message_edit().
+            snapshot = snapshot_edit_state(edited)
+            caption_key = next(
+                (k for k in ("imageMessage", "videoMessage", "documentMessage")
+                 if isinstance((edited.get("message") or {}).get(k), dict)),
+                None,
+            ) if edit_kind(edited) == "caption" else None
+            if caption_key is not None:
+                # A caption edit changes the caption and nothing else: the
+                # media's URL, key, measured duration and cache stay put, and
+                # the snapshot above already holds the whole body for a
+                # rollback.
+                #
+                # Mentions are deliberately not carried on a caption edit: only
+                # text rows resolve "@<phone>" back to a name
+                # (_get_message_content()), so a caption stored with the
+                # mention payload read the raw number out loud, and the send
+                # path never attaches mentions to a caption either. The caption
+                # is sent and kept exactly as typed.
+                api_text, edit_mentions = text, None
+                edited["message"][caption_key]["caption"] = text
+                # Both places a mention list can live: top-level (local sends)
+                # and inside the media body (anything normalised from sync).
+                for ctx in (edited.get("contextInfo"),
+                            edited["message"][caption_key].get("contextInfo")):
+                    if isinstance(ctx, dict):
+                        ctx.pop("mentionedJid", None)
+                        ctx.pop("mentionedJidList", None)
+            # edited_text_message() keeps a reply's quote when it lives inside
+            # the body (every reply that came from sync or the phone), which a
+            # bare rewrite to `conversation` silently dropped from the row.
+            elif edit_mentions:
                 # Same shape the send path builds for a mentioning message,
                 # so _get_message_content() rewrites @phone → @DisplayName
                 # and _extract_mentions() finds the JIDs for the hyperlinks.
-                edited["message"] = {"extendedTextMessage": {"text": api_text}}
-                edited["messageType"] = "extendedTextMessage"
+                edited["message"], edited["messageType"] = edited_text_message(
+                    edited, api_text, extended=True)
                 ctx = edited.setdefault("contextInfo", {})
                 ctx["mentionedJid"] = edit_mentions
             else:
-                edited["message"] = {"conversation": text}
-                edited["messageType"] = "conversation"
+                edited["message"], edited["messageType"] = edited_text_message(
+                    edited, text)
                 # An edit that removed every mention must clear the old list
                 # too, or the stale hyperlinks stay on screen forever.
                 ctx = edited.get("contextInfo")
@@ -2342,6 +2370,7 @@ class ConversationsPanel(wx.Panel):
                     ctx.pop("mentionedJid", None)
                     ctx.pop("mentionedJidList", None)
             edited["_edited"] = True
+            applied_message = copy.deepcopy(edited.get("message"))
             self.messages_list.SetItemText(
                 idx, self._render_message_line(edited)
             )
@@ -2364,12 +2393,79 @@ class ConversationsPanel(wx.Panel):
             # so without this the panels below the list keep describing the
             # message as it was before the edit.
             if self.messages_list.GetFocusedItem() == idx:
-                self._update_links_panel(
-                    self._extract_links(self._render_message_line(edited))
-                )
+                self._update_links_panel(self._message_own_links(edited))
                 self._update_mentions_panel(self._extract_mentions(edited))
 
+        # Call WPPConnect to update the message — on a worker thread.
+        # edit-message drives Puppeteer/WhatsApp Web and routinely takes a
+        # second or two to come back (its own timeout is 15s); running it
+        # inline here froze the whole window for that long on every edit,
+        # the one server-backed message action still doing that. Started
+        # after the local, optimistic update above (the same shape
+        # _on_menu_pin_message() uses) only so the snapshot and the body it
+        # wrote exist to hand over; a failure is reported through
+        # wx.CallAfter, which cannot run before this handler returns anyway.
+        if getattr(self, "_editing_is_caption", False):
+            # Also when the row was not found above: a caption is never sent
+            # with a mention payload, or its echo would store "@<phone>".
+            api_text, edit_mentions = text, None
+        threading.Thread(
+            target=self._send_message_edit,
+            args=(remote_jid, msg_id, api_text, edit_mentions, snapshot, applied_message),
+            daemon=True,
+        ).start()
+
         self._on_cancel_edit()
+
+    def _send_message_edit(self, remote_jid, msg_id, api_text, edit_mentions,
+                           snapshot, applied_message):
+        """Worker: send the edit, and undo the optimistic update if refused.
+
+        Only an explicit False is a refusal; None (a timeout, an error that may
+        have come after the edit went out) keeps the optimistic text — see
+        MainWindow.edit_message(). WhatsApp answers "Cannot edit this
+        message" once the message is past its edit window, and before this the
+        row kept the new text and the "Editada" marker while nobody else ever
+        received the edit.
+        """
+        ok = self.main_window.edit_message(
+            remote_jid, msg_id, api_text, mentioned_jids=edit_mentions)
+        if ok is False:
+            wx.CallAfter(self._rollback_message_edit, remote_jid, msg_id,
+                         snapshot, applied_message)
+
+    def _rollback_message_edit(self, remote_jid, msg_id, snapshot, applied_message):
+        """Main thread: restore a refused edit's row and say it failed."""
+        restored_idx = -1
+        if snapshot is not None:
+            candidates = [(i, m) for i, m in enumerate(self._sorted_messages)
+                          if isinstance(m, dict)
+                          and (m.get("key") or {}).get("id") == msg_id]
+            chat = self.main_window.get_chat(remote_jid)
+            records = ((chat or {}).get("messages", {}).get("messages", {})
+                       .get("records", []))
+            candidates += [(-1, r) for r in records
+                           if isinstance(r, dict)
+                           and (r.get("key") or {}).get("id") == msg_id
+                           and all(r is not m for _, m in candidates)]
+            for i, record in candidates:
+                if restore_edit_state(record, snapshot, applied_message) and i >= 0:
+                    restored_idx = i
+            if restored_idx >= 0:
+                restored = self._sorted_messages[restored_idx]
+                self.messages_list.SetItemText(
+                    restored_idx, self._render_message_line(restored))
+                # Same as the apply path: the panels under the list only follow
+                # focus changes, so a refused edit that added a mention would
+                # otherwise keep offering it.
+                if self.messages_list.GetFocusedItem() == restored_idx:
+                    self._update_links_panel(self._message_own_links(restored))
+                    self._update_mentions_panel(self._extract_mentions(restored))
+            if candidates:
+                self.main_window._schedule_save(dirty_jid=remote_jid)
+                self.main_window._schedule_set_chats()
+        self.main_window.output(
+            self.main_window.i18n.t("edit_message_failed"), interrupt=True)
 
     def _send_new_text_message(self, text: str, remote_jid: str):
         """Queue a brand-new text message and show it as pending right away.
@@ -4256,15 +4352,14 @@ class ConversationsPanel(wx.Panel):
 
         # ── Link detection ────────────────────────────────────────────────
         # Always check the rendered text for URLs (regardless of msg_type).
-        # Must use _render_message_line(msg) — the full, untruncated text —
-        # not messages_list.GetItemText(index): SysListView32 (the native
+        # Must go through _message_own_links(), which renders the full,
+        # untruncated text — not messages_list.GetItemText(index): SysListView32 (the native
         # control wx.ListCtrl wraps) truncates each row's accessible name at
         # _LIST_CTRL_TEXT_LIMIT characters, so a link further into a long
         # message was silently invisible to link detection and never became
         # Tab-focusable, even though the message itself displayed fine (via
         # the "Ler mais" remainder).
-        rendered = self._render_message_line(msg)
-        self._update_links_panel(self._extract_links(rendered))
+        self._update_links_panel(self._message_own_links(msg))
 
         # ── Mention detection ─────────────────────────────────────────────
         self._update_mentions_panel(self._extract_mentions(msg))
@@ -4321,8 +4416,7 @@ class ConversationsPanel(wx.Panel):
         if msg_type in ("conversation", "extendedTextMessage", ""):
             # Full untruncated text — see the matching comment in
             # _on_message_focused() for why GetItemText(index) is wrong here.
-            rendered = self._render_message_line(msg)
-            links = self._extract_links(rendered)
+            links = self._message_own_links(msg)
             if links:
                 try:
                     os.startfile(links[0])
@@ -4660,12 +4754,14 @@ class ConversationsPanel(wx.Panel):
             )
             self.Bind(wx.EVT_MENU, self._on_action_save_as, save_audio_item)
 
-        # Edit (own text messages within 3 hours)
+        # Edit (own text messages within WhatsApp's edit window — see
+        # core.message_edit.EDIT_UI_WINDOW_SECONDS for how it was measured)
         _is_own      = msg.get("key", {}).get("fromMe", False)
         _is_text     = msg_type in ("conversation", "extendedTextMessage")
-        _msg_ts      = msg.get("messageTimestamp", 0)
-        _within_3h   = (time.time() - _msg_ts) < 10800
-        if _is_own and _is_text and _within_3h:
+        _can_edit    = edit_window_open(msg.get("messageTimestamp"))
+        # Text, or the caption an own image/video/document already has —
+        # see core.message_edit.edit_kind().
+        if _is_own and edit_kind(msg) is not None and _can_edit:
             edit_item = menu.Append(wx.ID_ANY, f"{i18n.t('edit_message')}\tAlt+E")
             self.Bind(
                 wx.EVT_MENU,
@@ -4777,6 +4873,18 @@ class ConversationsPanel(wx.Panel):
                 seen.add(m)
                 out.append(m)
         return out
+
+    def _message_own_links(self, msg) -> list:
+        """Links *msg* itself carries, never the ones inside the quote it replies to.
+
+        A reply's rendered row ends with the quoted message's preview, so a
+        link in the message being answered used to become a Tab stop of the
+        reply — and, with one link of its own, pushed the pair into the
+        two-or-more links list. Both belong to the quoted message's own row.
+        """
+        return self._extract_links(
+            self._render_message_line(msg, include_quoted_preview=False)
+        )
 
     def _update_links_panel(self, links: list):
         """Rebuild the link controls below the messages list.
@@ -9944,8 +10052,13 @@ class ConversationsPanel(wx.Panel):
         )
         return True
 
-    def _render_message_line(self, msg, index: int | None = None, total: int | None = None) -> str:
-        """Produce the full display string for a single message row."""
+    def _render_message_line(self, msg, index: int | None = None, total: int | None = None,
+                             include_quoted_preview: bool = True) -> str:
+        """Produce the full display string for a single message row.
+
+        include_quoted_preview=False drops the ", mensagem citada: ..." clause.
+        Only link detection passes it — see _message_own_links().
+        """
         if isinstance(msg, dict) and msg.get("_type") == "empty_placeholder":
             return self.main_window.i18n.t("no_messages_in_conversation")
         # Unread separator sentinel
@@ -10020,7 +10133,7 @@ class ConversationsPanel(wx.Panel):
             pieces[-1] += f", {i18n.t('status_forwarded')}"
 
         # Append quoted message preview (if this is a reply)
-        if ctx:
+        if ctx and include_quoted_preview:
             quoted_msg_obj = ctx.get("quotedMessage") or {}
             quoted_preview = self._get_quoted_preview(quoted_msg_obj)
             if quoted_preview:
@@ -12316,21 +12429,45 @@ class ConversationsPanel(wx.Panel):
             return
         if not msg.get("key", {}).get("fromMe", False):
             return
-        if msg.get("messageType") not in ("conversation", "extendedTextMessage"):
+        if edit_kind(msg) is None:
             return
-        if (time.time() - msg.get("messageTimestamp", 0)) >= 10800:
+        if not edit_window_open(msg.get("messageTimestamp")):
+            # Said out loud: a shortcut that silently does nothing reads as a
+            # broken shortcut to a screen-reader user, and this is by far the
+            # most common reason an own text message cannot be edited.
+            self.main_window.output(
+                self.main_window.i18n.t("edit_window_expired").format(
+                    minutes=EDIT_UI_WINDOW_SECONDS // 60),
+                interrupt=True,
+            )
             return
         self._on_menu_edit_message(index, msg)
 
     def _on_menu_edit_message(self, index: int, msg: dict):
         """Enter edit mode: pre-fill message field with message text."""
-        content = self._get_message_content(msg) or ""
-        # Strip any leading quote block (from a previous reply prefix)
-        if content.startswith("> ") and "\n" in content:
-            content = content[content.index("\n") + 1:]
+        if edit_kind(msg) == "caption":
+            # The raw caption, not _get_message_content(): for media that is
+            # the row as the list reads it (type, file name, size), none of
+            # which is part of what gets edited.
+            body = msg.get("message") or {}
+            content = next(
+                ((body.get(k) or {}).get("caption") or ""
+                 for k in ("imageMessage", "videoMessage", "documentMessage")
+                 if isinstance(body.get(k), dict)),
+                "",
+            )
+        else:
+            content = self._get_message_content(msg) or ""
+            # Strip any leading quote block (from a previous reply prefix)
+            if content.startswith("> ") and "\n" in content:
+                content = content[content.index("\n") + 1:]
 
         self._editing_message_id    = msg.get("key", {}).get("id", "")
         self._editing_message_index = index
+        # Captured now, from the message the user chose: by the time the edit
+        # is saved a sync may have paginated the row out, and the caption rule
+        # (no mentions — see _apply_message_edit) must hold regardless.
+        self._editing_is_caption    = edit_kind(msg) == "caption"
 
         # Seed the pending-mention state from the message being edited. The
         # pre-filled text shows mentions as "@DisplayName" (that is what
@@ -12443,6 +12580,7 @@ class ConversationsPanel(wx.Panel):
         """Leave edit mode without saving."""
         self._editing_message_id    = None
         self._editing_message_index = -1
+        self._editing_is_caption    = False
         # Edit mode seeds these from the message being edited (see
         # _on_menu_edit_message) — drop them again, or the next ordinary message
         # typed into the field would inherit the edited message's mentions.
@@ -15819,8 +15957,9 @@ class ConversationsPanel(wx.Panel):
 
     def _on_mass_mark_read_chats(self, event):
         if not self.selected_chats: return
-        for jid in list(self.selected_chats):
-            self.main_window.mark_conversation_as_read(jid, True)
+        # One paced batch, not one /send-seen per chat at once — see
+        # MainWindow.mark_conversations_as_read().
+        self.main_window.mark_conversations_as_read(list(self.selected_chats), force=True)
         self.selected_chats.clear()
         self.main_window.add_chats_to_ui()
 
@@ -16350,6 +16489,25 @@ class ArchivedConversationsPanel(wx.Panel):
         self._filter_radio.Bind(wx.EVT_RADIOBOX, self._on_filter_changed)
         sizer.Add(self._filter_radio, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
 
+        # ── Search ──────────────────────────────────────────────────────────
+        # Mirrors ConversationsPanel's own search field (same Ctrl+F shortcut,
+        # same Down-arrow-to-first-result behavior) but placed after the
+        # filter tabs rather than before them — there is no "Nova conversa"
+        # button here to separate the two — and scoped to only this panel's
+        # own list: unlike the main panel's search field, which merges in
+        # archived results (see MainWindow._conversation_search_candidates()),
+        # this one never reaches outside the archived list it sits in.
+        self.search_label = wx.StaticText(
+            self, label=i18n.t("search_archived_conversations")
+        )
+        sizer.Add(self.search_label, 0, wx.LEFT | wx.TOP, 5)
+
+        self.search_field = wx.TextCtrl(self, style=wx.TE_DONTWRAP)
+        self.search_field.Bind(wx.EVT_TEXT, self.on_search_query_changed)
+        self.search_field.Bind(wx.EVT_KEY_DOWN, self._on_search_field_key_down)
+        self.search_field.SetAccessible(AccessibleSearchConversations("Ctrl+F"))
+        sizer.Add(self.search_field, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+
         self.conversations_list = wx.ListCtrl(
             self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL
         )
@@ -16386,13 +16544,17 @@ class ArchivedConversationsPanel(wx.Panel):
         applied to this panel instead. The archived list used to have none of
         these at all — Delete and Ctrl+Shift+L (clear) worked in the normal
         list but silently did nothing here, and the row context menu was
-        missing everything except unarchive/clear/delete. Ctrl+F (search) and
-        Ctrl+N (new conversation) are left out: this panel has no search field
-        of its own, and Ctrl+W (close conversation) doesn't apply — there is no
-        split conversation view to close from this list. Ctrl+Shift+Q always
+        missing everything except unarchive/clear/delete. Ctrl+F now focuses
+        this panel's own search field (see _init_ui()), scoped to archived
+        chats only — never the main panel's, which additionally merges in
+        archived results on a non-empty query. Ctrl+N (new conversation) is
+        still left out — there is nowhere to create a conversation from this
+        list — and Ctrl+W (close conversation) doesn't apply either: there is
+        no split conversation view to close from here. Ctrl+Shift+Q always
         means "unarchive" here rather than toggling, since every row is
         archived by definition.
         """
+        self.ID_CTRL_F           = wx.NewIdRef()
         self.ID_DELETE_CONV      = wx.NewIdRef()
         self.ID_ALT_SHIFT_C_LIST = wx.NewIdRef()
         self.ID_CONV_DATA_LIST   = wx.NewIdRef()
@@ -16405,6 +16567,7 @@ class ArchivedConversationsPanel(wx.Panel):
         CS = wx.ACCEL_CTRL | wx.ACCEL_SHIFT
         AS = wx.ACCEL_ALT | wx.ACCEL_SHIFT
         accel_tbl = wx.AcceleratorTable([
+            (wx.ACCEL_CTRL,   ord("F"),        self.ID_CTRL_F),
             (wx.ACCEL_NORMAL, wx.WXK_DELETE, self.ID_DELETE_CONV),
             (AS,              ord("C"),      self.ID_ALT_SHIFT_C_LIST),
             (CS,              ord("D"),      self.ID_CONV_DATA_LIST),
@@ -16416,6 +16579,7 @@ class ArchivedConversationsPanel(wx.Panel):
             (wx.ACCEL_CTRL,   ord("P"),      self.ID_PIN_LIST),
         ])
         self.SetAcceleratorTable(accel_tbl)
+        self.Bind(wx.EVT_MENU, self.on_ctrl_f,                    id=self.ID_CTRL_F)
         self.Bind(wx.EVT_MENU, self._on_accel_delete,             id=self.ID_DELETE_CONV)
         self.Bind(wx.EVT_MENU, self._on_accel_copy_number,        id=self.ID_ALT_SHIFT_C_LIST)
         self.Bind(wx.EVT_MENU, self._on_accel_conversation_data,  id=self.ID_CONV_DATA_LIST)
@@ -16520,6 +16684,29 @@ class ArchivedConversationsPanel(wx.Panel):
             self._on_pin(jid)
 
     # ── Events ────────────────────────────────────────────────────────────────
+
+    def on_search_query_changed(self, event):
+        """Mirrors ConversationsPanel.on_search_query_changed(): route through
+        add_chats_to_ui() (never _refresh_archived_chats_in_ui() directly) so
+        the active filter and this field's own query are applied together and
+        every other consequence of a rebuild (focus/selection restore) is
+        the one already exercised by the filter tabs above."""
+        self.main_window.add_chats_to_ui()
+
+    def on_ctrl_f(self, event):
+        self.search_field.SetFocus()
+
+    def _on_search_field_key_down(self, event):
+        """Down arrow in the search field moves focus to the first archived
+        conversation — mirrors ConversationsPanel._on_search_field_key_down()."""
+        if event.GetKeyCode() == wx.WXK_DOWN:
+            lst = self.conversations_list
+            if lst.GetItemCount() > 0:
+                lst.SetFocus()
+                lst.Focus(0)
+                lst.Select(0)
+            return
+        event.Skip()
 
     def _on_filter_changed(self, event):
         """Update the active conversation filter and rebuild the list."""
@@ -16782,6 +16969,8 @@ class ArchivedConversationsPanel(wx.Panel):
         self.conversations_list.SetColumn(0, col)
         if getattr(self, "_list_accessible", None) is not None:
             self._list_accessible._label = i18n.t("archived_chats")
+        if hasattr(self, "search_label"):
+            self.search_label.SetLabel(i18n.t("search_archived_conversations"))
 
         if hasattr(self, "_filter_radio"):
             self._filter_radio.SetLabel(i18n.t("conv_filter_label"))

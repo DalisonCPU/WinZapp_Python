@@ -822,6 +822,7 @@ class _EchoMainWindow(_MainWindow):
     """_MainWindow plus the state MainWindow.on_new_message() reads."""
 
     on_new_message = MainWindow.on_new_message
+    _drop_protocol_edit = MainWindow._drop_protocol_edit
     _normalize_jid = staticmethod(MainWindow._normalize_jid)
     _counts_as_last_message = MainWindow._counts_as_last_message
     # The real guard, not a no-op: on_new_message() routes every message
