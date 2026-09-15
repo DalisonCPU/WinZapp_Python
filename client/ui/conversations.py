@@ -2393,9 +2393,7 @@ class ConversationsPanel(wx.Panel):
             # so without this the panels below the list keep describing the
             # message as it was before the edit.
             if self.messages_list.GetFocusedItem() == idx:
-                self._update_links_panel(
-                    self._extract_links(self._render_message_line(edited))
-                )
+                self._update_links_panel(self._message_own_links(edited))
                 self._update_mentions_panel(self._extract_mentions(edited))
 
         # Call WPPConnect to update the message — on a worker thread.
@@ -2461,8 +2459,7 @@ class ConversationsPanel(wx.Panel):
                 # focus changes, so a refused edit that added a mention would
                 # otherwise keep offering it.
                 if self.messages_list.GetFocusedItem() == restored_idx:
-                    self._update_links_panel(
-                        self._extract_links(self._render_message_line(restored)))
+                    self._update_links_panel(self._message_own_links(restored))
                     self._update_mentions_panel(self._extract_mentions(restored))
             if candidates:
                 self.main_window._schedule_save(dirty_jid=remote_jid)
@@ -4355,15 +4352,14 @@ class ConversationsPanel(wx.Panel):
 
         # ── Link detection ────────────────────────────────────────────────
         # Always check the rendered text for URLs (regardless of msg_type).
-        # Must use _render_message_line(msg) — the full, untruncated text —
-        # not messages_list.GetItemText(index): SysListView32 (the native
+        # Must go through _message_own_links(), which renders the full,
+        # untruncated text — not messages_list.GetItemText(index): SysListView32 (the native
         # control wx.ListCtrl wraps) truncates each row's accessible name at
         # _LIST_CTRL_TEXT_LIMIT characters, so a link further into a long
         # message was silently invisible to link detection and never became
         # Tab-focusable, even though the message itself displayed fine (via
         # the "Ler mais" remainder).
-        rendered = self._render_message_line(msg)
-        self._update_links_panel(self._extract_links(rendered))
+        self._update_links_panel(self._message_own_links(msg))
 
         # ── Mention detection ─────────────────────────────────────────────
         self._update_mentions_panel(self._extract_mentions(msg))
@@ -4420,8 +4416,7 @@ class ConversationsPanel(wx.Panel):
         if msg_type in ("conversation", "extendedTextMessage", ""):
             # Full untruncated text — see the matching comment in
             # _on_message_focused() for why GetItemText(index) is wrong here.
-            rendered = self._render_message_line(msg)
-            links = self._extract_links(rendered)
+            links = self._message_own_links(msg)
             if links:
                 try:
                     os.startfile(links[0])
@@ -4878,6 +4873,18 @@ class ConversationsPanel(wx.Panel):
                 seen.add(m)
                 out.append(m)
         return out
+
+    def _message_own_links(self, msg) -> list:
+        """Links *msg* itself carries, never the ones inside the quote it replies to.
+
+        A reply's rendered row ends with the quoted message's preview, so a
+        link in the message being answered used to become a Tab stop of the
+        reply — and, with one link of its own, pushed the pair into the
+        two-or-more links list. Both belong to the quoted message's own row.
+        """
+        return self._extract_links(
+            self._render_message_line(msg, include_quoted_preview=False)
+        )
 
     def _update_links_panel(self, links: list):
         """Rebuild the link controls below the messages list.
@@ -10045,8 +10052,13 @@ class ConversationsPanel(wx.Panel):
         )
         return True
 
-    def _render_message_line(self, msg, index: int | None = None, total: int | None = None) -> str:
-        """Produce the full display string for a single message row."""
+    def _render_message_line(self, msg, index: int | None = None, total: int | None = None,
+                             include_quoted_preview: bool = True) -> str:
+        """Produce the full display string for a single message row.
+
+        include_quoted_preview=False drops the ", mensagem citada: ..." clause.
+        Only link detection passes it — see _message_own_links().
+        """
         if isinstance(msg, dict) and msg.get("_type") == "empty_placeholder":
             return self.main_window.i18n.t("no_messages_in_conversation")
         # Unread separator sentinel
@@ -10121,7 +10133,7 @@ class ConversationsPanel(wx.Panel):
             pieces[-1] += f", {i18n.t('status_forwarded')}"
 
         # Append quoted message preview (if this is a reply)
-        if ctx:
+        if ctx and include_quoted_preview:
             quoted_msg_obj = ctx.get("quotedMessage") or {}
             quoted_preview = self._get_quoted_preview(quoted_msg_obj)
             if quoted_preview:
