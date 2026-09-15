@@ -15,6 +15,7 @@ Configuration (via .env at the project root):
                             run.
 
 Usage:
+  uv run setup-api
   venv\\Scripts\\python.exe setup_api.py
 """
 
