@@ -257,8 +257,9 @@ movement:
 1. Run `python winzapp_tools/god_split/verify_split.py <base> <file> <Class> <package>`
    yourself. Every node must be identical except the ones the commit message
    lists; review exactly those by hand.
-2. Run `verify_imports.py` and the full suite; compare the count with the
-   base.
+2. Run `verify_imports.py`, `verify_instance_access.py <base>` (names
+   reached through `self._mw`/`mw`/`self.main_window`/`getattr(..., "x")`)
+   and the full suite; compare the count with the base.
 3. Read the test changes: a test rewritten to use `tests/god_modules.py`
    must still assert the same thing — a patch that no longer reaches the code
    makes a test pass for the wrong reason.

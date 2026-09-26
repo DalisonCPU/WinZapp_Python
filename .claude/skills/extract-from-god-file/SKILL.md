@@ -62,7 +62,13 @@ lines:
 python winzapp_tools/god_split/split_god_class.py <config.py>
 python winzapp_tools/god_split/verify_split.py main <god file> <Class> <package dir>
 python winzapp_tools/god_split/verify_imports.py
+python winzapp_tools/god_split/verify_instance_access.py main
 ```
+
+`verify_instance_access.py` covers what imports do not: the rest of the app
+holds the instance as `self.main_window`, `self._mw`, `mw`, `panel`, … and
+reaches members by string (`getattr(mw, "x", None)`). Every such name must
+keep the status it had on the base ref (class member / `self.x =` attribute).
 
 `config_main_window.py` / `config_conversation_panel.py` in the same folder
 are worked examples: anchors (first method of each run → module), helper
