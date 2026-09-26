@@ -95,3 +95,5 @@ CORECTĂRI
 - După adăugarea unui contact local din datele unei conversații, lista de mesaje afișa în continuare numele pe care persoana îl folosește în WhatsApp, până la repornirea WinZapp. Acum noul nume apare imediat.
 
 - La asocierea unui număr diferit de cel anterior, WinZapp șterge datele contului vechi, dar o sincronizare aflată deja în desfășurare continua câteva minute să umple lista cu conversațiile acelui cont, care apoi dispăreau din nou. Acum această sincronizare se oprește imediat.
+
+- După schimbarea dispozitivului de ieșire audio — căști USB sau Bluetooth deconectate, dispozitivul implicit din Windows schimbat sau ieșirea modificată în Setări — mesajul audio pe care îl porneați putea pur și simplu să nu se redea, fără niciun avertisment, și funcționa abia la a doua încercare. Acum WinZapp trece la dispozitivul implicit și redă mesajul chiar de prima dată.

@@ -96,6 +96,8 @@ FIXES
 
 - When pairing a different number from the previous one, WinZapp deletes the old account's data, but a sync that was already running kept filling the list with that account's chats for a few minutes, which then disappeared again. That sync now stops at once.
 
+- After the audio output device changed — a USB or Bluetooth headset unplugged, the Windows default device switched, or the output changed in Settings — the audio message you asked to play could simply not play, with no warning, and only worked on the second try. WinZapp now moves to the default device and plays the message the first time.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.

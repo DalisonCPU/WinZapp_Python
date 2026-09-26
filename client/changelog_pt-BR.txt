@@ -96,6 +96,8 @@ CORREÇÕES
 
 - Ao parear um número diferente do anterior, o WinZapp apaga os dados da conta antiga, mas uma sincronização que já estava em andamento continuava por alguns minutos enchendo a lista com as conversas dela, que depois sumiam de novo. Agora essa sincronização para na hora.
 
+- Depois que o dispositivo de saída de áudio mudava — um fone USB ou Bluetooth desconectado, o dispositivo padrão do Windows trocado ou a saída alterada nas Configurações —, a mensagem de áudio que você mandava tocar podia simplesmente não tocar, sem nenhum aviso, e só funcionava na segunda tentativa. Agora o WinZapp passa para o dispositivo padrão e toca a mensagem já na primeira vez.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta conectada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua conexão com o WhatsApp realmente fica guardada — e a restaurá-la sozinho quando ela deixa de ser aceita, avisando o que aconteceu. Junto vieram as correções das situações que quebravam a sessão e faziam o programa pedir para parear de novo: desligar o computador, suspender e retomar, e o próprio programa reiniciando a conexão. Também chegaram a verificação ortográfica no campo de mensagem e as ações sobre links.
