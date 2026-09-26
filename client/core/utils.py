@@ -888,8 +888,8 @@ DEFAULT_SETTINGS = {
         # client/updater.py's select_release().
         "alpha_updates_enabled": False,
         "noise_reduction_enabled": False,
-        # Stereo voice messages (issue #82, core/voice_stereo.py). Off: iPhone
-        # cannot play a stereo voice message.
+        # Stereo voice messages (issue #82, core/voice_stereo.py). Off: a
+        # stereo recording goes out as an audio message, not a voice message.
         "voice_message_stereo": False,
         # Windows spell checking in the message field (core/spell_checker.py).
         # One of SPELL_CHECK_MODES: "windows" (default — follow Windows' own

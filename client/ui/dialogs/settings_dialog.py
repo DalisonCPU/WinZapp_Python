@@ -2990,8 +2990,8 @@ class SettingsDialog(wx.Dialog):
             self._noise_reduction_check.GetValue()
         )
 
-        # Turning stereo voice messages on warns first that iPhone cannot play
-        # them (ui/dialogs/stereo_voice_warning.py). Read from this dialog's own
+        # Turning stereo voice messages on says first that they go out as audio
+        # messages (ui/dialogs/stereo_voice_warning.py). Read from this dialog's own
         # box, not from settings: it may have been unticked in this same save.
         # No leaves stereo off; "don't show again" unticks the box here too, so
         # a later Apply cannot write it back on.
