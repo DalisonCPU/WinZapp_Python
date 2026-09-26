@@ -374,7 +374,7 @@ class AudioPlaybackMixin:
             # decrypted temp file instead, and play that.
             if self.main_window.sound_system.handle_playback_failure():
                 try:
-                    self._audio_stream, self._audio_tempo_ctrl = _open_stream()
+                    self._audio_stream, self._audio_tempo_ctrl = self._open_audio_stream_from_temp_file()
                     playback_ctrl = (
                         self._audio_tempo_ctrl if self._audio_tempo_ctrl is not None else self._audio_stream
                     )
