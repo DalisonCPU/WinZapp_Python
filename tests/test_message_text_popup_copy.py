@@ -12,6 +12,7 @@ from core.wrapped_text import (
     selection_offsets,
     word_wrap,
 )
+from tests.god_modules import conversations_source
 
 
 LONG = ("palavra " * 40).strip()  # 319 chars, needs several wrapped lines
@@ -124,9 +125,7 @@ def test_an_empty_selection_copies_nothing():
 
 
 def test_popup_copies_through_the_original_range_not_the_control_text():
-    source = (
-        Path(__file__).resolve().parent.parent / "client" / "ui" / "conversations.py"
-    ).read_text(encoding="utf-8")
+    source = conversations_source()
     start = source.index("    def _show_message_text_popup(")
     body = source[start:source.index("\n    def ", start + 1)]
     assert "value=word_wrap(text)" in body

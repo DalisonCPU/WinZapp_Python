@@ -35,6 +35,16 @@ read when you touch that area (see the index at the end and `.claude/rules/`).
 5. **All speech goes through `MainWindow.speak_output`** (via
    `MainWindow.output()`); UI is plain wx controls only, list mutations
    inside `Freeze()`/`Thaw()`, titles and rows show names, never raw JIDs.
+6. **Modularize on arrival — never grow a file just because it is open.**
+   `main.py` went from ~1,000 to 35,600 lines in four months, one agent
+   append at a time, until no human would touch it. Before adding code, find
+   the module that owns the responsibility (`client/main_window/`,
+   `client/ui/conversation_panel/`, `client/core/`); if none does, create
+   one. Pure logic goes into a plain function with a direct test, not onto a
+   wx class. A new feature that needs more than ~150 lines is its own module.
+   When you delete a feature, delete its dead helpers too. Size budgets are
+   enforced by `tests/test_god_file_split_structure.py` — split the module
+   instead of raising a budget (that is a team decision, in its own PR).
 
 ## What this is
 
@@ -92,15 +102,17 @@ version is named once, in `client/node_download_config.py`. `client/api/` and
   `api_patches/package.json`; every send endpoint passes through
   `auditSendResult()` and Python through `core/send_contract.py` — a 201
   without a real message id is a failure. `docs/traps/send-contract.md`.
-- **MainWindow is split into mixins**: `client/main.py` (~1,900 lines) keeps
-  only `__init__`, `init_UI` and startup; every other method lives in one
-  module per responsibility under `client/main_window/` (sync, connection,
-  sending, calls, identity, chat list, …; the map is that package's
-  `__init__.py`). `client/ui/conversations.py` (`ConversationsPanel`, ~17,500
-  lines) holds the message list and composer. **grep `client/main_window/` and
-  them first** — the method you need very likely exists. New code goes into
-  the module that owns the responsibility, or a new module — never back into
-  `main.py` (see "Keep files small" below).
+- **The two big classes are split into mixins.**
+  `client/main.py` (~1,900 lines) keeps only `MainWindow.__init__`, `init_UI`
+  and startup; every other method lives in one module per responsibility
+  under `client/main_window/` (sync, connection, sending, calls, identity,
+  chat list, … — 28 mixins plus plain-function modules).
+  `client/ui/conversations.py` (~1,200 lines, `ConversationsPanel`) likewise
+  keeps `__init__`/`init_UI`; the message list, composer, playback, menus etc.
+  live under `client/ui/conversation_panel/`.
+  Each package's `__init__.py` is the map. **grep those packages first** — the
+  method you need very likely exists. `MainWindow.method(stub, …)` still works
+  in tests (MRO); a mixin never imports `main`.
 
 ### Message pipeline (short form — `docs/reference/message-pipeline.md`)
 

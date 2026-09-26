@@ -26,7 +26,7 @@ from core.message_edit import (
     snapshot_edit_state,
 )
 from ui.conversations import ConversationsPanel
-from tests.god_modules import patch_main_global
+from tests.god_modules import conversations_source, patch_main_global
 
 NOW = 1_789_360_000
 
@@ -50,7 +50,7 @@ class TestEditWindow:
         assert edit_window_open(ts, now=NOW) is False
 
     def test_no_three_hour_gate_is_left(self):
-        src = inspect.getsource(ConversationsPanel)
+        src = conversations_source()
         assert "10800" not in src.replace("(\"mute_3h\", 10800)", "")
 
 
@@ -223,7 +223,7 @@ class TestAltE:
         assert panel.entered_edit == [] and panel.main_window.spoken == []
 
     def test_the_context_menu_uses_the_same_window(self):
-        src = inspect.getsource(ConversationsPanel)
+        src = conversations_source()
         assert "_can_edit    = edit_window_open(" in src
 
 

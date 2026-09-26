@@ -26,6 +26,7 @@ CLIENT = ROOT / "client"
 # (entry file, mixin package dir, god class, entry-file line budget)
 SPLITS = [
     ("main.py", "main_window", "MainWindow", 2_500),
+    ("ui/conversations.py", "ui/conversation_panel", "ConversationsPanel", 1_800),
 ]
 
 #: No single module of a split package may grow past this. The largest one
@@ -72,7 +73,7 @@ def test_no_member_is_defined_by_two_mixins(entry, package, cls, budget):
     klass = _import_class(entry, cls)
     owners = {}
     for base in klass.__mro__:
-        if base is klass or base.__module__.split(".")[0] != package:
+        if base is klass or not base.__module__.startswith(package.replace("/", ".") + "."):
             continue
         for name in vars(base):
             if name.startswith("__") and name.endswith("__"):
@@ -81,6 +82,8 @@ def test_no_member_is_defined_by_two_mixins(entry, package, cls, budget):
     for name in vars(klass):
         if name in owners:
             owners[name].append(cls)
+    # Not vacuous: the package's mixins were actually found in the MRO.
+    assert len({o for owner_list in owners.values() for o in owner_list} - {cls}) >= 5
     shadowed = {n: o for n, o in owners.items() if len(o) > 1}
     assert shadowed == {}, f"members defined in more than one place: {shadowed}"
 
@@ -123,12 +126,13 @@ def test_nothing_under_client_imports_main():
     assert offenders == []
 
 
-def test_mixin_methods_still_resolve_on_the_class():
+@pytest.mark.parametrize("entry,package,cls,budget", SPLITS)
+def test_mixin_methods_still_resolve_on_the_class(entry, package, cls, budget):
     """Stub tests call MainWindow.<method>(stub, ...). That keeps working
     through the MRO; this pins that a sample from every mixin resolves."""
-    klass = _import_class("main.py", "MainWindow")
+    klass = _import_class(entry, cls)
     for base in klass.__mro__:
-        if base.__module__.startswith("main_window."):
+        if base.__module__.startswith(package.replace("/", ".") + "."):
             for name, member in vars(base).items():
                 if inspect.isfunction(member):
                     assert inspect.getattr_static(klass, name) is member

@@ -34,12 +34,10 @@ from ui.accessible import (
     AccessibleCallSettingsButton,
     AccessibleCallVideoToggleButton,
 )
-from tests.god_modules import main_window_source
+from tests.god_modules import main_window_source, conversations_source
 
 
-_CONVERSATIONS_SRC = (
-    Path(__file__).parents[1] / "client" / "ui" / "conversations.py"
-).read_text(encoding="utf-8")
+_CONVERSATIONS_SRC = conversations_source()
 
 _MAIN_SRC = main_window_source()
 

@@ -8,7 +8,7 @@ import pytest
 from core.call_logic import active_call_label_key, incoming_call_can_answer
 from core.call_video import CameraCapture, camera_names, jpeg_frames, list_camera_devices
 from main import MainWindow
-from tests.god_modules import main_window_source
+from tests.god_modules import main_window_source, conversations_source
 
 
 def test_camera_names_only_reads_video_devices():
@@ -245,7 +245,7 @@ def test_video_button_and_labels_exist_in_all_languages():
 
 
 def test_video_button_is_restricted_to_individual_chats():
-    source = (Path(__file__).parents[1] / 'client' / 'ui' / 'conversations.py').read_text(encoding='utf-8')
+    source = conversations_source()
     assert 'unavailable = jid.endswith(("@g.us", "@newsletter", "@broadcast"))' in source
     assert 'self._video_call_btn.Show(bool(jid) and not unavailable)' in source
     assert 'self.main_window.start_video_call(jid, name)' in source
