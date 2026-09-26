@@ -136,7 +136,8 @@ def threads(monkeypatch):
     from ui.dialogs import api_setup
 
     captured = _Threads()
-    # Only main's own binding is replaced, never the threading module itself.
+    # Only the modules' `threading` bindings are replaced (main and every
+    # main_window mixin that imports it), never the threading module itself.
     patch_main_global(monkeypatch, "threading", captured)
     monkeypatch.setattr(main_module.wx, "CallAfter", lambda fn, *a, **k: fn(*a, **k))
     monkeypatch.setattr(main_module.wx, "MessageBox", lambda *a, **k: wx.ID_OK)

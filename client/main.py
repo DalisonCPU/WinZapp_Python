@@ -223,7 +223,6 @@ from main_window.message_rules import (  # noqa: F401
     is_countable_message,
     _discount_non_countable_unread,
     _media_not_in_store_lock,
-    _media_not_in_store,
     _MEDIA_MISSING_LOG_EVERY,
     _MAX_EMPTY_DELTA_RETRIES,
     _MAX_ABSENT_CHAT_RETRIES,

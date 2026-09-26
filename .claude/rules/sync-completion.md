@@ -10,6 +10,7 @@ paths:
   - "client/main_window/conversation_sync.py"
   - "client/main_window/chats_store.py"
   - "client/main_window/message_rules.py"
+  - "client/main_window/contacts.py"
 ---
 
 # Sync completion

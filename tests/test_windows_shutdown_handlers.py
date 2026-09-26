@@ -41,7 +41,6 @@ import ast
 import inspect
 import re
 import textwrap
-from pathlib import Path
 
 import pytest
 import wx
@@ -51,7 +50,6 @@ from tests.conftest import hidden_frame
 from tests.god_modules import main_window_source
 
 
-MAIN_PY = Path(__file__).resolve().parents[1] / "client" / "main.py"
 
 
 def _query_event():

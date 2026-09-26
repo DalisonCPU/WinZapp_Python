@@ -9,7 +9,7 @@ logging back in (a real log showed 'inChat' the same second the client wiped).
 import pathlib
 
 import connection_state as cs
-from tests.god_modules import main_window_source
+from tests.god_modules import main_window_method_source
 
 LOGOUT_CONFIRM = 4
 RESUME_FAIL = 20
@@ -169,9 +169,7 @@ def test_the_production_branch_really_asks_for_the_disabled_ceiling():
     source, the way tests/test_wa_version_expiry_pin.py checks the stable
     channel is asked for first.
     """
-    main_py = main_window_source()
-    method = main_py[main_py.index("    def check_wa_connection_http("):]
-    method = method[:method.index("\n    def ", 10)]
+    method = main_window_method_source("check_wa_connection_http")
     # The method's own except, at method indentation — not the two nested ones
     # inside the CONNECTED branch.
     branch = method[method.index("\n        except Exception as e:"):]

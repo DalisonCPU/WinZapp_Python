@@ -125,7 +125,7 @@ version is named once, in `client/node_download_config.py`. `client/api/` and
    `_is_undecrypted_placeholder()` drops a live `ciphertext`; one a sync stored is
    shown and later replaced by its decrypted copy (`message-pipeline.md`). An edit
    arrives under the *original* `key.id` and goes to `_apply_possible_edit()`.
-3. Sends: `client/ui/conversations.py` shows a virtual pending message
+3. Sends: `client/ui/conversation_panel/text_sending.py` shows a virtual pending message
    (`_local_pending`, `_local_id`), `client/core/message_queue.py` calls
    `MainWindow.send_*`; the echo comes back through `on_new_message` and is
    matched to the pending message **by type**. Ambiguous failures (timeout,
@@ -141,7 +141,7 @@ version is named once, in `client/node_download_config.py`. `client/api/` and
 - `@c.us` — legacy phone form still in some WPPConnect responses; normalized
   on load (`MainWindow.deduplicate_chats`, `_normalize_jid`).
 - `@lid` — linked-device id, **not a phone number**. Bridge through
-  `_lid_to_phone`/`_phone_to_lid` (`main.py`) before display, send or contact
+  `_lid_to_phone`/`_phone_to_lid` (`main_window/identity.py`) before display, send or contact
   lookup. Brazilian numbers also need 8/9-digit interchangeability.
 - `@g.us` — group. Not trustworthy alone: a self-chat echo can carry a
   participant's `@lid` digits suffixed `@g.us`. Invariant: a group JID's
