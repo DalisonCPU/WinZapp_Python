@@ -19,8 +19,9 @@ read when you touch that area (see the index at the end and `.claude/rules/`).
    `tests/test_no_desktop_visible_windows.py`; history in
    `docs/traps/tests-never-open-windows.md`.
 2. **Every user-facing string goes into every registered locale file**
-   (`client/languages/{pt-BR,pt-PT,en-US,es-ES,pl,tr-TR}.json`; the set is
-   data, driven by `language_map.json`, not a hardcoded count). `I18n.t()` has
+   (`client/languages/<locale>.json` — seven today: pt-BR, pt-PT, en-US, es-ES,
+   pl, tr-TR, ro; the set is data, driven by `language_map.json`, never a
+   count to remember). The same goes for `client/changelog_<locale>.txt`. `I18n.t()` has
    no per-key fallback: a missing key renders as the raw key name. Reuse the
    words that locale already uses for the concept (`docs/reference/i18n-terminology.md`).
    `tests/test_language_files_in_sync.py` enforces it.

@@ -1,8 +1,24 @@
-V1.1.2.0
+V2.0.0.0
 
-Bu sürüm; WinZapp'in gerekmediği halde yeniden eşleme istemesine neden olan durumları düzeltir, aynı anda birden fazla ögeyi daha hızlı seçmenin bir yolunu sunar ve sohbeti temizleme ile tüm sohbetleri okundu olarak işaretleme onay pencerelerine yeni seçenekler ekler.
+Bu sürümün en büyük yeniliği aramalar: artık sesli ve görüntülü aramaları telefona uzanmadan doğrudan WinZapp'ten yapabilir, cevaplayabilir ve reddedebilirsiniz; erişilebilir bir arama penceresi, klavye kısayolları, aramalara özel ses ayarları ve yeni Aramalar sekmesindeki arama geçmişiyle birlikte. Ayrıca kilitli sohbetler, arşivlenmiş sohbetlerde arama, Türkçe ve Rumence dilleri ve çeşitli kullanım iyileştirmeleri geldi; WinZapp'in gerekmediği halde yeniden eşleme istediği durumlar da düzeltildi. Arka planda programın kodu büyük bir yeniden düzenlemeden geçti: kullanımda hiçbir şeyi değiştirmez, ancak WinZapp'in bundan sonra bakımını ve düzeltilmesini kolaylaştırır.
 
 YENİLİKLER
+
+- Sesli ve görüntülü aramalar. Bireysel bir sohbette "Sesli ara" (Ctrl+Shift+V) ve "Görüntülü ara" (Ctrl+Alt+Shift+V) düğmeleri aramayı doğrudan WinZapp'ten başlatır. Arama, Tab ile ulaşılabilen düğmeleri ve kendi kısayolları olan bir pencere açar: Ctrl+M mikrofonu sessize alır veya açar, Ctrl+V görüntülü aramada kamerayı açıp kapatır, Ctrl+P sesli aramayı görüntülü aramaya dönüştürür, Ctrl+C arama ayarlarını açar ve Ctrl+Shift+Q aramayı sonlandırır. Ekran okuyucu, arama bağlandığında, yeniden bağlanırken ve sona erdiğinde haber verir.
+
+- WinZapp'te aramaları cevaplama ve reddetme. Gelen arama penceresinde artık "Cevapla", "Reddet" ve "Sessize al" düğmeleri var; görüntülü aramada "Görüntülü cevapla" ve "Görüntüsüz cevapla". Bu penceredeki kısayollar yalnızca Alt ve altı çizili harfle çalışır; böylece yanlışlıkla basılan bir tuş aramayı cevaplamaz veya reddetmez.
+
+- Yeni Aramalar sekmesi (Alt+6): tüm sohbetlerin arama geçmişi Tümü, Cevapsız, Reddedilen ve Cevaplanan olarak ayrılır; Ctrl+Tab ve Ctrl+Shift+Tab aralarında geçiş yapar. Listede Enter aramanın sohbetini açar, Ctrl+Shift+R cevapsız bir aramayı geri arar ve F5 listeyi yeniler.
+
+- Aramalar, WhatsApp'ta olduğu gibi sohbette ve sohbet listesinde görünür: "Cevapsız sesli arama", "Cevaplanan görüntülü arama" gibi, sohbette gerçekleştikleri yerde. Cevapsız bir aramada "Geri ara" düğmesi veya Ctrl+Shift+R geri arar.
+
+- Aramalar için ses ve görüntü ayarları. Ayarlar'ın Aramalar sekmesinde "Arama ses ayarları" aramalarda kullanılacak mikrofonu ve hoparlörü, "Görüntülü arama ayarları" ise kamerayı seçer. Kulaklık yerine hoparlör kullandığınızda kendi sesinizin geri dönmesini azaltan yankı önleme ile mikrofon ve hoparlör için özel mod da burada bulunur. Arama sırasında aynı seçenekler Ctrl+C ile açılır.
+
+- Kilitli sohbetler (Alt+7). Bağlam menüsündeki "Sohbeti kilitle" veya Ctrl+Shift+T, sohbeti 6 ila 12 haneli bir PIN ile korunan bir kasaya taşır; sohbet listesinde, arşivde, aramada ve iletme penceresinde artık görünmez. Bu sohbetlerin bildirimleri yalnızca kaç yeni mesaj geldiğini söyler; ad ve içerik göstermez. Kasayı kurarken WinZapp, mevcut PIN'i unutursanız yeni bir PIN belirlemek için sesli okunabilen veya kopyalanabilen bir kurtarma anahtarı oluşturur. Kasa, WinZapp simge durumuna küçültüldüğünde, sistem tepsisine gizlendiğinde ve başka bir panele geçildiğinde, isterseniz bir süre kullanılmadığında da kendiliğinden kapanır; Ctrl+Shift+K kasayı hemen kapatıp gizler. Kilitli sohbetler navigasyon menüsünden de kaldırılabilir: bu durumda kasa, sohbet aramasına gizli bir kod yazılarak açılır.
+
+- Arşivlenmiş sohbetlerde arama. Arşivlenmiş sohbetler (Alt+3) artık ana listedeki gibi bir arama alanına sahip: Ctrl+F oraya götürür, aşağı ok ilk sonuca gider.
+
+- İki yeni dil: Türkçe ve Rumence. Ayarlar'da Genel sekmesinden seçebilirsiniz.
 
 - Herhangi bir emojiyle tepki verme. 12 hızlı seçeneğin sonundaki "Daha fazla tepki ekle" tam emoji seçicisini açar; sık kullandığınız emojiler zamanla hızlı seçenekler arasında yer alır ve en çok kullanılanlar en üstte görünür. Her tepkiyi hep aynı konumda bulmayı tercih ederseniz Ayarlar > Tepkiler sekmesini kullanın: "Sabit hızlı tepkiler kullan" işaretliyken 12 konum kullanıma göre değişmez ve bir konumda Enter'a basmak, oraya hangi tepkinin geleceğini seçmek için emoji seçicisini açar.
 
@@ -28,11 +44,17 @@ YENİLİKLER
 
 - WinZapp'i sistem tepsisinden geri getiren genel kısayol tuşu artık onu tepsiye de gönderiyor: WinZapp ön plandayken aynı kısayol onu tepsiye gizler. Diğer tüm durumlarda pencereyi öne getirmeye devam eder.
 
+İYİLEŞTİRMELER
+
+- Kodun büyük ölçüde yeniden düzenlenmesi. WinZapp'in tek başına 50 binden fazla satır tutan ve programın yaptığı neredeyse her şeyi barındıran en büyük iki dosyası, her biri tek bir işten sorumlu onlarca küçük parçaya bölündü: eşitleme, bağlantı, mesaj gönderme, aramalar, sohbet listesi vb. Kullanıcı için hiçbir şey değişmez. Geliştiriciler için her parçayı bulmak, anlamak ve düzeltmek çok daha kolay; bir düzeltmenin fark edilmeden başka bir şeyi bozması ise çok daha zor hale gelir — WinZapp'i uzun vadede sağlıklı tutan da budur.
+
+- WinZapp'in ve yerel sunucunun günlükleri (log.log ve wppconnect.log) artık telefon numaralarını, WhatsApp tanımlayıcılarını ve kişi adlarını içermez: bunlar maskelenmiş olarak görünür. Böylece bir sorunu bildirirken kişilerinizi açığa çıkarmadan günlükleri gönderebilirsiniz.
+
+- Lehçe çeviri gözden geçirildi.
+
 DÜZELTMELER
 
 - Sesli mesaj kayıt anonsları susturulduğunda, kayıt başlatılırken ekran okuyucunun kesilmeden önce “Gönder” demeye başlaması sorunu giderildi. WinZapp artık kırpılmış anonstan kaynaklanan otomatik odak hareketini önlerken Ctrl+R, Ctrl+Shift+P ve Ctrl+Shift+D kısayollarını kullanılabilir durumda tutar.
-
-- Cevaplanan gelen aramalar iki dakika sonra artık “cevaplanmadı” olarak işaretlenmez. WinZapp artık bir arama cevaplandığında, reddedildiğinde veya sonlandırıldığında gelen arama zamanlayıcısını durdurur; kısa süreli WhatsApp Web arama durumu geçişleri artık aktif bir aramayı yanlışlıkla sonlandırmaz.
 
 - Bir sohbette seçtiğiniz mesajlar, sohbeti kapattıktan sonra seçili kalıyor ve tekrar açtığınızda seçili olarak geri geliyordu. Seçim artık sohbetle birlikte sonlanır.
 
@@ -59,6 +81,20 @@ DÜZELTMELER
 - Bir mesaj kopyalanırken (Ctrl+C), metni açılırken (Alt+C) veya birkaç mesaj birlikte kopyalanırken, bahsedilen kişiler mesaj listesinde görünen adları yerine telefon numarası ya da anlamsız bir rakam dizisi olarak çıkıyordu. Artık adlarıyla çıkıyor.
 
 - Dosya seçilmemiş özel bir bildirim sesi varken, bir sohbetin bilgilerinde veya Ayarlar'daki Uyarı Tonları sekmesinde, önizlemeyi dinleme düğmesi kullanılabilir kalıyor ve hata gösteriyordu. Artık yalnızca yazılan yol var olan bir dosyaya çıktığında görünüyor.
+
+- Birden fazla hesap açıkken güncelleme tamamlanmıyordu: WinZapp eski sürümle yeniden açılıyor ve ne olduğunu açıklamadan aynı güncellemeyi tekrar sunuyordu. Artık kurulumdan önce diğer hesapları kapatır; bir güncelleme tamamlanamazsa bunu bir sonraki açılışta bildirir.
+
+- Meta AI'a gönderilen mesajlar iletilmiyor, yanıtları da boş görünüyordu. WhatsApp, ilk mesajdan önce Meta AI hizmet koşullarının kabul edilmesini ister: WinZapp artık bu koşulları okumak için bir bağlantıyla birlikte gösterir ve kabulü kaydeder. Bir mesaj yine de reddedilirse uyarı nedenini açıklar ve Meta AI yanıtları metinleriyle birlikte görünür.
+
+- Bir yanıtta, alıntılanan mesajın bağlantıları yanıtın kendi bağlantılarıymış gibi ele alınıyordu: Tab ile durulan bir öge oluyor, yanıtın bağlantılarıyla birlikte bağlantı listesini oluşturabiliyordu ve Enter mesaj metnini göstermek yerine alıntılanan bağlantıyı açıyordu. Artık yalnızca yanıtın kendi bağlantıları sayılır.
+
+- Durumlar paneli açıkken bir mesaj bildirimine tıklamak, sohbeti panelin arkasında açıyor ve Alt+1'e basılana kadar klavye odağını görünmeyen bir denetimde bırakıyordu. Aynısı, grup bilgilerinden bir katılımcının sohbeti açılırken de oluyordu. WinZapp artık sohbeti açmadan önce sohbet listesini gösterir.
+
+- Grup bilgilerinde, hiç konuşmadığınız veya yalnızca numara olarak görünen bir katılımcının üzerinde Enter'a basmak iletişim kutusunu kapatıp sizi grupta bırakıyordu. Artık o kişiyle özel sohbeti açar.
+
+- Bir sohbetin bilgilerinden yerel kişi eklendikten sonra mesaj listesi, WinZapp yeniden başlatılana kadar kişinin WhatsApp'ta kullandığı adı göstermeye devam ediyordu. Artık yeni ad hemen görünür.
+
+- Öncekinden farklı bir numara eşlendiğinde WinZapp eski hesabın verilerini siler; ancak zaten çalışmakta olan bir eşitleme birkaç dakika boyunca listeyi o hesabın sohbetleriyle doldurmaya devam ediyor, sonra bunlar yeniden kayboluyordu. Artık bu eşitleme hemen durur.
 
 V1.1.1.0
 
