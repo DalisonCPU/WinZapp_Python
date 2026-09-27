@@ -314,8 +314,10 @@ class CallsMixin:
         from core.call_audio import CallAudioConfig, CallAudioSession
 
         audio_settings = self.settings.get("call_audio_devices", {})
-        input_name = audio_settings.get("input_device_name", "")
-        output_name = audio_settings.get("output_device_name", "")
+        # A quick device switch (Ctrl+Alt+Shift+H/G) overrides the saved call
+        # devices for this session — see main_window/quick_audio_devices.py.
+        input_name = self.call_audio_device("input")
+        output_name = self.call_audio_device("output")
         exclusive_input = bool(audio_settings.get("exclusive_input", False))
         exclusive_output = bool(audio_settings.get("exclusive_output", False))
         echo_cancellation = bool(audio_settings.get("echo_cancellation", False))

@@ -4,16 +4,20 @@ Ctrl+Alt+Shift+G (recording), then a digit.
 Win+digit combinations were ruled out first: every Win / Win+Alt / Win+Ctrl /
 Win+Shift + 1..0 is registered by Explorer for the taskbar (RegisterHotKey
 answers 1409, ERROR_HOTKEY_ALREADY_REGISTERED). Alt+8/Alt+9 are kept for
-communities and channels. The choice is written to the general devices AND the
-call devices. Nothing here opens a window.
+communities and channels. The switch lasts this session only (nothing is
+saved), covers the general and the call devices, and is passed on to every
+other open account over IPC. Nothing here opens a window.
 """
 
+import copy
 import inspect
+import json
 import types
 
 import pytest
 import wx
 
+import ipc
 import main_window.quick_audio_devices as quick_mod
 from core.quick_audio_devices import (
     DIGIT_SLOTS,
@@ -24,6 +28,7 @@ from core.quick_audio_devices import (
     slot_for_digit,
 )
 from main import MainWindow
+from tests.god_modules import main_window_method_source
 from ui.dialogs.quick_audio_device_dialog import QuickAudioDeviceDialog, typed_digit
 
 
@@ -121,7 +126,7 @@ class TestDialogKeys:
         assert d.picked == []
 
 
-# ── Applying the choice ────────────────────────────────────────────────────────
+# ── Applying the choice: this session only, every open account ─────────────
 
 
 class _SoundSystem:
@@ -134,19 +139,27 @@ class _SoundSystem:
         return self.ok if name == "Novo" else True
 
 
+SAVED = {"audio_devices": {"output_device_name": "Antigo", "input_device_name": "Mic antigo"},
+         "call_audio_devices": {"output_device_name": "Fone de ligação",
+                                "input_device_name": "Mic de ligação"}}
+
+
 class _Stub:
     apply_quick_audio_device = MainWindow.apply_quick_audio_device
     open_quick_audio_devices = MainWindow.open_quick_audio_devices
+    current_audio_device = MainWindow.current_audio_device
+    call_audio_device = MainWindow.call_audio_device
+    _session_audio_device = MainWindow._session_audio_device
+    _ipc_audio_device = MainWindow._ipc_audio_device
 
     def __init__(self, sound_ok=True, in_call=False):
-        self.settings = {"audio_devices": {"output_device_name": "Antigo",
-                                           "input_device_name": "Mic antigo"},
-                         "call_audio_devices": {"output_device_name": "Antigo",
-                                                "input_device_name": "Mic antigo"}}
-        self.i18n = types.SimpleNamespace(t=lambda k: {"audio_device_default": "Padrão"}.get(k, k + "{device}"))
+        self.settings = copy.deepcopy(SAVED)
+        self.i18n = types.SimpleNamespace(
+            t=lambda k: {"audio_device_default": "Padrão"}.get(k, k + "{device}"))
         self.sound_system = _SoundSystem(sound_ok)
         self._call_audio_session = object() if in_call else None
         self.events = []
+        self.passed_on = []
 
     def load_sounds(self):
         self.events.append("load_sounds")
@@ -160,35 +173,57 @@ class _Stub:
     def output(self, text, interrupt=False):
         self.events.append(("say", text))
 
+    def _pass_audio_device_to_other_accounts(self, kind, name):
+        self.passed_on.append((kind, name))
 
-class TestApply:
-    def test_output_switches_live_reloads_sounds_and_covers_calls(self):
+
+class TestSessionOnly:
+    def test_output_switches_live_and_reloads_sounds(self):
         s = _Stub()
         assert s.apply_quick_audio_device(KIND_OUTPUT, "Novo") is True
         assert s.sound_system.applied == ["Novo"]
-        assert s.settings["audio_devices"]["output_device_name"] == "Novo"
-        assert s.settings["call_audio_devices"]["output_device_name"] == "Novo"
-        # Sounds are recreated after the BASS switch (docs/traps/audio-devices.md).
-        assert s.events.index("load_sounds") < s.events.index("save")
+        assert "load_sounds" in s.events      # docs/traps/audio-devices.md
         assert ("say", "quick_audio_output_setNovo") in s.events
+
+    def test_nothing_is_saved(self):
+        """The next launch starts on Settings' choice again."""
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        assert s.settings == SAVED
+        assert "save" not in s.events
+
+    def test_the_session_choice_is_what_is_in_use_and_what_calls_open(self):
+        s = _Stub()
+        assert s.current_audio_device(KIND_OUTPUT) == "Antigo"
+        assert s.call_audio_device(KIND_OUTPUT) == "Fone de ligação"
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        assert s.current_audio_device(KIND_OUTPUT) == "Novo"
+        assert s.call_audio_device(KIND_OUTPUT) == "Novo"
+        # The other kind still follows the saved settings.
+        assert s.call_audio_device(KIND_INPUT) == "Mic de ligação"
+
+    def test_the_system_default_is_a_real_override(self):
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "")
+        assert s.current_audio_device(KIND_OUTPUT) == ""
+        assert s.call_audio_device(KIND_OUTPUT) == ""
 
     def test_an_output_that_will_not_open_changes_nothing(self):
         s = _Stub(sound_ok=False)
         assert s.apply_quick_audio_device(KIND_OUTPUT, "Novo") is False
         assert s.sound_system.applied == ["Novo", "Antigo"]   # put back
-        assert s.settings["audio_devices"]["output_device_name"] == "Antigo"
-        assert s.settings["call_audio_devices"]["output_device_name"] == "Antigo"
-        assert "save" not in s.events
+        assert s.current_audio_device(KIND_OUTPUT) == "Antigo"
+        assert s.passed_on == []
         assert ("say", "quick_audio_device_failedNovo") in s.events
 
-    def test_input_is_tested_then_used_for_voice_messages_and_calls(self, monkeypatch):
+    def test_input_is_tested_then_used_for_recording_and_calls(self, monkeypatch):
         monkeypatch.setattr(quick_mod, "find_input_device_index", lambda name: 4)
         monkeypatch.setattr(quick_mod, "test_input_device", lambda idx: True)
         s = _Stub()
         assert s.apply_quick_audio_device(KIND_INPUT, "Mic novo") is True
-        assert s.settings["audio_devices"]["input_device_name"] == "Mic novo"
-        assert s.settings["call_audio_devices"]["input_device_name"] == "Mic novo"
         assert s.effective_input_device_name == "Mic novo"
+        assert s.call_audio_device(KIND_INPUT) == "Mic novo"
+        assert s.settings == SAVED
         assert "load_sounds" not in s.events
 
     def test_an_input_that_will_not_open_changes_nothing(self, monkeypatch):
@@ -196,21 +231,114 @@ class TestApply:
         monkeypatch.setattr(quick_mod, "test_input_device", lambda idx: False)
         s = _Stub()
         assert s.apply_quick_audio_device(KIND_INPUT, "Mic novo") is False
-        assert s.settings["audio_devices"]["input_device_name"] == "Mic antigo"
-        assert "save" not in s.events
+        assert s.current_audio_device(KIND_INPUT) == "Mic antigo"
+        assert s.passed_on == []
 
-    def test_the_default_needs_no_test(self, monkeypatch):
+    def test_the_default_input_needs_no_test(self, monkeypatch):
         monkeypatch.setattr(quick_mod, "find_input_device_index",
                             lambda name: pytest.fail("the default was probed"))
         s = _Stub()
         assert s.apply_quick_audio_device(KIND_INPUT, "") is True
-        assert s.settings["call_audio_devices"]["input_device_name"] == ""
         assert ("say", "quick_audio_input_setPadrão") in s.events
 
     def test_a_call_in_progress_moves_without_being_dropped(self):
         s = _Stub(in_call=True)
         s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
         assert "restart_call" in s.events
+
+
+class TestEveryOpenAccount:
+    def test_the_choice_is_passed_on(self):
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        assert s.passed_on == [(KIND_OUTPUT, "Novo")]
+
+    def test_an_account_that_was_passed_the_choice_follows_quietly(self):
+        """No speech (the user is in another window, which already spoke) and
+        no passing it on again (it would bounce between processes)."""
+        s = _Stub()
+        s._ipc_audio_device(KIND_OUTPUT, "Novo")
+        assert s.current_audio_device(KIND_OUTPUT) == "Novo"
+        assert s.passed_on == []
+        assert not any(isinstance(e, tuple) and e[0] == "say" for e in s.events)
+
+    def test_a_malformed_request_is_ignored(self):
+        s = _Stub()
+        s._ipc_audio_device("speakers", "Novo")
+        s._ipc_audio_device(KIND_OUTPUT, None)
+        assert s.sound_system.applied == []
+
+    def test_passing_on_asks_each_other_running_account(self, monkeypatch):
+        asked = []
+        monkeypatch.setattr(ipc, "request_audio_device",
+                            lambda gd, acc, kind, name: asked.append((gd, acc, kind, name)) or True)
+
+        class _Thread:
+            def __init__(self, target=None, **kw):
+                self.target = target
+
+            def start(self):
+                self.target()
+        monkeypatch.setattr(quick_mod.threading, "Thread", _Thread)
+
+        class _S:
+            _pass_audio_device_to_other_accounts = MainWindow._pass_audio_device_to_other_accounts
+            global_dir = "G"
+
+            def _other_running_account_ids(self):
+                return ["b", "c"]
+
+        _S()._pass_audio_device_to_other_accounts(KIND_INPUT, "Mic novo")
+        assert asked == [("G", "b", KIND_INPUT, "Mic novo"), ("G", "c", KIND_INPUT, "Mic novo")]
+
+
+class TestIpc:
+    @staticmethod
+    def _listener(received):
+        return ipc.IpcListener("G", "acc", on_activate=lambda s: None, on_quit=lambda: None,
+                               on_audio_device=lambda kind, name: received.append((kind, name)))
+
+    def test_the_listener_hands_the_device_over_and_acknowledges(self):
+        received = []
+        replies = self._listener(received)._handle_message(json.dumps(
+            {"cmd": "audio_device", "request_id": "r1", "kind": "output", "name": "Novo"}))
+        assert received == [("output", "Novo")]
+        assert json.loads(replies[0]) == {"request_id": "r1", "ack": True}
+
+    def test_a_bad_payload_is_not_acknowledged(self):
+        received = []
+        replies = self._listener(received)._handle_message(json.dumps(
+            {"cmd": "audio_device", "request_id": "r1", "kind": "output", "name": 3}))
+        assert received == [] and replies == []
+
+    def test_a_listener_without_the_callback_ignores_it(self):
+        listener = ipc.IpcListener("G", "acc", on_activate=lambda s: None, on_quit=lambda: None)
+        assert listener._handle_message(json.dumps(
+            {"cmd": "audio_device", "request_id": "r", "kind": "output", "name": ""})) == []
+
+    def test_request_audio_device_sends_kind_and_name(self, monkeypatch):
+        sent = []
+        monkeypatch.setattr(ipc, "_send",
+                            lambda gd, acc, req, timeout: sent.append(req) or [{"ack": True}])
+        assert ipc.request_audio_device("G", "acc", "input", "Mic") is True
+        assert (sent[0]["cmd"], sent[0]["kind"], sent[0]["name"]) == ("audio_device", "input", "Mic")
+        monkeypatch.setattr(ipc, "_send", lambda *a, **k: None)
+        assert ipc.request_audio_device("G", "acc", "input", "Mic") is False
+
+
+def test_calls_open_the_session_device():
+    src = main_window_method_source("_build_call_audio_session")
+    assert 'input_name = self.call_audio_device("input")' in src
+    assert 'output_name = self.call_audio_device("output")' in src
+
+
+def test_the_listener_is_wired():
+    src = main_window_method_source("_start_ipc_listener")
+    assert "on_audio_device=lambda kind, name: wx.CallAfter(" in src
+    assert "self._ipc_audio_device, kind, name)" in src
+
+
+# ── Opening the list ──────────────────────────────────────────────────────────
 
 
 class _FakeDialog:
@@ -246,6 +374,16 @@ class TestOpen:
         title, rows, focus = _FakeDialog.seen
         assert title == "quick_audio_output_title{device}"
         assert rows[focus][1] == "Antigo"      # opens on the device in use
+
+    def test_it_opens_on_this_sessions_choice(self):
+        s = _Stub()
+        s._session_audio_devices = {KIND_OUTPUT: "Novo"}
+        s._quick_device_names = lambda kind: ["Antigo", "Novo"]
+        s.apply_quick_audio_device = lambda *a: None
+        _FakeDialog.answer = None
+        s.open_quick_audio_devices(KIND_OUTPUT)
+        _, rows, focus = _FakeDialog.seen
+        assert rows[focus][1] == "Novo"
 
     def test_cancel_changes_nothing(self):
         s = _Stub()

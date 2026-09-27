@@ -658,6 +658,9 @@ class WindowChromeMixin:
                     name="winzapp-ipc-quit").start(),
                 released_predicate=lambda: getattr(self, "_ipc_released", False),
                 window_ready_predicate=lambda: getattr(self, "_window_ready", False),
+                # Another account's quick device switch (Ctrl+Alt+Shift+H/G).
+                on_audio_device=lambda kind, name: wx.CallAfter(
+                    self._ipc_audio_device, kind, name),
             )
             self._ipc_listener.start()
             ready = self._ipc_listener.wait_ready(timeout=3.0)
