@@ -840,9 +840,17 @@ class AudioPlaybackMixin:
 
     def seek_active_playback_by(self, delta_seconds: float) -> bool:
         """Seek the currently playing voice message or video by *delta_seconds*
-        (negative = backward), clamped to [0, length]. Returns False when
+        (negative = backward), clamped to [0, length - 1]. Returns False when
         nothing is playing, so callers (keyboard shortcuts) can fall through
-        to their normal behavior instead. Issue #17."""
+        to their normal behavior instead. Issue #17.
+
+        The upper clamp is `length - 1`, not `length`: landing exactly on the
+        reported length is what BASS_ChannelSetPosition can reject with a
+        BassError for a decoded stream (issue #305, see
+        seek_active_playback_to_edge()'s own docstring) — seeking far enough
+        forward (Shift+Right/PageDown near the end of a track) used to hit
+        that same boundary and silently do nothing instead of clamping to the
+        end."""
         if self._current_video_msg_id is not None and self._video_player.is_playing:
             try:
                 total = self._video_player.get_length()
@@ -852,7 +860,7 @@ class AudioPlaybackMixin:
                 delta_bytes = self._video_player.seconds_to_bytes(abs(delta_seconds))
                 if delta_seconds < 0:
                     delta_bytes = -delta_bytes
-                new_pos = max(0, min(total, pos + delta_bytes))
+                new_pos = max(0, min(total - 1, pos + delta_bytes))
                 self._video_player.set_position(new_pos)
                 return True
             except Exception:
@@ -868,7 +876,7 @@ class AudioPlaybackMixin:
             delta_bytes = _ctrl.seconds_to_bytes(abs(delta_seconds))
             if delta_seconds < 0:
                 delta_bytes = -delta_bytes
-            new_pos = max(0, min(total, pos + delta_bytes))
+            new_pos = max(0, min(total - 1, pos + delta_bytes))
             _ctrl.set_position(new_pos)
             return True
         except Exception:
@@ -884,9 +892,17 @@ class AudioPlaybackMixin:
         through to "select to end of list" instead of seeking) — Shift+Home's
         `0` never hits that edge case, which is why only one direction failed.
         `total - 1` is one BASS byte short of the true end, imperceptible to a
-        listener, and never hands BASS the rejected boundary value. Both the
-        video and the plain-audio branch go through the same BASS channel
-        underneath (video_player._audio_ctrl()), so both get the clamp."""
+        listener, and never hands BASS the rejected boundary value.
+
+        The video branch goes through the same kind of BASS channel
+        underneath (video_player._audio_ctrl()), but video_player.set_position()
+        already swallows that exception itself and returns silently — so it
+        never actually hit issue #305's symptom (the failure never reached
+        this method's own except, and this method kept returning True). Its
+        bug was a different, quieter one: the seek to the exact end silently
+        did nothing while still reporting success. The same clamp fixes that
+        too, so it gets it for consistency, not because it shared the
+        reported bug."""
         if self._current_video_msg_id is not None and self._video_player.is_playing:
             try:
                 total = self._video_player.get_length()
