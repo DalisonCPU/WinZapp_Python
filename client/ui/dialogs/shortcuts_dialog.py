@@ -114,6 +114,7 @@ class ShortcutsDialog(wx.Dialog):
         # document a shortcut that does nothing for a single-account install.
         if main_window is not None and getattr(main_window, "account_id", None) and getattr(main_window, "registry", None):
             lines.append(i18n.t("shortcut_ctrl_alt_num_label"))
+            lines.append(i18n.t("shortcut_ctrl_f4_label"))
         lines += [
             "",
             section("shortcuts_conv_section"),
