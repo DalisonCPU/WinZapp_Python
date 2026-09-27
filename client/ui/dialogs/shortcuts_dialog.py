@@ -107,6 +107,8 @@ class ShortcutsDialog(wx.Dialog):
             i18n.t("shortcut_ctrl_alt_shift_d_label"),
             i18n.t("shortcut_ctrl_alt_shift_q_label"),
             i18n.t("shortcut_ctrl_alt_shift_p_label"),
+            i18n.t("shortcut_ctrl_alt_shift_h_label"),
+            i18n.t("shortcut_ctrl_alt_shift_g_label"),
         ]
         # Ctrl+Alt+1..9 only exists at all when this process is running under
         # the multi-account system (see MainWindow._build_menubar's Accounts
