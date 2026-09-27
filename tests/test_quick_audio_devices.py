@@ -317,6 +317,10 @@ class TestAnExplicitChoiceEndsTheSwitch:
         full = main_window_source()
         at = full.index('_step("audio devices", self._apply_configured_audio_devices)')
         assert "self.end_session_audio_devices(general=True, call=True)" in full[at - 300:at]
+        # ...and a call in progress moves to the imported devices.
+        after = full[at:at + 700]
+        assert '_step("call audio", _move_active_call)' in after
+        assert "self._restart_active_voice_call_audio()" in after
 
 
 class TestEveryOpenAccount:

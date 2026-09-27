@@ -964,6 +964,14 @@ class SettingsMixin:
         _step("audio devices", self._apply_configured_audio_devices)
         _step("sounds", self.load_sounds)
 
+        def _move_active_call():
+            # A call in progress moves to the imported call devices too, as
+            # the in-call settings do; it would stay on the quick-switched one.
+            if getattr(self, "_call_audio_session", None) is not None:
+                self._restart_active_voice_call_audio()
+
+        _step("call audio", _move_active_call)
+
         def _clear_sound_cache():
             cache = getattr(self, "_notification_sound_cache", None)
             if cache is not None:
