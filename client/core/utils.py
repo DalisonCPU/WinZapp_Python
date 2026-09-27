@@ -562,6 +562,52 @@ def migrate_voice_message_mode_default(settings) -> bool:
     return True
 
 
+# Marks that the one-shot WPPConnect-reinstall-notice check has already run
+# for this install. Its own flag, like the one above, for the same reason.
+WPP_REINSTALL_NOTICE_MIGRATION_FLAG = "wpp_reinstall_notice_migrated"
+
+
+def migrate_wpp_reinstall_notice(settings) -> bool:
+    """Flag a pre-2.0 install as needing the one-time WPPConnect reinstall
+    recommendation.
+
+    No version number has ever been persisted to settings.json before this
+    migration existed, so there is no string to parse or compare. But that
+    absence is itself the signal: settings_default.json now ships this flag
+    pre-set to True, so a genuinely fresh 2.0+ install (bootstrapped by
+    copying settings_default.json — see load_settings()) already has it and
+    never reaches the branch below. Every settings.json that exists on disk
+    right now, anywhere, was therefore necessarily created before this PR —
+    there is no way for one to exist today that a 2.0.0.0+ build wrote,
+    because 2.0.0.0 does not exist until this merges. So "the flag is
+    missing" already means "this account predates 2.0", with nothing else to
+    check.
+
+    Pre-2.0 (pre-calling) WPPConnect installs carry a stale pairing/pin
+    catalogue that leaves some accounts hitting HTTP 500 on calls after
+    updating; only a WPPConnect reinstall clears it. Alpha users were told to
+    do this manually via Help > Force Reinstall WPPConnect long ago — this
+    migration just arms the one-time dialog that offers everyone else the
+    same fix, from _show_wpp_reinstall_notice_if_pending().
+
+    One-shot, own flag, same shape as the other migrations in this module:
+    once the flag is set — whether the user says yes, no, or the dialog never
+    got to run — it never flips back to pending on a later launch. Returns
+    True whenever *settings* changed, the flag included.
+    """
+    if not isinstance(settings, dict):
+        return False
+    general = settings.get("general")
+    if not isinstance(general, dict):
+        general = {}
+        settings["general"] = general
+    if general.get(WPP_REINSTALL_NOTICE_MIGRATION_FLAG):
+        return False
+    general[WPP_REINSTALL_NOTICE_MIGRATION_FLAG] = True
+    general["wpp_reinstall_notice_pending"] = True
+    return True
+
+
 # Marks that the one-shot spell_check_enabled -> spell_check_mode conversion
 # has already run. Its own flag, like the two above, for the same reason.
 SPELL_CHECK_MODE_MIGRATION_FLAG = "spell_check_mode_migrated"
@@ -914,7 +960,13 @@ DEFAULT_SETTINGS = {
         # sync progress/completion, media downloads and the automatic offline
         # transition. On by default; unchecked = those warnings stay silent.
         "announce_sync_events": True,
-        "search_normalization": "off"
+        "search_normalization": "off",
+        # Ships pre-set True: a genuinely fresh 2.0+ install already has this
+        # flag and skips migrate_wpp_reinstall_notice() entirely. Every
+        # settings.json that reaches that migration without the flag already
+        # set predates 2.0 by construction — see the migration's docstring.
+        "wpp_reinstall_notice_migrated": True,
+        "wpp_reinstall_notice_pending": False
     },
     "status": {
         "messages_set_completed": False

@@ -422,6 +422,8 @@
     "wpp_update_fetch_failed_msg": "Nu s-a putut verifica cea mai recentă versiune WPPConnect. Verificați-vă conexiunea la internet și încercați din nou.",
     "wpp_force_reinstall_confirm_title": "Forțați reinstalarea WPPConnect",
     "wpp_force_reinstall_confirm_msg": "Aceasta va opri WPPConnect (dacă rulează), va șterge instalarea curentă și va descărca și instala cea mai recentă versiune (v{version}), fără a verifica dacă este deja cea instalată. Continua?",
+    "wpp_reinstall_notice_title": "Actualizare WPPConnect recomandată",
+    "wpp_reinstall_notice_message": "Instalarea actuală a WPPConnect ar putea să nu aibă toate funcțiile cele mai recente, cum ar fi apelurile video și vocale. Doriți să reinstalați WPPConnect acum? Dacă vă răzgândiți, puteți accesa oricând această opțiune din meniul ajutor (alt+a).",
     "update_no_zip_asset": "Nu s-a găsit niciun fișier ZIP în cea mai recentă versiune.",
     "menu_whats_new": "&Ce este nou",
     "menu_about": "Despre program",
