@@ -766,6 +766,7 @@
   "shortcut_alt_shift_c_label": "Alt+Shift+C: telefon numarasını kopyala",
   "shortcut_alt_shift_v_label": "Alt+Shift+V: katılımcıyla sohbet et (gruplar)",
   "shortcut_alt_shift_q_label": "Alt+Shift+Q: alıntılanan mesaja git",
+  "shortcut_alt_shift_m_label": "Alt+Shift+M: sizden bahseden önceki mesaja git",
   "shortcut_alt_shift_s_label": "Alt+Shift+S: sohbeti sessize alma menüsünü aç / sesi aç",
   "status_like": "Beğen",
   "status_unlike": "Beğeniyi kaldır",
