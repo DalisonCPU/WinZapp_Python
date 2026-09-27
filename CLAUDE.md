@@ -19,8 +19,9 @@ read when you touch that area (see the index at the end and `.claude/rules/`).
    `tests/test_no_desktop_visible_windows.py`; history in
    `docs/traps/tests-never-open-windows.md`.
 2. **Every user-facing string goes into every registered locale file**
-   (`client/languages/{pt-BR,pt-PT,en-US,es-ES,pl,tr-TR}.json`; the set is
-   data, driven by `language_map.json`, not a hardcoded count). `I18n.t()` has
+   (`client/languages/<locale>.json` — seven today: pt-BR, pt-PT, en-US, es-ES,
+   pl, tr-TR, ro; the set is data, driven by `language_map.json`, never a
+   count to remember). The same goes for `client/changelog_<locale>.txt`. `I18n.t()` has
    no per-key fallback: a missing key renders as the raw key name. Reuse the
    words that locale already uses for the concept (`docs/reference/i18n-terminology.md`).
    `tests/test_language_files_in_sync.py` enforces it.
@@ -193,7 +194,8 @@ phone, so they are strictly bounded. Full reasoning: `docs/traps/sync-completion
 
 ### Other places
 
-`client/status_panel.py` (Alt+5, `docs/reference/status-tab.md`);
+`client/status_panel.py` + `client/status_tab/` (Alt+5, split like the two
+above; `docs/reference/status-tab.md`);
 `client/calls_panel.py` (Alt+6, every call record of every chat; logic in
 `client/core/call_log.py`, `docs/reference/message-pipeline.md` 3a);
 `client/updater.py` (`docs/traps/updater-channels.md`);

@@ -248,7 +248,7 @@ class TestStereoSendsAsAudio:
     def test_the_pending_row_already_reads_as_audio(self):
         """The row shown while sending must say what is going out."""
         src = inspect.getsource(ConversationsPanel._send_voice_message)
-        assert '"ptt":     not sends_as_audio_file(stereo_out),' in src
+        assert '"ptt":     not (mixed_audio or sends_as_audio_file(stereo_out)),' in src
 
     def test_the_notice_says_audio_instead_of_iphone_cannot_play(self):
         import json
