@@ -876,13 +876,23 @@ class AudioPlaybackMixin:
 
     def seek_active_playback_to_edge(self, to_end: bool) -> bool:
         """Seek the currently playing voice message or video to its very
-        start (to_end=False) or end (to_end=True). Issue #17."""
+        start (to_end=False) or end (to_end=True). Issue #17.
+
+        Landing exactly on the reported length is what BASS_ChannelSetPosition
+        can reject with a BassError for a decoded stream (issue #305: Shift+End
+        raised, was swallowed by the except below, and the keypress fell
+        through to "select to end of list" instead of seeking) — Shift+Home's
+        `0` never hits that edge case, which is why only one direction failed.
+        `total - 1` is one BASS byte short of the true end, imperceptible to a
+        listener, and never hands BASS the rejected boundary value. Both the
+        video and the plain-audio branch go through the same BASS channel
+        underneath (video_player._audio_ctrl()), so both get the clamp."""
         if self._current_video_msg_id is not None and self._video_player.is_playing:
             try:
                 total = self._video_player.get_length()
                 if total <= 0:
                     return False
-                self._video_player.set_position(total if to_end else 0)
+                self._video_player.set_position(max(0, total - 1) if to_end else 0)
                 return True
             except Exception:
                 return False
@@ -893,7 +903,7 @@ class AudioPlaybackMixin:
             total = _ctrl.get_length()
             if total <= 0:
                 return False
-            _ctrl.set_position(total if to_end else 0)
+            _ctrl.set_position(max(0, total - 1) if to_end else 0)
             return True
         except Exception:
             return False

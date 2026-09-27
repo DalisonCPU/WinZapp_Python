@@ -766,6 +766,7 @@
     "shortcut_alt_shift_c_label": "Alt+Shift+C: copy phone number",
     "shortcut_alt_shift_v_label": "Alt+Shift+V: chat with participant (groups)",
     "shortcut_alt_shift_q_label": "Alt+Shift+Q: go to quoted message",
+    "shortcut_alt_shift_m_label": "Alt+Shift+M: jump to the previous message that mentions you",
     "shortcut_alt_shift_s_label": "Alt+Shift+S: open the mute chat menu / unmute",
     "status_like": "Like ❤️",
     "status_unlike": "Unlike",

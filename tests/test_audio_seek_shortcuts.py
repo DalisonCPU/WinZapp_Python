@@ -42,6 +42,20 @@ class _FakeChannel:
         return int(seconds * self.BYTES_PER_SECOND)
 
 
+class _FakeChannelRejectsExactEnd(_FakeChannel):
+    """Reproduces the real BASS behaviour issue #305 was hitting:
+    BASS_ChannelSetPosition can raise a BassError when asked to land exactly
+    on the channel's reported length. The fakes above never did this, so the
+    existing suite couldn't catch the bug — seek_active_playback_to_edge()'s
+    `except Exception: return False` swallowed it and Shift+End fell through
+    to list-selection instead of seeking."""
+
+    def set_position(self, pos):
+        if pos == self._length:
+            raise RuntimeError("BASS_ChannelSetPosition: BASS_ERROR_POSITION")
+        super().set_position(pos)
+
+
 class _FakeVideoPlayer:
     is_playing = False
 
@@ -178,7 +192,21 @@ class TestSeekActivePlaybackToEdge:
         stub._audio_stream = _FakeChannel(length_seconds=60, position_seconds=30)
         stub._audio_tempo_ctrl = _FakeChannel(length_seconds=60, position_seconds=30)
         assert stub.seek_active_playback_to_edge(to_end=True) is True
-        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND
+        # One byte short of the reported length, not the length itself — see
+        # test_survives_a_bass_rejection_at_the_exact_end below for why.
+        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND - 1
+
+    def test_survives_a_bass_rejection_at_the_exact_end(self):
+        """Issue #305 regression: a real BASS channel can raise when asked to
+        seek exactly to its reported length. Shift+End must still land at
+        (effectively) the end and must not report failure — a False here is
+        what let the keypress fall through to list-selection."""
+        stub = _Stub()
+        stub._audio_stream = _FakeChannelRejectsExactEnd(length_seconds=60, position_seconds=30)
+        stub._audio_tempo_ctrl = _FakeChannelRejectsExactEnd(length_seconds=60, position_seconds=30)
+
+        assert stub.seek_active_playback_to_edge(to_end=True) is True
+        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND - 1
 
 
 class TestOnAudioSliderSeeksTheTempoControl:
@@ -249,7 +277,24 @@ class TestMessageListShiftShortcutsDispatchToSeek:
         stub._audio_tempo_ctrl = _FakeChannel(length_seconds=60, position_seconds=30)
         import wx
         stub._on_messages_list_key_down(_FakeKeyEvent(wx.WXK_END, shift_down=True))
-        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND
+        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND - 1
+
+    def test_shift_end_does_not_fall_through_to_list_selection_on_bass_rejection(self):
+        """Issue #305: before the fix, a BASS rejection at the exact end made
+        seek_active_playback_to_edge() return False, and the keypress fell
+        through to select-to-end-of-list instead of seeking. The event must
+        be consumed (not Skip()'d) even against a channel that rejects the
+        exact boundary."""
+        stub = _Stub()
+        stub._audio_stream = _FakeChannelRejectsExactEnd(length_seconds=60, position_seconds=30)
+        stub._audio_tempo_ctrl = _FakeChannelRejectsExactEnd(length_seconds=60, position_seconds=30)
+        import wx
+        event = _FakeKeyEvent(wx.WXK_END, shift_down=True)
+
+        stub._on_messages_list_key_down(event)
+
+        assert stub._audio_tempo_ctrl.get_position() == 60 * _FakeChannel.BYTES_PER_SECOND - 1
+        assert not event.skipped
 
     def test_plain_home_without_shift_is_not_intercepted(self):
         """Home (no Shift) already has its own meaning here (load older
