@@ -246,6 +246,22 @@ class SettingsMixin:
         if not general.get("wpp_reinstall_notice_pending", False):
             return
 
+        # Pending means only "this settings.json predates 2.0", not "this
+        # WPPConnect lacks calls". An install reinstalled since — every alpha
+        # tester was asked to do it by hand — already carries the catalogue the
+        # notice offers, and was being told it may be missing calls anyway
+        # (reported 2026-09-27, pinned 2.3000.1047835881-alpha of 430). Its
+        # catalogue answers the question; unreadable counts as "ask".
+        from core.wa_version_catalogue import catalogue_supports_calls, newest_build, read_catalogue
+        catalogue = read_catalogue(resource_path(
+            "api", "node_modules", "@wppconnect", "wa-version", "versions.json"))
+        if catalogue_supports_calls(catalogue):
+            logging.info("[wpp_reinstall_notice] not shown: the installed catalogue "
+                         "already reaches %s.", newest_build(catalogue))
+            self.settings.setdefault("general", {})["wpp_reinstall_notice_pending"] = False
+            self.save_settings()
+            return
+
         message = self.i18n.t("wpp_reinstall_notice_message")
         self.output(message, interrupt=False)
         result = wx.MessageBox(

@@ -11,6 +11,8 @@ regardless of the user's answer.
 
 import types
 
+import pytest
+
 import wx
 
 from core.utils import migrate_wpp_reinstall_notice
@@ -89,6 +91,26 @@ def _stub(pending: bool):
     return stub
 
 
+STALE = {"versions": [{"version": "2.3000.1046948731-alpha"}]}
+FRESH = {"versions": [{"version": "2.3000.1046948731-alpha"},
+                      {"version": "2.3000.1047835881-alpha"}]}
+
+
+@pytest.fixture
+def catalogue(monkeypatch):
+    """What versions.json the notice finds. Stale by default, so these tests
+    never depend on whichever client/api happens to exist on the machine."""
+    import core.wa_version_catalogue as cat
+    state = {"value": STALE, "paths": []}
+
+    def _read(path):
+        state["paths"].append(path)
+        return state["value"]
+    monkeypatch.setattr(cat, "read_catalogue", _read)
+    return state
+
+
+@pytest.mark.usefixtures("catalogue")
 class TestShowIfPending:
     def test_not_pending_shows_nothing_and_costs_nothing(self, monkeypatch):
         shown = []
@@ -115,3 +137,41 @@ class TestShowIfPending:
         assert "reinstall" not in stub.calls
         assert "saved" in stub.calls
         assert stub.settings["general"]["wpp_reinstall_notice_pending"] is False
+
+
+class TestAnInstallAlreadyReinstalled:
+    """Reported 2026-09-27 by an alpha tester who had reinstalled WPPConnect by
+    hand long before: pinned 2.3000.1047835881-alpha of 430, calls working,
+    and still told on launch that the install may lack calls."""
+
+    def test_a_catalogue_that_reaches_the_calls_build_is_not_asked_about(self, monkeypatch, catalogue):
+        shown = []
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: shown.append(a))
+        catalogue["value"] = FRESH
+        stub = _stub(pending=True)
+
+        stub._show_wpp_reinstall_notice_if_pending()
+
+        assert shown == []
+        assert stub.spoken == []
+        assert "reinstall" not in stub.calls
+        # ...and it stays that way on the next launch.
+        assert stub.settings["general"]["wpp_reinstall_notice_pending"] is False
+        assert "saved" in stub.calls
+
+    def test_it_reads_the_installed_wa_version_catalogue(self, monkeypatch, catalogue):
+        import os
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.NO)
+        _stub(pending=True)._show_wpp_reinstall_notice_if_pending()
+        assert catalogue["paths"][0].replace(os.sep, "/").endswith(
+            "api/node_modules/@wppconnect/wa-version/versions.json")
+
+    def test_an_unreadable_catalogue_still_asks(self, monkeypatch, catalogue):
+        """Cannot tell is not proof the install is fine."""
+        asked = []
+        monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: asked.append(a) or wx.NO)
+        catalogue["value"] = None
+
+        _stub(pending=True)._show_wpp_reinstall_notice_if_pending()
+
+        assert len(asked) == 1
