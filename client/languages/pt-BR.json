@@ -781,6 +781,7 @@
     "shortcut_alt_shift_c_label": "Alt+Shift+C: copiar número de telefone",
     "shortcut_alt_shift_v_label": "Alt+Shift+V: conversar com participante (grupos)",
     "shortcut_alt_shift_q_label": "Alt+Shift+Q: ir para mensagem citada",
+    "shortcut_alt_shift_m_label": "Alt+Shift+M: ir para a mensagem anterior que menciona você",
     "shortcut_alt_shift_s_label": "Alt+Shift+S: abrir o menu silenciar conversa / reativar som",
     "status_like": "Curtir ❤️",
     "status_unlike": "Descurtir",
