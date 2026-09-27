@@ -928,6 +928,10 @@ DEFAULT_SETTINGS = {
     "general": {
         "language": "",
         "notifications_enabled": True,
+        # How much a background notification says: "full", "name" or
+        # "sound" (core.notification_manager.NOTIFICATION_CONTENT_LEVELS,
+        # issue #258). "full" is what WinZapp always did.
+        "notification_content": "full",
         "keep_muted_chats_silent_when_open": True,
         "updates_enabled": True,
         # Alpha channel (one build per commit on main) - opt-in, see

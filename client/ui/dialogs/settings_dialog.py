@@ -14,6 +14,7 @@ from core.audio_devices import (
     enumerate_output_devices, enumerate_input_devices, test_input_device,
 )
 from core.spell_checker import SPELL_CHECK_MODES, spell_check_mode
+from core.notification_manager import NOTIFICATION_CONTENT_LEVELS
 from core.reaction_shortcuts import (
     DEFAULT_QUICK_REACTIONS,
     assign_quick_reaction,
@@ -162,6 +163,15 @@ def ensure_default_settings_file():
     return False
 
 
+#: Radio labels for Settings > General > notification content, in the order
+#: of core.notification_manager.NOTIFICATION_CONTENT_LEVELS.
+NOTIFICATION_CONTENT_LABEL_KEYS = (
+    "notification_content_full",
+    "notification_content_name",
+    "notification_content_sound",
+)
+
+
 def chat_lock_tab_visible(main_window) -> bool:
     """Whether Settings may show the "Locked chats" tab at all.
 
@@ -265,6 +275,23 @@ class SettingsDialog(wx.Dialog):
             self._general_page, label=i18n.t("notifications_label")
         )
         gen_sizer.Add(self._notifications_check, 0, wx.ALL, 8)
+
+        # How much a background notification says (issue #258). A radio
+        # group, like the spell-check one below, so the screen reader reads
+        # the question and the chosen answer together. Only meaningful while
+        # notifications are on, so it follows that box's state.
+        self._notification_content_radio = wx.RadioBox(
+            self._general_page,
+            label=i18n.t("notification_content_label"),
+            choices=[i18n.t(key) for key in NOTIFICATION_CONTENT_LABEL_KEYS],
+            majorDimension=1,
+            style=wx.RA_SPECIFY_COLS,
+        )
+        gen_sizer.Add(self._notification_content_radio, 0, wx.EXPAND | wx.ALL, 8)
+        self._notifications_check.Bind(
+            wx.EVT_CHECKBOX,
+            lambda e: (self._sync_notification_content_enabled(), e.Skip()),
+        )
 
         self._keep_muted_silent_check = wx.CheckBox(
             self._general_page, label=i18n.t("keep_muted_chats_silent_when_open_label")
@@ -1405,6 +1432,12 @@ class SettingsDialog(wx.Dialog):
         mode = spell_check_mode(self.main_window.settings.get("general", {}))
         self._spell_check_radio.SetSelection(SPELL_CHECK_MODES.index(mode))
 
+    def _sync_notification_content_enabled(self):
+        """The notification-content choice only applies while background
+        notifications are on; greyed out otherwise, but kept, so turning them
+        back on restores the level the user had picked."""
+        self._notification_content_radio.Enable(self._notifications_check.GetValue())
+
     def _load_values(self):
         """Populate controls from current settings."""
         lang_code = self.main_window.settings.get("general", {}).get("language", "pt-BR")
@@ -1415,6 +1448,13 @@ class SettingsDialog(wx.Dialog):
 
         notifs = self.main_window.settings.get("general", {}).get("notifications_enabled", True)
         self._notifications_check.SetValue(notifs)
+        content = self.main_window.settings.get("general", {}).get("notification_content", "full")
+        # An unknown value opens on the default, as notification_content_level()
+        # reads it everywhere else.
+        self._notification_content_radio.SetSelection(
+            NOTIFICATION_CONTENT_LEVELS.index(content)
+            if content in NOTIFICATION_CONTENT_LEVELS else 0)
+        self._sync_notification_content_enabled()
 
         call_settings = self.main_window.settings.get("calls", {})
         self._call_alerts_check.SetValue(call_settings.get("alerts_enabled", True))
@@ -3020,6 +3060,9 @@ class SettingsDialog(wx.Dialog):
         self.main_window.settings.setdefault("general", {})["notifications_enabled"] = (
             self._notifications_check.GetValue()
         )
+        self.main_window.settings.setdefault("general", {})["notification_content"] = (
+            NOTIFICATION_CONTENT_LEVELS[self._notification_content_radio.GetSelection()]
+        )
         self.main_window.settings.setdefault("general", {})["keep_muted_chats_silent_when_open"] = (
             self._keep_muted_silent_check.GetValue()
         )
@@ -3293,6 +3336,9 @@ class SettingsDialog(wx.Dialog):
         self._noise_reduction_check.SetLabel(i18n.t("noise_reduction_label"))
         self._voice_stereo_check.SetLabel(i18n.t("voice_stereo_default_label"))
         self._notifications_check.SetLabel(i18n.t("notifications_label"))
+        self._notification_content_radio.SetLabel(i18n.t("notification_content_label"))
+        for _i, _key in enumerate(NOTIFICATION_CONTENT_LABEL_KEYS):
+            self._notification_content_radio.SetItemLabel(_i, i18n.t(_key))
         self._call_alerts_check.SetLabel(i18n.t("calls_alerts_enabled_label"))
         self._call_popup_check.SetLabel(i18n.t("calls_popup_enabled_label"))
         self._call_audio_settings_button.SetLabel(i18n.t("calls_audio_settings_button"))
