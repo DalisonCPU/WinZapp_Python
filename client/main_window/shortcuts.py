@@ -343,4 +343,7 @@ class ShortcutsMixin:
         if not self.settings.get("speech_content", {}).get("silence_while_recording", False):
             return False
         cp = getattr(self, "conversations_panel", None)
-        return bool(cp is not None and getattr(cp, "_is_recording", False))
+        # Mixed capture intentionally includes screen-reader speech and must
+        # also announce device failures while the partial take stays open.
+        return bool(cp is not None and getattr(cp, "_is_recording", False)
+                    and not getattr(cp, "_recording_system_audio", False))

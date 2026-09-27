@@ -602,8 +602,8 @@ class SettingsMixin:
         # change (plan Zad 2.3b). Best-effort; never blocks the save.
         self._persist_global_settings()
 
-    def _schedule_save_settings(self):
-        """Debounce save_settings: coalesce rapid calls into one write after 2 s.
+    def _schedule_save_settings(self, delay=2.0):
+        """Debounce save_settings; recording sliders request 0.5 s, others 2 s.
 
         Used when background events (e.g. presence.update bursts) update settings
         frequently — avoids hammering the disk on every event.
@@ -611,6 +611,9 @@ class SettingsMixin:
         with self._save_timer_lock:
             existing = getattr(self, "_settings_save_timer", None)
             if existing is not None:
+                # Background changes must not postpone a slider's short save.
+                if existing.interval < delay:
+                    return
                 existing.cancel()
             def _fire():
                 # Clear the handle FIRST: left dangling after the timer
@@ -618,11 +621,12 @@ class SettingsMixin:
                 # still-pending write and re-saves settings.json on every
                 # single shutdown from the first settings change onwards.
                 with self._save_timer_lock:
-                    if self._settings_save_timer is t:
-                        self._settings_save_timer = None
+                    if self._settings_save_timer is not t:
+                        return  # superseded or already flushed during shutdown
+                    self._settings_save_timer = None
                 self.save_settings()
 
-            t = threading.Timer(2.0, _fire)
+            t = threading.Timer(delay, _fire)
             t.daemon = True
             self._settings_save_timer = t
             t.start()

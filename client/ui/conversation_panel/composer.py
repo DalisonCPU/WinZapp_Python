@@ -75,10 +75,14 @@ class ComposerMixin:
             self.send_message_btn.Show()
             self.record_voice_message_btn.Hide()
             self._record_voice_alt_btn.Hide()
+            if hasattr(self, "_record_voice_system_btn"):
+                self._record_voice_system_btn.Hide()
         else:
             self.send_message_btn.Hide()
             self.record_voice_message_btn.Show()
             self._record_voice_alt_btn.Show()
+            if hasattr(self, "_record_voice_system_btn"):
+                self._record_voice_system_btn.Show()
         # Sync typing status with WPPConnect (only on state transitions)
         if self.conversation is not None:
             jid = self.conversation.get("remoteJid", "")
