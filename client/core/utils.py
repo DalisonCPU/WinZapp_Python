@@ -305,7 +305,13 @@ def is_voice_message(msg) -> bool:
     """Return True if msg is a voice note (PTT / mensagem de voz), not a generic audio file."""
     if not isinstance(msg, dict):
         return False
-    if msg.get("_is_voice_recording") or msg.get("type") == "ptt":
+    if msg.get("_is_voice_recording"):
+        # A recording WinZapp sends as an audio message instead (stereo, or
+        # microphone + computer audio) says so on its pending row with an
+        # explicit ptt False; any other recording is a voice note.
+        inner = (msg.get("message") or {}).get("audioMessage") or {}
+        return inner.get("ptt") is not False
+    if msg.get("type") == "ptt":
         return True
     if msg.get("isPtt") or msg.get("ptt"):
         return True

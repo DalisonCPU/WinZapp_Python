@@ -3058,6 +3058,11 @@ class SettingsDialog(wx.Dialog):
         input_name = self._audio_input_device_names[input_sel - 1] if input_sel > 0 else ""
         self.main_window.settings.setdefault("audio_devices", {})["input_device_name"] = input_name
         self.main_window.effective_input_device_name = input_name
+        # The devices just applied are an explicit choice: a quick switch
+        # (Ctrl+Alt+Shift+H/G) made earlier this session stops overriding them.
+        end_session = getattr(self.main_window, "end_session_audio_devices", None)
+        if end_session is not None:
+            end_session(general=True)
 
         self.main_window.settings.setdefault("general", {})["noise_reduction_enabled"] = (
             self._noise_reduction_check.GetValue()

@@ -962,6 +962,10 @@ class NotificationManager:
         *instead of* the toast, never alongside it.
         """
         self.i18n.get_language()
+        # At the "name" level the body is only the neutral line, and the
+        # announcement already starts "New message from <name>".
+        if body in (self.i18n.t("notif_hidden_message"), self.i18n.t("notif_hidden_reaction")):
+            body = ""
         announce_background_message(self.main_window, self.i18n, title, body)
 
     def _dispatch(self, title: str, body: str, remote_jid: str, msg_key: dict = None):

@@ -138,6 +138,10 @@ class _SoundSystem:
         self.applied.append(name)
         return self.ok if name == "Novo" else True
 
+    def apply_effects_device(self, name, warn_on_failure=False):
+        self.applied.append(("effects", name))
+        return True
+
 
 SAVED = {"audio_devices": {"output_device_name": "Antigo", "input_device_name": "Mic antigo"},
          "call_audio_devices": {"output_device_name": "Fone de ligação",
@@ -150,6 +154,8 @@ class _Stub:
     current_audio_device = MainWindow.current_audio_device
     call_audio_device = MainWindow.call_audio_device
     _session_audio_device = MainWindow._session_audio_device
+    _session_call_audio_device = MainWindow._session_call_audio_device
+    end_session_audio_devices = MainWindow.end_session_audio_devices
     _ipc_audio_device = MainWindow._ipc_audio_device
 
     def __init__(self, sound_ok=True, in_call=False):
@@ -181,9 +187,17 @@ class TestSessionOnly:
     def test_output_switches_live_and_reloads_sounds(self):
         s = _Stub()
         assert s.apply_quick_audio_device(KIND_OUTPUT, "Novo") is True
-        assert s.sound_system.applied == ["Novo"]
+        assert s.sound_system.applied == ["Novo", ("effects", "Novo")]
         assert "load_sounds" in s.events      # docs/traps/audio-devices.md
         assert ("say", "quick_audio_output_setNovo") in s.events
+
+    def test_effect_sounds_follow_unless_a_device_was_chosen_for_them(self):
+        """Effects are pinned to a device of their own; set to follow the
+        system default they follow the switch, chosen on purpose they stay."""
+        s = _Stub()
+        s.settings["audio_devices"]["effects_output_device_name"] = "Caixa de som"
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        assert s.sound_system.applied == ["Novo"]
 
     def test_nothing_is_saved(self):
         """The next launch starts on Settings' choice again."""
@@ -211,7 +225,7 @@ class TestSessionOnly:
     def test_an_output_that_will_not_open_changes_nothing(self):
         s = _Stub(sound_ok=False)
         assert s.apply_quick_audio_device(KIND_OUTPUT, "Novo") is False
-        assert s.sound_system.applied == ["Novo", "Antigo"]   # put back
+        assert s.sound_system.applied == ["Novo", "Antigo"]   # put back, effects untouched
         assert s.current_audio_device(KIND_OUTPUT) == "Antigo"
         assert s.passed_on == []
         assert ("say", "quick_audio_device_failedNovo") in s.events
@@ -245,6 +259,37 @@ class TestSessionOnly:
         s = _Stub(in_call=True)
         s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
         assert "restart_call" in s.events
+
+
+class TestAnExplicitChoiceEndsTheSwitch:
+    """Found in review: the override was only ever set, so a device chosen in
+    Settings or in the call's audio settings afterwards kept losing to it."""
+
+    def test_saving_settings_ends_the_general_override_only(self):
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        s.end_session_audio_devices(general=True)
+        assert s.current_audio_device(KIND_OUTPUT) == "Antigo"
+        assert s.call_audio_device(KIND_OUTPUT) == "Novo"
+
+    def test_applying_call_settings_ends_the_call_override_only(self):
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        s.end_session_audio_devices(call=True)
+        assert s.call_audio_device(KIND_OUTPUT) == "Fone de ligação"
+        assert s.current_audio_device(KIND_OUTPUT) == "Novo"
+
+    def test_the_settings_dialog_ends_it_when_it_applies_the_devices(self):
+        from ui.dialogs.settings_dialog import SettingsDialog
+        src = inspect.getsource(SettingsDialog).replace("\r\n", "\n")
+        at = src.index("self.main_window.effective_input_device_name = input_name")
+        assert "end_session(general=True)" in src[at:at + 600]
+
+    def test_the_call_dialog_ends_it_when_it_applies(self):
+        from tests.god_modules import main_window_source
+        full = main_window_source()
+        at = full.index('audio_cfg["echo_cancellation"] = echo_check.GetValue()')
+        assert "self.end_session_audio_devices(call=True)" in full[at:at + 400]
 
 
 class TestEveryOpenAccount:

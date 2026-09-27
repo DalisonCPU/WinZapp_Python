@@ -5,7 +5,9 @@ list of recording devices; a digit (or arrows + Enter) switches at once.
 
 The switch is for this session only. Nothing is saved: Settings > Audio
 devices and the call device settings keep their choice, and the next launch
-starts on it again. It covers everything that uses a device — sounds and
+starts on it again. An explicit choice made afterwards ends it: saving
+Settings ends the general override (the dialog re-applies its devices), and
+applying the call's own audio settings ends the call override. It covers everything that uses a device — sounds and
 playback, voice-message recording, calls (a call in progress moves without
 being dropped) — and every account open right now: each one is its own
 process with its own audio, so the account that got the keystroke passes the
@@ -46,9 +48,23 @@ class QuickAudioDevicesMixin:
         return [name for _, name in devices]
 
     def _session_audio_device(self, kind: str):
-        """This session's override for *kind*: a device name ("" = system
-        default), or None when the saved setting still applies."""
+        """This session's general override for *kind*: a device name ("" =
+        system default), or None when the saved setting still applies."""
         return (getattr(self, "_session_audio_devices", None) or {}).get(kind)
+
+    def _session_call_audio_device(self, kind: str):
+        """This session's override for the device a call opens for *kind*."""
+        return (getattr(self, "_session_call_audio_devices", None) or {}).get(kind)
+
+    def end_session_audio_devices(self, *, general: bool = False, call: bool = False):
+        """Drop the quick-switch override, because the user just chose devices
+        explicitly: in Settings (``general``) or in the call's audio settings
+        (``call``). Left in place, the override would keep winning over the
+        choice the user just made."""
+        if general:
+            self._session_audio_devices = {}
+        if call:
+            self._session_call_audio_devices = {}
 
     def current_audio_device(self, kind: str) -> str:
         """The general device *kind* is on: the session override, else the saved one."""
@@ -61,7 +77,7 @@ class QuickAudioDevicesMixin:
         """The device a call opens for *kind*: the session override when there
         is one, else the call device settings (which may differ from the
         general ones on purpose)."""
-        override = self._session_audio_device(kind)
+        override = self._session_call_audio_device(kind)
         if override is not None:
             return override
         return self.settings.get("call_audio_devices", {}).get(_SETTING_KEY[kind], "")
@@ -110,6 +126,11 @@ class QuickAudioDevicesMixin:
                 if announce:
                     self.output(t("quick_audio_device_failed").format(device=shown), interrupt=True)
                 return False
+            # Effect sounds (message received/sent...) are pinned to a device
+            # of their own. Set to follow the system default, they follow the
+            # switch too; a device chosen for them on purpose is left alone.
+            if not self.settings.get("audio_devices", {}).get("effects_output_device_name", ""):
+                self.sound_system.apply_effects_device(name)
             self.load_sounds()
         elif name:
             idx = find_input_device_index(name)
@@ -120,7 +141,10 @@ class QuickAudioDevicesMixin:
 
         if getattr(self, "_session_audio_devices", None) is None:
             self._session_audio_devices = {}
+        if getattr(self, "_session_call_audio_devices", None) is None:
+            self._session_call_audio_devices = {}
         self._session_audio_devices[kind] = name
+        self._session_call_audio_devices[kind] = name
         if kind == KIND_INPUT:
             self.effective_input_device_name = name
         logging.info("[quick-audio] %s device set to %r for this session", kind, name or "(default)")

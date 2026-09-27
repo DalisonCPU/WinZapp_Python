@@ -159,11 +159,11 @@ class _Sender:
         self.i18n = types.SimpleNamespace(t=lambda key: key)
 
     def send_media_attachment(self, remote_jid, file_path, media_type, caption="",
-                              quoted=None, **_kw):
+                              quoted=None, custom_filename="", **_kw):
         with open(file_path, "rb") as fh:
             body = fh.read()
         self.uploads.append({"jid": remote_jid, "path": file_path, "type": media_type,
-                             "quoted": quoted, "body": body})
+                             "quoted": quoted, "body": body, "filename": custom_filename})
         return "REAL_ID"
 
     def _convert_wav_to_ogg(self, wav_path, stereo=False):
@@ -246,9 +246,28 @@ class TestStereoSendsAsAudio:
         assert "base64Ptt" in posted[0][1]
 
     def test_the_pending_row_already_reads_as_audio(self):
-        """The row shown while sending must say what is going out."""
+        """The row shown while sending must say what is going out. Checked
+        through is_voice_message() itself: the row keeps _is_voice_recording
+        (the sent sound needs it), and that flag used to win over ptt."""
+        from core.utils import is_voice_message
         src = inspect.getsource(ConversationsPanel._send_voice_message)
         assert '"ptt":     not (mixed_audio or sends_as_audio_file(stereo_out)),' in src
+
+        def row(ptt):
+            return {"_is_voice_recording": True, "messageType": "audioMessage",
+                    "message": {"audioMessage": {"seconds": 3, "ptt": ptt}}}
+        assert is_voice_message(row(False)) is False   # stereo / mixed: audio
+        assert is_voice_message(row(True)) is True     # mono: voice message
+        legacy = {"_is_voice_recording": True, "messageType": "audioMessage",
+                  "message": {"audioMessage": {"seconds": 3}}}
+        assert is_voice_message(legacy) is True        # no ptt stated: as before
+
+    def test_the_upload_is_named_not_a_temp_file(self, tmp_path):
+        """A recipient who saves the audio gets this name."""
+        s = _Sender()
+        s.send_audio_message("j@s.whatsapp.net", str(tmp_path / "v.wav"),
+                             ogg_bytes=b"OPUS", stereo=True)
+        assert s.uploads[0]["filename"] == "default_filename_audio.ogg"
 
     def test_the_notice_says_audio_instead_of_iphone_cannot_play(self):
         import json

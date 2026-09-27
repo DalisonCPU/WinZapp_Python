@@ -1224,6 +1224,9 @@ class CallsMixin:
                 audio_cfg["exclusive_input"] = exclusive_input_check.GetValue()
                 audio_cfg["exclusive_output"] = exclusive_output_check.GetValue()
                 audio_cfg["echo_cancellation"] = echo_check.GetValue()
+                # An explicit choice for calls ends a quick switch's override
+                # of the call devices (main_window/quick_audio_devices.py).
+                self.end_session_audio_devices(call=True)
             if include_camera:
                 video_cfg["camera_name"] = "" if camera_combo.GetStringSelection() == default_name else camera_combo.GetStringSelection()
             self.save_settings()

@@ -43,11 +43,22 @@ class TestOfflineStartStillDeferred:
         assert cs.offline_start_still_deferred(
             network_up=True, probe_proven=True, deferred_for=10_000) is False
 
-    def test_a_proven_probe_holds_it_for_as_long_as_the_outage_lasts(self):
-        """The field outage lasted two hours. Any cap on a probe known to work
-        lands the start back in the offline window it exists to avoid."""
+    def test_a_proven_probe_outlasts_the_measured_outage(self):
+        """The field outage lasted 2 h 05 min: a proven probe must hold the
+        start through it, or it lands back in the offline window it avoids."""
         assert cs.offline_start_still_deferred(
-            network_up=False, probe_proven=True, deferred_for=4 * 3600) is True
+            network_up=False, probe_proven=True, deferred_for=2 * 3600 + 5 * 60) is True
+
+    def test_a_proven_probe_is_still_capped(self):
+        """Proof is usually earned on another network; a hotel portal or an
+        authenticated proxy only the browser gets through must not keep the
+        account offline for good."""
+        cap = cs.OFFLINE_START_PROVEN_PROBE_CAP_SECONDS
+        assert cap >= 2 * 3600 + 5 * 60
+        assert cs.offline_start_still_deferred(
+            network_up=False, probe_proven=True, deferred_for=cap - 1) is True
+        assert cs.offline_start_still_deferred(
+            network_up=False, probe_proven=True, deferred_for=cap) is False
 
     def test_an_unproven_probe_holds_it_only_up_to_the_cap(self):
         cap = cs.OFFLINE_START_UNPROVEN_PROBE_CAP_SECONDS
@@ -64,11 +75,18 @@ class TestCountsTowardProfileHealth:
         assert cs.counts_toward_profile_health("CLOSED", True) is False
         assert cs.counts_toward_profile_health("closed", True) is False
 
+    def test_every_status_the_closed_branch_handles_is_exempt(self):
+        """The CLOSED auto-start branch also handles DESTROYED and an empty
+        answer; while a start is held on purpose they are not failures either."""
+        assert cs.counts_toward_profile_health("DESTROYED", True) is False
+        assert cs.counts_toward_profile_health("", True) is False
+        assert cs.counts_toward_profile_health(None, True) is False
+
     def test_everything_else_is_still_observed(self):
         assert cs.counts_toward_profile_health("CLOSED", False) is True
         assert cs.counts_toward_profile_health("CONNECTED", True) is True
         assert cs.counts_toward_profile_health("INITIALIZING", True) is True
-        assert cs.counts_toward_profile_health("", True) is True
+        assert cs.counts_toward_profile_health("", False) is True
 
 
 # ── _restart_wpp_session() ──────────────────────────────────────────────────

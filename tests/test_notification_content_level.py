@@ -185,3 +185,14 @@ class TestSettings:
         s._notifications_check.value = True
         s._sync_notification_content_enabled()
         assert s._notification_content_radio.enabled is True
+
+
+def test_the_no_banner_fallback_does_not_repeat_itself_at_name(direct_callafter):
+    """Found in review: with no toaster, _dispatch() spoke "New message from
+    Ana: New message" at the "name" level."""
+    stub = _Stub(None)
+    stub.i18n.t = lambda key: {"fg_new_msg": "Nova mensagem de {name}",
+                               "notif_hidden_message": "Nova mensagem",
+                               "notif_hidden_reaction": "Nova reação"}.get(key, key)
+    stub._dispatch("Ana", "Nova mensagem", "j@s.whatsapp.net")
+    assert stub.main_window.spoken == ["Nova mensagem de Ana"]

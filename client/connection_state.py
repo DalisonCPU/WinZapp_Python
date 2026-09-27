@@ -396,10 +396,18 @@ AUTO_START_DEFERRED_OFFLINE = (
 # happened before the deferral existed.
 OFFLINE_START_UNPROVEN_PROBE_CAP_SECONDS = 600.0
 
+# A proven probe gets a long cap, not none. The proof is usually earned on
+# another network (at home, before the laptop slept) and says nothing about a
+# hotel portal or an authenticated proxy that only the browser gets through
+# on the network it wakes on. Long enough for the outage this was measured
+# on (2 h 05 min), short enough that such a network is not offline for good.
+OFFLINE_START_PROVEN_PROBE_CAP_SECONDS = 3 * 3600.0
+
 
 def offline_start_still_deferred(*, network_up: bool, probe_proven: bool,
                                  deferred_for: float,
                                  unproven_cap: float = OFFLINE_START_UNPROVEN_PROBE_CAP_SECONDS,
+                                 proven_cap: float = OFFLINE_START_PROVEN_PROBE_CAP_SECONDS,
                                  ) -> bool:
     """Whether a deferred session start must keep waiting for the network.
 
@@ -410,19 +418,19 @@ def offline_start_still_deferred(*, network_up: bool, probe_proven: bool,
     """
     if network_up:
         return False
-    if probe_proven:
-        return True
-    return deferred_for < unproven_cap
+    return deferred_for < (proven_cap if probe_proven else unproven_cap)
 
 
 def counts_toward_profile_health(status: str, start_deferred_offline: bool) -> bool:
     """Whether a status reading may be fed to ProfileHealthTracker.
 
     The tracker reads a CLOSED as the end of a failed start cycle, and three
-    of them restore a profile snapshot. A CLOSED held on purpose while a start
-    waits for the network is not a start that failed, so it must not count.
+    of them restore a profile snapshot. A closed session held on purpose while
+    a start waits for the network is not a start that failed, so it must not
+    count — whichever of the statuses the CLOSED auto-start branch handles it
+    reads as (CLOSED, DESTROYED, or an empty answer).
     """
-    return not (start_deferred_offline and (status or "").upper() == "CLOSED")
+    return not (start_deferred_offline and (status or "").upper() in ("CLOSED", "DESTROYED", ""))
 
 
 def classify_unlinked(

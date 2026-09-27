@@ -10,7 +10,7 @@ import tempfile
 import threading
 import wx
 from ui.dialogs.emoji_picker import choose_and_insert_emoji
-from core.attachment_types import pasted_attachment_media_type
+from core.attachment_types import DEFAULT_PASTED_AUDIO_AS, pasted_attachment_media_type
 from core.link_preview import (
     fetch_link_preview,
     find_first_url,
@@ -473,7 +473,7 @@ class ComposerMixin:
                     # shown while sending already has the type WhatsApp will
                     # show — not one a later refresh corrects.
                     pasted_audio_as = self.main_window.settings.get(
-                        "general", {}).get("pasted_audio_as", "audio")
+                        "general", {}).get("pasted_audio_as", DEFAULT_PASTED_AUDIO_AS)
                     for path in paths:
                         self._staged_attachments.append(
                             {

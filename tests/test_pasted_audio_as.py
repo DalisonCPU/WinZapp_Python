@@ -62,7 +62,7 @@ def test_other_files_are_not_touched(tmp_path):
 def test_the_paste_uses_the_setting():
     from ui.conversation_panel.composer import ComposerMixin
     src = inspect.getsource(ComposerMixin._paste_clipboard_as_attachment)
-    assert '.get("pasted_audio_as", "audio")' in src
+    assert '.get("pasted_audio_as", DEFAULT_PASTED_AUDIO_AS)' in src
     assert "pasted_attachment_media_type(" in src
 
 

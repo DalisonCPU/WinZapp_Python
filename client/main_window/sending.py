@@ -799,7 +799,12 @@ class SendingMixin:
                 err_msg = self.i18n.t("audio_convert_failed")
                 logging.error("[send_audio_message] %s", err_msg)
                 return {"ok": False, "error": err_msg, "retry": False}
-            return self.send_media_attachment(remote_jid, ogg_path, "audio", quoted=quoted)
+            # Named, not tmpXXXX.ogg: the name is what a recipient who saves
+            # the audio gets.
+            return self.send_media_attachment(
+                remote_jid, ogg_path, "audio", quoted=quoted,
+                custom_filename=f"{self.i18n.t('default_filename_audio')}.ogg",
+            )
         finally:
             if ogg_path:
                 try:
