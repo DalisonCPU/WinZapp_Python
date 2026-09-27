@@ -15,6 +15,7 @@ from core.audio_devices import (
 )
 from core.spell_checker import SPELL_CHECK_MODES, spell_check_mode
 from core.notification_manager import NOTIFICATION_CONTENT_LEVELS
+from core.attachment_types import PASTED_AUDIO_MODES
 from core.reaction_shortcuts import (
     DEFAULT_QUICK_REACTIONS,
     assign_quick_reaction,
@@ -1145,6 +1146,17 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_BUTTON, self._on_browse_save_folder
         )
 
+        # What an audio file pasted into the message field (Ctrl+V) is sent
+        # as, in the order of core.attachment_types.PASTED_AUDIO_MODES.
+        self._pasted_audio_radio = wx.RadioBox(
+            self._files_page,
+            label=i18n.t("pasted_audio_label"),
+            choices=[i18n.t("pasted_audio_as_audio"), i18n.t("pasted_audio_as_document")],
+            majorDimension=1,
+            style=wx.RA_SPECIFY_COLS,
+        )
+        files_sizer.Add(self._pasted_audio_radio, 0, wx.EXPAND | wx.ALL, 8)
+
         self._files_page.SetSizer(files_sizer)
         self._notebook.AddPage(self._files_page, i18n.t("tab_files_saving"))
 
@@ -1482,6 +1494,11 @@ class SettingsDialog(wx.Dialog):
         )
         self._set_quick_reaction_slots(reactions.get("quick_reaction_slots"))
         self._update_quick_reaction_fields()
+
+        pasted_audio_as = self.main_window.settings.get("general", {}).get("pasted_audio_as", "audio")
+        self._pasted_audio_radio.SetSelection(
+            PASTED_AUDIO_MODES.index(pasted_audio_as)
+            if pasted_audio_as in PASTED_AUDIO_MODES else 0)
 
         files_settings = self.main_window.settings.get(save_location.SECTION, {})
         self._save_folder_radio.SetSelection(
@@ -2849,6 +2866,9 @@ class SettingsDialog(wx.Dialog):
             self._save_folder_radio.GetSelection())
         files_section[save_location.CUSTOM_KEY] = (
             self._save_folder_custom_field.GetValue() or "").strip()
+        self.main_window.settings.setdefault("general", {})["pasted_audio_as"] = (
+            PASTED_AUDIO_MODES[self._pasted_audio_radio.GetSelection()]
+        )
 
         # UI: focus on open
         focus_on_open = (
@@ -3360,6 +3380,9 @@ class SettingsDialog(wx.Dialog):
         )):
             self._search_norm_radio.SetItemLabel(_i, i18n.t(_key))
         self._save_folder_radio.SetLabel(i18n.t("save_folder_mode_label"))
+        self._pasted_audio_radio.SetLabel(i18n.t("pasted_audio_label"))
+        self._pasted_audio_radio.SetItemLabel(0, i18n.t("pasted_audio_as_audio"))
+        self._pasted_audio_radio.SetItemLabel(1, i18n.t("pasted_audio_as_document"))
         for _i, _key in enumerate((
             "save_folder_mode_last",
             "save_folder_mode_downloads",

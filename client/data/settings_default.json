@@ -10,6 +10,7 @@
         "language": "",
         "notifications_enabled": true,
         "notification_content": "full",
+        "pasted_audio_as": "audio",
         "keep_muted_chats_silent_when_open": true,
         "updates_enabled": true,
         "alpha_updates_enabled": false,

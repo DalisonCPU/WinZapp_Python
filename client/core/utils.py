@@ -932,6 +932,9 @@ DEFAULT_SETTINGS = {
         # "sound" (core.notification_manager.NOTIFICATION_CONTENT_LEVELS,
         # issue #258). "full" is what WinZapp always did.
         "notification_content": "full",
+        # Audio files pasted into the message field (Ctrl+V): "audio" or
+        # "document" (core.attachment_types.PASTED_AUDIO_MODES).
+        "pasted_audio_as": "audio",
         "keep_muted_chats_silent_when_open": True,
         "updates_enabled": True,
         # Alpha channel (one build per commit on main) - opt-in, see

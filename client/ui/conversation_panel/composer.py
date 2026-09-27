@@ -10,7 +10,7 @@ import tempfile
 import threading
 import wx
 from ui.dialogs.emoji_picker import choose_and_insert_emoji
-from core.attachment_types import classify_attachment_media_type
+from core.attachment_types import pasted_attachment_media_type
 from core.link_preview import (
     fetch_link_preview,
     find_first_url,
@@ -468,11 +468,18 @@ class ComposerMixin:
             if wx.TheClipboard.GetData(data):
                 paths = [p for p in data.GetFilenames() if os.path.isfile(p)]
                 if paths:
+                    # An audio file goes out as audio or as a document by the
+                    # user's choice (Settings > Files and saving), so the row
+                    # shown while sending already has the type WhatsApp will
+                    # show — not one a later refresh corrects.
+                    pasted_audio_as = self.main_window.settings.get(
+                        "general", {}).get("pasted_audio_as", "audio")
                     for path in paths:
                         self._staged_attachments.append(
                             {
                                 "path": path,
-                                "media_type": classify_attachment_media_type(path),
+                                "media_type": pasted_attachment_media_type(
+                                    path, pasted_audio_as),
                             }
                         )
                     self._show_attachment_panel()
