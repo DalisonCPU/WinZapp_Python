@@ -957,6 +957,10 @@ class SettingsMixin:
 
         _step("live connection", _reconnect_socket)
 
+        # The imported devices are an explicit choice: a quick switch
+        # (Ctrl+Alt+Shift+H/G) stops overriding them, for calls too.
+        _step("quick device switch",
+              lambda: self.end_session_audio_devices(general=True, call=True))
         _step("audio devices", self._apply_configured_audio_devices)
         _step("sounds", self.load_sounds)
 

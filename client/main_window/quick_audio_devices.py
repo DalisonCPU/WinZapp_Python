@@ -6,12 +6,15 @@ list of recording devices; a digit (or arrows + Enter) switches at once.
 The switch is for this session only. Nothing is saved: Settings > Audio
 devices and the call device settings keep their choice, and the next launch
 starts on it again. An explicit choice made afterwards ends it: saving
-Settings ends the general override (the dialog re-applies its devices), and
-applying the call's own audio settings ends the call override. It covers everything that uses a device — sounds and
-playback, voice-message recording, calls (a call in progress moves without
-being dropped) — and every account open right now: each one is its own
-process with its own audio, so the account that got the keystroke passes the
-choice on over IPC (ipc.request_audio_device) and the others apply it quietly.
+Settings or importing settings ends the general override (both re-apply the
+saved devices), and changing a device box in the call's own audio settings
+ends the call override for that device.
+
+It covers everything that uses a device — sounds and playback, voice-message
+recording, calls (a call in progress moves without being dropped) — and every
+account open right now: each one is its own process with its own audio, so
+the account that got the keystroke passes the choice on over IPC
+(ipc.request_audio_device) and the others apply it quietly.
 
 Output goes through SoundSystem.apply_output_device() and then load_sounds(),
 exactly as the Settings dialog does it: switching the one BASS device
@@ -56,15 +59,18 @@ class QuickAudioDevicesMixin:
         """This session's override for the device a call opens for *kind*."""
         return (getattr(self, "_session_call_audio_devices", None) or {}).get(kind)
 
-    def end_session_audio_devices(self, *, general: bool = False, call: bool = False):
-        """Drop the quick-switch override, because the user just chose devices
-        explicitly: in Settings (``general``) or in the call's audio settings
-        (``call``). Left in place, the override would keep winning over the
-        choice the user just made."""
-        if general:
-            self._session_audio_devices = {}
-        if call:
-            self._session_call_audio_devices = {}
+    def end_session_audio_devices(self, *, general: bool = False, call: bool = False,
+                                  kinds=(KIND_OUTPUT, KIND_INPUT)):
+        """Drop the quick-switch override for *kinds*, because the user just
+        chose devices explicitly: in Settings (``general``) or in the call's
+        audio settings (``call``). Left in place, the override would keep
+        winning over the choice the user just made."""
+        for wanted, attr in ((general, "_session_audio_devices"),
+                             (call, "_session_call_audio_devices")):
+            overrides = getattr(self, attr, None)
+            if wanted and overrides:
+                for kind in kinds:
+                    overrides.pop(kind, None)
 
     def current_audio_device(self, kind: str) -> str:
         """The general device *kind* is on: the session override, else the saved one."""

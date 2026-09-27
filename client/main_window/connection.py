@@ -1197,7 +1197,8 @@ class ConnectionMixin:
     def _prove_whatsapp_probe_once(self):
         """Fire one background _probe_whatsapp_host() while the session is
         known to be connected, so a later deferred start can trust a failing
-        probe without a cap (connection_state.offline_start_still_deferred()).
+        probe for the long cap instead of the short one
+        (connection_state.offline_start_still_deferred()).
 
         Nothing else probes the host while things are working, so without
         this the probe would usually be unproven exactly when a wake finds
@@ -1223,16 +1224,19 @@ class ConnectionMixin:
             return False
         import connection_state as cs
         deferred_for = time.monotonic() - since
+        network_up = self._probe_whatsapp_host()
+        probe_proven = getattr(self, "_whatsapp_probe_proven", False)
         if cs.offline_start_still_deferred(
-            network_up=self._probe_whatsapp_host(),
-            probe_proven=getattr(self, "_whatsapp_probe_proven", False),
+            network_up=network_up,
+            probe_proven=probe_proven,
             deferred_for=deferred_for,
         ):
             return True
         self._offline_start_deferred_since = None
         logging.info("[connection] Lifting the deferred session start after %.0fs "
                      "(network %s).", deferred_for,
-                     "back" if getattr(self, "_whatsapp_probe_proven", False)
+                     "back" if network_up
+                     else "still unreachable, proven-probe cap reached" if probe_proven
                      else "unproven, cap reached")
         return False
 

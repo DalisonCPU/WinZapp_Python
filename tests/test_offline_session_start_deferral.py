@@ -201,6 +201,22 @@ class TestOfflineStartDeferralHolds:
         assert stub._offline_start_deferral_holds() is False
         assert stub._offline_start_deferred_since is None
 
+    def test_a_proven_probe_gives_up_after_its_own_cap(self, caplog):
+        """And log.log does not claim the network came back: it did not."""
+        past_cap = time.monotonic() - cs.OFFLINE_START_PROVEN_PROBE_CAP_SECONDS - 1
+        stub = _HoldStub(since=past_cap, network_up=False, proven=True)
+        with caplog.at_level("INFO"):
+            assert stub._offline_start_deferral_holds() is False
+        assert stub._offline_start_deferred_since is None
+        assert "network still unreachable" in caplog.text
+        assert "network back" not in caplog.text
+
+    def test_the_log_says_back_only_when_it_answered(self, caplog):
+        stub = _HoldStub(since=time.monotonic() - 60, network_up=True, proven=False)
+        with caplog.at_level("INFO"):
+            stub._offline_start_deferral_holds()
+        assert "network back" in caplog.text
+
 
 # ── Proving the probe ───────────────────────────────────────────────────────
 

@@ -1217,6 +1217,15 @@ class CallsMixin:
         root.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
         first_combo = input_combo if input_combo is not None else camera_combo
 
+        # What each device box showed when the dialog opened. Only a box the
+        # user changed is a device choice: OK pressed to turn on echo
+        # cancellation must not undo a quick switch (Ctrl+Alt+Shift+H/G) the
+        # call is using, which these boxes (filled from the saved setting)
+        # do not show.
+        shown_devices = ({"input": input_combo.GetSelection(),
+                          "output": output_combo.GetSelection()}
+                         if include_audio else {})
+
         def apply(_evt=None):
             if include_audio:
                 audio_cfg["input_device_name"] = "" if input_combo.GetStringSelection() == default_name else input_combo.GetStringSelection()
@@ -1224,9 +1233,15 @@ class CallsMixin:
                 audio_cfg["exclusive_input"] = exclusive_input_check.GetValue()
                 audio_cfg["exclusive_output"] = exclusive_output_check.GetValue()
                 audio_cfg["echo_cancellation"] = echo_check.GetValue()
-                # An explicit choice for calls ends a quick switch's override
-                # of the call devices (main_window/quick_audio_devices.py).
-                self.end_session_audio_devices(call=True)
+                # A device chosen here ends a quick switch's override of that
+                # call device (main_window/quick_audio_devices.py).
+                changed = tuple(kind for kind, combo in (("input", input_combo),
+                                                          ("output", output_combo))
+                                if combo.GetSelection() != shown_devices[kind])
+                if changed:
+                    self.end_session_audio_devices(call=True, kinds=changed)
+                    shown_devices.update(input=input_combo.GetSelection(),
+                                         output=output_combo.GetSelection())
             if include_camera:
                 video_cfg["camera_name"] = "" if camera_combo.GetStringSelection() == default_name else camera_combo.GetStringSelection()
             self.save_settings()

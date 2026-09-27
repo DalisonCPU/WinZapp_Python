@@ -963,8 +963,10 @@ class NotificationManager:
         """
         self.i18n.get_language()
         # At the "name" level the body is only the neutral line, and the
-        # announcement already starts "New message from <name>".
-        if body in (self.i18n.t("notif_hidden_message"), self.i18n.t("notif_hidden_reaction")):
+        # announcement already starts "New message from <name>". Only the
+        # message line: a hidden reaction keeps "New reaction", or it would
+        # be announced as a message that is not there.
+        if body == self.i18n.t("notif_hidden_message"):
             body = ""
         announce_background_message(self.main_window, self.i18n, title, body)
 

@@ -196,3 +196,14 @@ def test_the_no_banner_fallback_does_not_repeat_itself_at_name(direct_callafter)
                                "notif_hidden_reaction": "Nova reação"}.get(key, key)
     stub._dispatch("Ana", "Nova mensagem", "j@s.whatsapp.net")
     assert stub.main_window.spoken == ["Nova mensagem de Ana"]
+
+
+def test_a_hidden_reaction_is_not_announced_as_a_message(direct_callafter):
+    """The fallback always opens with "New message from"; stripping the
+    reaction line too would announce a message that is not there."""
+    stub = _Stub(None)
+    stub.i18n.t = lambda key: {"fg_new_msg": "Nova mensagem de {name}",
+                               "notif_hidden_message": "Nova mensagem",
+                               "notif_hidden_reaction": "Nova reação"}.get(key, key)
+    stub._dispatch("Ana", "Nova reação", "j@s.whatsapp.net")
+    assert stub.main_window.spoken == ["Nova mensagem de Ana: Nova reação"]

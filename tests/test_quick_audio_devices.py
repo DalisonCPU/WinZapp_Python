@@ -285,11 +285,38 @@ class TestAnExplicitChoiceEndsTheSwitch:
         at = src.index("self.main_window.effective_input_device_name = input_name")
         assert "end_session(general=True)" in src[at:at + 600]
 
-    def test_the_call_dialog_ends_it_when_it_applies(self):
+    def test_only_the_kinds_named_are_ended(self):
+        s = _Stub()
+        s.apply_quick_audio_device(KIND_OUTPUT, "Novo")
+        s._session_call_audio_devices[KIND_INPUT] = "Microfone novo"
+        s.end_session_audio_devices(call=True, kinds=(KIND_OUTPUT,))
+        assert s.call_audio_device(KIND_OUTPUT) == "Fone de ligação"
+        assert s.call_audio_device(KIND_INPUT) == "Microfone novo"
+
+    def test_ending_before_any_switch_is_harmless(self):
+        s = _Stub()
+        s.end_session_audio_devices(general=True, call=True)
+        assert s.current_audio_device(KIND_OUTPUT) == "Antigo"
+
+    def test_the_call_dialog_ends_it_only_for_a_box_the_user_changed(self):
+        """Found in the second review: OK pressed mid-call to turn on echo
+        cancellation moved the call off the quick-switched headset, because the
+        boxes show the saved devices, not the one in use."""
         from tests.god_modules import main_window_source
         full = main_window_source()
-        at = full.index('audio_cfg["echo_cancellation"] = echo_check.GetValue()')
-        assert "self.end_session_audio_devices(call=True)" in full[at:at + 400]
+        at = full.index("shown_devices = (")
+        block = full[at:at + 2600]
+        assert '"input": input_combo.GetSelection()' in block
+        assert "combo.GetSelection() != shown_devices[kind]" in block
+        assert "if changed:" in block
+        assert "self.end_session_audio_devices(call=True, kinds=changed)" in block
+        assert "self.end_session_audio_devices(call=True)" not in full
+
+    def test_a_settings_import_ends_both(self):
+        from tests.god_modules import main_window_source
+        full = main_window_source()
+        at = full.index('_step("audio devices", self._apply_configured_audio_devices)')
+        assert "self.end_session_audio_devices(general=True, call=True)" in full[at - 300:at]
 
 
 class TestEveryOpenAccount:
