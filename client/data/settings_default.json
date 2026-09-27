@@ -27,7 +27,9 @@
         "global_hotkey": null,
         "switch_behavior": "single",
         "announce_sync_events": true,
-        "search_normalization": "off"
+        "search_normalization": "off",
+        "wpp_reinstall_notice_migrated": true,
+        "wpp_reinstall_notice_pending": false
     },
     "status": {
         "messages_set_completed": false
