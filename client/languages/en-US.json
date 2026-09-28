@@ -459,6 +459,8 @@
     "resyncing_conversation_announcement": "Resyncing this chat",
     "resync_conversation_done": "Chat resynced",
     "resync_conversation_failed": "Couldn't resync this chat. Try again in a moment.",
+    "resync_conversation_up_to_date": "This chat was already up to date: no new or removed messages on WhatsApp.",
+    "resync_conversation_nothing_remote": "WhatsApp has no messages in this chat to resync. Nothing was changed on this computer.",
     "resync_conversation_none_open": "Open a chat to resync it.",
     "resync_conversation_busy": "Please wait: a sync is already in progress.",
     "resync_all_confirm": "Are you sure you want to resync all chats? The chats and messages saved on this computer will be deleted and downloaded again from WhatsApp, which may take a while.",

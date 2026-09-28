@@ -459,6 +459,8 @@
     "resyncing_conversation_announcement": "A ressincronizar esta conversa",
     "resync_conversation_done": "Conversa ressincronizada",
     "resync_conversation_failed": "Não foi possível ressincronizar esta conversa. Tente novamente dentro de instantes.",
+    "resync_conversation_up_to_date": "A conversa já estava atualizada: nenhuma mensagem nova ou removida no WhatsApp.",
+    "resync_conversation_nothing_remote": "O WhatsApp não tem mensagens desta conversa para ressincronizar. Nada foi alterado neste computador.",
     "resync_conversation_none_open": "Abra uma conversa para a ressincronizar.",
     "resync_conversation_busy": "Aguarde: já está em curso uma sincronização.",
     "resync_all_confirm": "Tem a certeza de que pretende ressincronizar todas as conversas? As conversas e mensagens guardadas neste computador serão apagadas e descarregadas novamente do WhatsApp, o que pode demorar.",

@@ -177,13 +177,22 @@ class SyncMixin:
         """Background worker for _on_menu_resync_conversation()."""
         try:
             chat = self.chats.get(remote_jid)
+            known_before = {((r.get("key") or {}).get("id") or "")
+                            for r in _chat_message_records(chat or {})
+                            if isinstance(r, dict)}
             fetched_ids = set()
             ok = bool(chat) and bool(self.sync_chat_messages(
                 chat, sync_mode="full", fetched_ids_out=fetched_ids))
             if not ok or not fetched_ids:
                 logging.info("[resync-conversation] %s: nothing fetched (ok=%s)",
                              remote_jid, ok)
-                wx.CallAfter(self.output, self.i18n.t("resync_conversation_failed"), True)
+                # ok with nothing fetched is WhatsApp answering, not failing:
+                # it holds no messages for this chat (chat_not_found also lands
+                # here). Nothing was touched either way, but "try again" would
+                # send the user retrying an answer that will not change.
+                key = ("resync_conversation_nothing_remote" if ok
+                       else "resync_conversation_failed")
+                wx.CallAfter(self.output, self.i18n.t(key), True)
                 return
             chat = self.chats.get(remote_jid) or chat
             records = _chat_message_records(chat)
@@ -225,7 +234,10 @@ class SyncMixin:
                          remote_jid, len(fetched_ids), len(stale))
             self._refresh_open_conversation_after_sync(remote_jid, chat)
             self._schedule_set_chats()
-            wx.CallAfter(self.output, self.i18n.t("resync_conversation_done"), True)
+            changed = bool(stale) or bool(fetched_ids - known_before)
+            wx.CallAfter(self.output, self.i18n.t(
+                "resync_conversation_done" if changed
+                else "resync_conversation_up_to_date"), True)
         except Exception:
             logging.exception("[resync-conversation] %s: failed", remote_jid)
             wx.CallAfter(self.output, self.i18n.t("resync_conversation_failed"), True)

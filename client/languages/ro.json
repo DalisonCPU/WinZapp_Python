@@ -403,6 +403,8 @@
     "resyncing_conversation_announcement": "Se resincronizează acest chat",
     "resync_conversation_done": "Chatul a fost resincronizat",
     "resync_conversation_failed": "Nu s-a putut resincroniza acest chat. Încercați din nou peste câteva momente.",
+    "resync_conversation_up_to_date": "Chatul era deja actualizat: nu există mesaje noi sau eliminate în WhatsApp.",
+    "resync_conversation_nothing_remote": "WhatsApp nu are mesaje din acest chat de resincronizat. Nu s-a modificat nimic pe acest computer.",
     "resync_conversation_none_open": "Deschideți un chat pentru a-l resincroniza.",
     "resync_conversation_busy": "Așteptați: o sincronizare este deja în curs.",
     "resync_all_confirm": "Sigur doriți să resincronizați toate chaturile? Chaturile și mesajele salvate pe acest computer vor fi șterse și descărcate din nou din WhatsApp, ceea ce poate dura.",

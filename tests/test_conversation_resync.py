@@ -166,14 +166,31 @@ class TestTheWorker:
         assert window.db.deleted == []
         assert window.spoken == ["resync_conversation_failed"]
 
-    def test_an_answer_with_no_messages_is_not_a_success(self):
+    def test_an_answer_with_no_messages_says_whatsapp_has_none(self):
         """chat_not_found returns True from sync_chat_messages() -- with
-        nothing fetched, which is no reason to call the conversation synced."""
+        nothing fetched. That is WhatsApp answering, not a failure: "try
+        again" would send the user retrying an answer that will not change."""
         window = _Window([_msg("A", 100)], set(), ok=True)
 
         window._resync_conversation_worker(JID)
 
-        assert window.spoken == ["resync_conversation_failed"]
+        assert window.db.deleted == []
+        assert window.spoken == ["resync_conversation_nothing_remote"]
+
+    def test_a_new_message_on_the_server_is_a_change(self):
+        window = _Window([_msg("A", 100)], {"A", "B"})
+
+        window._resync_conversation_worker(JID)
+
+        assert window.spoken == ["resync_conversation_done"]
+
+    def test_nothing_new_and_nothing_removed_says_it_was_up_to_date(self):
+        window = _Window([_msg("A", 100), _msg("B", 200)], {"A", "B"})
+
+        window._resync_conversation_worker(JID)
+
+        assert window.db.deleted == []
+        assert window.spoken == ["resync_conversation_up_to_date"]
 
     def test_after_a_profile_restore_nothing_is_removed(self):
         records = [_msg("A", 100), _msg("GHOST", 150), _msg("B", 200)]
@@ -184,7 +201,7 @@ class TestTheWorker:
 
         assert len(records) == 3
         assert window.db.deleted == []
-        assert window.spoken == ["resync_conversation_done"]
+        assert window.spoken == ["resync_conversation_up_to_date"]
 
     def test_the_conversation_can_be_resynced_again_afterwards(self):
         window = _Window([_msg("A", 100)], {"A"})

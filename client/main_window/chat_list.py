@@ -32,6 +32,22 @@ from core.locale_format import (
 from main_window.message_rules import is_countable_message
 
 
+def _start_debounce_timer(delay_ms, callback):
+    """Start a wx.CallLater from whichever thread asked for it.
+
+    wx.CallLater starts a wxTimer, and wx asserts that only the main thread
+    may do that -- from a worker it raises wxAssertionError. The debounced
+    schedulers below are called from sync workers too (Shift+F5's
+    _resync_conversation_worker() was one: it logged every resync as failed
+    after the resync itself had succeeded), so off the main thread the timer
+    is handed over with CallAfter instead.
+    """
+    if wx.IsMainThread():
+        wx.CallLater(delay_ms, callback)
+    else:
+        wx.CallAfter(wx.CallLater, delay_ms, callback)
+
+
 class ChatListMixin:
     """The chat list: navigation to a JID, computing and applying the chat lists,
     scheduled refreshes, last-message previews, archived list and row
@@ -742,7 +758,13 @@ class ChatListMixin:
         if getattr(self, "_refresh_messages_pending", False):
             return
         self._refresh_messages_pending = True
-        wx.CallLater(300, self._do_scheduled_refresh_messages)
+        try:
+            _start_debounce_timer(300, self._do_scheduled_refresh_messages)
+        except Exception:
+            # A flag left set with no timer behind it would swallow every
+            # later refresh for the rest of the launch.
+            self._refresh_messages_pending = False
+            raise
 
     def _do_scheduled_refresh_messages(self):
         """Run the coalesced rebuild. Re-checks the panel still has a
@@ -762,7 +784,13 @@ class ChatListMixin:
         if getattr(self, "_set_chats_pending", False):
             return
         self._set_chats_pending = True
-        wx.CallLater(300, self._do_scheduled_set_chats)
+        try:
+            _start_debounce_timer(300, self._do_scheduled_set_chats)
+        except Exception:
+            # Same latch as _schedule_refresh_messages(): left set with no
+            # timer behind it, the chat list would stop reordering.
+            self._set_chats_pending = False
+            raise
 
     def _do_scheduled_set_chats(self):
         """Run heavy computation in background; apply UI changes on main thread."""
