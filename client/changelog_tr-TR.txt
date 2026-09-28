@@ -38,11 +38,19 @@ YENİLİKLER
 
 - Esc tuşu kapatmadan önce seçimi kaldırır. Mesajlar seçiliyken Esc tuşuna ilk basış yalnızca mevcut seçimleri kaldırır; tuşa ikinci kez basıldığında ise sohbet kapatılır. Bu davranış da Ayarlar > Kullanıcı Arayüzü sekmesinden isteğe bağlı olarak devre dışı bırakılabilir.
 
-- Stereo sesli mesajlar. Stereo kayıt yeteneğine sahip bir mikrofonla sesli mesajlar her iki kanalın sesini (stereo ses ayrımını) koruyabilir. Ayarlar > Ses Cihazları sekmesindeki "Sesli mesajları varsayılan olarak stereo kaydet" seçeneğini işaretleyebilir ya da yalnızca tek bir mesajı diğer modda kaydetmek için "Sesli mesaj kaydet" düğmesinin altındaki yeni düğmeyi (Ctrl+Shift+G) kullanabilirsiniz: Varsayılan mono ise stereo, stereo ise mono olarak kaydeder. iPhone kullanıcıları stereo sesli mesajları dinleyemediği için WinZapp önce "Tekrar gösterme" onay kutusu barındıran bir uyarı gösterir. Bu uyarının yeniden gösterilmesi için Kullanıcı Arayüzü sekmesindeki ilgili seçeneği kullanabilirsiniz. Mikrofon iki kanal sağlamıyorsa mesaj otomatik olarak mono kaydedilir ve WinZapp bunu sesli olarak bildirir.
+- Stereo sesli mesajlar. Stereo kayıt yeteneğine sahip bir mikrofonla sesli mesajlar her iki kanalın sesini (stereo ses ayrımını) koruyabilir. Ayarlar > Ses Cihazları sekmesindeki "Sesli mesajları varsayılan olarak stereo kaydet" seçeneğini işaretleyebilir ya da yalnızca tek bir mesajı diğer modda kaydetmek için "Sesli mesaj kaydet" düğmesinin altındaki yeni düğmeyi (Ctrl+Shift+G) kullanabilirsiniz: Varsayılan mono ise stereo, stereo ise mono olarak kaydeder. iPhone stereo sesli mesajları oynatamadığı için stereo kayıt ses olarak gönderilir; WinZapp bunu önce "Tekrar gösterme" onay kutusu barındıran bir uyarıyla bildirir. Bu uyarının yeniden gösterilmesi için Kullanıcı Arayüzü sekmesindeki ilgili seçeneği kullanabilirsiniz. Mikrofon iki kanal sağlamıyorsa mesaj otomatik olarak mono kaydedilir ve WinZapp bunu sesli olarak bildirir.
 
 - Shift+F5 ile yalnızca açık sohbeti yeniden eşitleme (Eşitle menüsünde de bulunur). Tüm sohbetleri silip yeniden indiren F5'in aksine Shift+F5; açık sohbetin mesajlarını WhatsApp'tan yeniden alır, eksik olanları doğru yere yerleştirir ve artık orada bulunmayanları kaldırır; eski geçmişe dokunmaz. F5 ve Shift+F5 komutları artık onay istemektedir; iletişim kutusunda varsayılan yanıt Hayır olup "Tekrar gösterme" seçeneği de yer alır. Tekrar sorulmasını isterseniz Ayarlar > Kullanıcı Arayüzü sekmesindeki ilgili seçenekleri kullanabilirsiniz.
 
 - WinZapp'i sistem tepsisinden geri getiren genel kısayol tuşu artık onu tepsiye de gönderiyor. WinZapp ön plandayken bu kısayola basıldığında pencere sistem tepsisine gizlenir; diğer tüm durumlarda ise pencereyi öne getirmeyi sürdürür.
+
+- Mikrofonu bilgisayar sesiyle birlikte kaydetme. Yeni "Mikrofon ve bilgisayar sesini kaydet" düğmesi (Ctrl+Shift+H), sesinizi ve bilgisayarda çalan her şeyi (bir video, müzik ya da ekran okuyucunun kendisi) tek bir mesajda kaydeder. Kayıt sırasında iki kaydırıcı, bilgisayardaki diğer seslerin ve NVDA'nın ses düzeyini ayrı ayrı ayarlar; NVDA yoksa ikincisi devre dışı kalır. Bu düzeyler yalnızca kaydı etkiler, duyduklarınızı değil, ve her hesap için hatırlanır. Başlamadan önce WinZapp, bilgisayarda çalan her şeyin kayda gireceği konusunda "Tekrar gösterme" seçeneğiyle uyarır; uyarıyı yeniden görmek için Kullanıcı Arayüzü sekmesindeki "Bilgisayar sesini kaydetmeden önce uyar" seçeneğini kullanın. Kayıt ses olarak gönderilir.
+
+- Yalnızca geçerli hesabı kapatma. Birden fazla hesabınız varsa Hesaplar menüsündeki "Geçerli hesabı kapat" (Ctrl+F4), yalnızca bulunduğunuz hesabı kapatır, belleğini ve bağlantısını serbest bırakır ve sizi açık olan başka bir hesaba geçirir; diğerleri çalışmaya devam eder. Yeniden açmak için başka bir hesabın Hesaplar menüsünden seçin ya da numarasıyla birlikte Ctrl+Alt'a basın. Açık olan tek hesapsa WinZapp önce sorar, çünkü kapatmak programdan çıkmak anlamına gelir.
+
+- Ses cihazını hızlıca değiştirme. Ctrl+Alt+Shift+H oynatma cihazlarının, Ctrl+Alt+Shift+G kayıt cihazlarının listesini açar; cihazlar 1'den 0'a numaralandırılmıştır: hemen değiştirmek için numaraya basmanız yeterlidir ya da ok tuşlarını ve Enter'ı kullanabilirsiniz. Değişiklik seslere, sesli mesajlara ve aramalara (süren bir arama kesilmeden yeni cihaza geçer) ve WinZapp kapanana kadar tüm açık hesaplara uygulanır. Ayarlar'da seçilen cihazlar değişmez.
+
+- Arka plan bildirimlerinin ne söyleyeceğini seçme. Ayarlar'ın Genel sekmesindeki "Arka plan bildirimlerinin içeriği" üç düzey sunar: eskisi gibi ses, sohbet veya grup adı ve mesaj metni; metin olmadan ses ve sohbet veya grup adı; ya da ekranda bildirim göstermeden ve hiçbir şey okunmadan yalnızca ses. Kilitli sohbetlerin bildirimleri yine ad veya içerik göstermez.
 
 İYİLEŞTİRMELER
 
@@ -51,6 +59,8 @@ YENİLİKLER
 - WinZapp'in ve yerel sunucunun günlükleri (log.log ve wppconnect.log) artık telefon numaralarını, WhatsApp tanımlayıcılarını ve kişi adlarını içermez. Bu hassas veriler günlüklere maskelenmiş olarak kaydedilir. Böylece bir sorunu geliştiricilere bildirirken kişisel gizliliğinizi koruyarak günlük dosyalarını güvenle gönderebilirsiniz.
 
 - Lehçe çeviri gözden geçirildi.
+
+- Ctrl+V ile mesaj alanına yapıştırılan ses dosyaları artık, Ayarlar'ın Dosyalar ve kaydetme sekmesindeki yeni "Mesaj alanına yapıştırılan ses dosyaları (Ctrl+V)" seçeneğiyle ses ya da belge olarak gönderilebilir; varsayılan olarak ses olarak gönderilir. Mesaj, sohbette en baştan gönderileceği türle görünür.
 
 DÜZELTMELER
 
@@ -97,6 +107,10 @@ DÜZELTMELER
 - Öncekinden farklı bir numara eşlendiğinde WinZapp eski hesabın verilerini siler; ancak arka planda devam eden bir eşitleme işlemi birkaç dakika boyunca listeyi eski hesabın sohbetleriyle doldurmaya devam ediyor ve ardından bunlar yeniden kayboluyordu. Artık yeni numara eşlendiği anda önceki hesaba ait eşitleme işlemi derhal durdurulur.
 
 - Ses çıkış cihazı değiştirildikten sonra (örneğin bir USB veya Bluetooth kulaklığın bağlantısı kesildiğinde), ses oynatma, yeni varsayılanda yeniden açılmak yerine eski, artık ölü cihaza gönderilmeye devam edebilir. Çalma artık bir cihaz geri dönüşünden sonra akışı yeniden açıyor.
+
+- Bilgisayar, internet henüz yokken uykudan uyandığında WinZapp, internet geri geldikten sonra bile kapatılıp yeniden açılana kadar bağlantısız kalabiliyordu. Artık WhatsApp bağlantısını yeniden açmak için ağın geri gelmesini bekliyor.
+
+- Aynı sohbetten birkaç mesaj, o sohbeti WinZapp'ta okuduktan hemen sonra aynı anda geldiğinde, okunmamış sayacı gelenlerden daha az mesaj gösterebiliyordu: aynı anda gönderilen üç dosya iki okunmamış olarak görünüyordu. Artık sayaç hepsini gösteriyor.
 
 V1.1.1.0
 

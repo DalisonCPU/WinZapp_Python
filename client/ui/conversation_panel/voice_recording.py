@@ -20,6 +20,7 @@ from core.voice_stereo import (
     alternate_record_label_key,
     encode_as_stereo,
     fell_back_to_mono,
+    sends_as_audio_file,
 )
 from ui.dialogs.stereo_voice_warning import (
     ask_stereo_voice,
@@ -62,7 +63,8 @@ class VoiceRecordingMixin:
 
     def _on_record_alternate_mode(self, event):
         """The second record button: one message in the mode Settings did not
-        pick. Recording in stereo warns first that iPhone cannot play it."""
+        pick. Recording in stereo says first that it goes out as an audio
+        message, not a voice message (core/voice_stereo.py)."""
         if self._is_recording or self._recording_starting:
             return
         # Ctrl+Shift+G reaches here even when the button is disabled -- a
@@ -779,7 +781,10 @@ class VoiceRecordingMixin:
             "message": {
                 "audioMessage": {
                     "seconds": duration_sec,
-                    "ptt":     not mixed_audio,
+                    # Microphone + computer audio, and a stereo recording, both
+                    # go out as an audio message rather than a voice message
+                    # (core/voice_stereo.py) — say so already.
+                    "ptt":     not (mixed_audio or sends_as_audio_file(stereo_out)),
                     **({"mimetype": "audio/mp4", "fileName": f"{local_id}.m4a"}
                        if mixed_audio else {}),
                 }

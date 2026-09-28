@@ -107,6 +107,8 @@ class ShortcutsDialog(wx.Dialog):
             i18n.t("shortcut_ctrl_alt_shift_d_label"),
             i18n.t("shortcut_ctrl_alt_shift_q_label"),
             i18n.t("shortcut_ctrl_alt_shift_p_label"),
+            i18n.t("shortcut_ctrl_alt_shift_h_label"),
+            i18n.t("shortcut_ctrl_alt_shift_g_label"),
         ]
         # Ctrl+Alt+1..9 only exists at all when this process is running under
         # the multi-account system (see MainWindow._build_menubar's Accounts
@@ -114,6 +116,7 @@ class ShortcutsDialog(wx.Dialog):
         # document a shortcut that does nothing for a single-account install.
         if main_window is not None and getattr(main_window, "account_id", None) and getattr(main_window, "registry", None):
             lines.append(i18n.t("shortcut_ctrl_alt_num_label"))
+            lines.append(i18n.t("shortcut_ctrl_f4_label"))
         lines += [
             "",
             section("shortcuts_conv_section"),

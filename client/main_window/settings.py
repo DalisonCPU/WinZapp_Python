@@ -246,6 +246,22 @@ class SettingsMixin:
         if not general.get("wpp_reinstall_notice_pending", False):
             return
 
+        # Pending means only "this settings.json predates 2.0", not "this
+        # WPPConnect lacks calls". An install reinstalled since — every alpha
+        # tester was asked to do it by hand — already carries the catalogue the
+        # notice offers, and was being told it may be missing calls anyway
+        # (reported 2026-09-27, pinned 2.3000.1047835881-alpha of 430). Its
+        # catalogue answers the question; unreadable counts as "ask".
+        from core.wa_version_catalogue import catalogue_supports_calls, newest_build, read_catalogue
+        catalogue = read_catalogue(resource_path(
+            "api", "node_modules", "@wppconnect", "wa-version", "versions.json"))
+        if catalogue_supports_calls(catalogue):
+            logging.info("[wpp_reinstall_notice] not shown: the installed catalogue "
+                         "already reaches %s.", newest_build(catalogue))
+            self.settings.setdefault("general", {})["wpp_reinstall_notice_pending"] = False
+            self.save_settings()
+            return
+
         message = self.i18n.t("wpp_reinstall_notice_message")
         self.output(message, interrupt=False)
         result = wx.MessageBox(
@@ -941,8 +957,20 @@ class SettingsMixin:
 
         _step("live connection", _reconnect_socket)
 
+        # The imported devices are an explicit choice: a quick switch
+        # (Ctrl+Alt+Shift+H/G) stops overriding them, for calls too.
+        _step("quick device switch",
+              lambda: self.end_session_audio_devices(general=True, call=True))
         _step("audio devices", self._apply_configured_audio_devices)
         _step("sounds", self.load_sounds)
+
+        def _move_active_call():
+            # A call in progress moves to the imported call devices too, as
+            # the in-call settings do; it would stay on the quick-switched one.
+            if getattr(self, "_call_audio_session", None) is not None:
+                self._restart_active_voice_call_audio()
+
+        _step("call audio", _move_active_call)
 
         def _clear_sound_cache():
             cache = getattr(self, "_notification_sound_cache", None)

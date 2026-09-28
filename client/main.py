@@ -293,6 +293,7 @@ from main_window.history import HistoryMixin
 from main_window.read_state import ReadStateMixin
 from main_window.chat_actions import ChatActionsMixin
 from main_window.message_actions import MessageActionsMixin
+from main_window.quick_audio_devices import QuickAudioDevicesMixin
 
 
 requests.get = _patched_get
@@ -335,6 +336,7 @@ class MainWindow(
     ReadStateMixin,
     ChatActionsMixin,
     MessageActionsMixin,
+    QuickAudioDevicesMixin,
     wx.Frame,
 ):
     def __init__(self, account_id=None, account_name=None, startup_source="user",

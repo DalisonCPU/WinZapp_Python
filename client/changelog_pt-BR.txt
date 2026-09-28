@@ -38,11 +38,19 @@ NOVIDADES
 
 - O Esc desmarca antes de fechar. Com mensagens marcadas, o primeiro Esc apenas desmarca todas e só o segundo fecha a conversa. Também pode ser desativado em Configurações, Interface do usuário.
 
-- Mensagens de voz em estéreo. Com um microfone que grava em estéreo de verdade, a mensagem de voz pode manter o som dos dois lados. Marque "Gravar mensagens de voz em estéreo por padrão" na aba Dispositivos de áudio das Configurações, ou use o novo botão abaixo de "Gravar mensagem de voz" (Ctrl+Shift+G) para gravar só uma mensagem no outro modo: em estéreo quando o padrão for mono, e em mono quando for estéreo. Quem usa iPhone não consegue ouvir mensagens de voz em estéreo, por isso o WinZapp avisa antes, com a opção "Não mostrar novamente"; para voltar a ser avisado, use a opção correspondente na aba Interface do usuário. Se o microfone não oferecer dois canais, a mensagem é gravada em mono e o WinZapp avisa.
+- Mensagens de voz em estéreo. Com um microfone que grava em estéreo de verdade, a mensagem de voz pode manter o som dos dois lados. Marque "Gravar mensagens de voz em estéreo por padrão" na aba Dispositivos de áudio das Configurações, ou use o novo botão abaixo de "Gravar mensagem de voz" (Ctrl+Shift+G) para gravar só uma mensagem no outro modo: em estéreo quando o padrão for mono, e em mono quando for estéreo. Como o iPhone não reproduz mensagens de voz em estéreo, a gravação em estéreo é enviada como áudio, e o WinZapp avisa isso antes, com a opção "Não mostrar novamente"; para voltar a ser avisado, use a opção correspondente na aba Interface do usuário. Se o microfone não oferecer dois canais, a mensagem é gravada em mono e o WinZapp avisa.
 
 - Ressincronizar só a conversa aberta com Shift+F5, também no menu Sincronização. Diferente do F5, que apaga e baixa de novo todas as conversas, o Shift+F5 busca de novo no WhatsApp as mensagens da conversa aberta, coloca no lugar certo as que faltavam e remove as que não existem mais lá, sem mexer no histórico mais antigo. O F5 e o Shift+F5 agora pedem confirmação, com Não como padrão e a opção "Não mostrar novamente"; para voltar a ser perguntado, use as opções correspondentes na aba Interface do usuário das Configurações.
 
 - O atalho global que traz o WinZapp da bandeja agora também o leva de volta: com o WinZapp em primeiro plano, o mesmo atalho o oculta na bandeja. Em qualquer outra situação, ele continua trazendo a janela para a frente.
+
+- Gravar o microfone junto com o áudio do computador. O novo botão "Gravar microfone e áudio do computador" (Ctrl+Shift+H) grava numa mensagem só a sua voz e o que o computador está tocando, como um vídeo, uma música ou o próprio leitor de tela. Durante a gravação, dois controles deslizantes ajustam separadamente o volume dos demais sons do computador e o do NVDA; sem o NVDA, o segundo fica desativado. Esses volumes valem só para a gravação, não para o que você ouve, e ficam guardados em cada conta. Antes de começar, o WinZapp avisa que tudo o que tocar no computador vai para a gravação, com a opção "Não mostrar novamente"; para voltar a ser avisado, use a opção "Avisar antes de gravar o áudio do computador" na aba Interface do usuário. A gravação é enviada como áudio.
+
+- Fechar só a conta atual. Com mais de uma conta, "Fechar conta atual", no menu Contas (Ctrl+F4), encerra apenas a conta em que você está, liberando a memória e a conexão dela, e passa para outra conta aberta; as demais continuam funcionando. Para abri-la de novo, escolha a conta no menu Contas de outra conta ou use Ctrl+Alt com o número dela. Se for a única conta aberta, o WinZapp pergunta antes, porque fechá-la encerra o programa.
+
+- Trocar rapidamente o dispositivo de áudio. Ctrl+Alt+Shift+H abre a lista dos dispositivos de reprodução e Ctrl+Alt+Shift+G a dos dispositivos de gravação, numerados de 1 a 0: é só apertar o número para trocar na hora, ou usar as setas e Enter. A troca vale para os sons, as mensagens de voz e as ligações — uma ligação em andamento muda de dispositivo sem cair — e para todas as contas abertas, até você fechar o WinZapp. Os dispositivos escolhidos nas Configurações não mudam.
+
+- Escolher o que as notificações em segundo plano dizem. Na aba Geral das Configurações, "Conteúdo das notificações em segundo plano" oferece três níveis: som, nome da conversa ou grupo e texto da mensagem, como antes; som e nome da conversa ou grupo, sem o texto; ou somente o som, sem notificação na tela e sem nada lido. As notificações das conversas trancadas continuam sem nome nem conteúdo.
 
 MELHORIAS
 
@@ -51,6 +59,8 @@ MELHORIAS
 - Os registros do WinZapp e do servidor local (log.log e wppconnect.log) não trazem mais números de telefone, identificadores do WhatsApp nem nomes de contatos: eles aparecem mascarados. Assim, dá para enviar os registros ao relatar um problema sem expor os seus contatos.
 
 - A tradução para o polonês foi revisada.
+
+- Arquivos de áudio colados no campo de mensagem com Ctrl+V agora podem ser enviados como áudio ou como documento, na nova opção "Arquivos de áudio colados no campo de mensagem (Ctrl+V)" da aba Arquivos e salvamento das Configurações; o padrão é áudio. A mensagem já aparece na conversa com o tipo com que será enviada.
 
 CORREÇÕES
 
@@ -97,6 +107,10 @@ CORREÇÕES
 - Ao parear um número diferente do anterior, o WinZapp apaga os dados da conta antiga, mas uma sincronização que já estava em andamento continuava por alguns minutos enchendo a lista com as conversas dela, que depois sumiam de novo. Agora essa sincronização para na hora.
 
 - Depois que o dispositivo de saída de áudio mudava — um fone USB ou Bluetooth desconectado, o dispositivo padrão do Windows trocado ou a saída alterada nas Configurações —, a mensagem de áudio que você mandava tocar podia simplesmente não tocar, sem nenhum aviso, e só funcionava na segunda tentativa. Agora o WinZapp passa para o dispositivo padrão e toca a mensagem já na primeira vez.
+
+- Quando o computador voltava da suspensão ainda sem internet, o WinZapp podia continuar desconectado depois de a internet voltar, até ser fechado e aberto de novo. Agora ele espera a rede voltar para reabrir a conexão com o WhatsApp.
+
+- Quando várias mensagens da mesma conversa chegavam juntas, logo depois de você ter lido essa conversa no WinZapp, o contador de não lidas podia mostrar menos mensagens do que chegaram: três arquivos mandados de uma vez apareciam como duas não lidas. Agora o contador mostra todas.
 
 V1.1.1.0
 

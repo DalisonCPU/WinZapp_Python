@@ -305,7 +305,13 @@ def is_voice_message(msg) -> bool:
     """Return True if msg is a voice note (PTT / mensagem de voz), not a generic audio file."""
     if not isinstance(msg, dict):
         return False
-    if msg.get("_is_voice_recording") or msg.get("type") == "ptt":
+    if msg.get("_is_voice_recording"):
+        # A recording WinZapp sends as an audio message instead (stereo, or
+        # microphone + computer audio) says so on its pending row with an
+        # explicit ptt False; any other recording is a voice note.
+        inner = (msg.get("message") or {}).get("audioMessage") or {}
+        return inner.get("ptt") is not False
+    if msg.get("type") == "ptt":
         return True
     if msg.get("isPtt") or msg.get("ptt"):
         return True
@@ -928,14 +934,21 @@ DEFAULT_SETTINGS = {
     "general": {
         "language": "",
         "notifications_enabled": True,
+        # How much a background notification says: "full", "name" or
+        # "sound" (core.notification_manager.NOTIFICATION_CONTENT_LEVELS,
+        # issue #258). "full" is what WinZapp always did.
+        "notification_content": "full",
+        # Audio files pasted into the message field (Ctrl+V): "audio" or
+        # "document" (core.attachment_types.PASTED_AUDIO_MODES).
+        "pasted_audio_as": "audio",
         "keep_muted_chats_silent_when_open": True,
         "updates_enabled": True,
         # Alpha channel (one build per commit on main) - opt-in, see
         # client/updater.py's select_release().
         "alpha_updates_enabled": False,
         "noise_reduction_enabled": False,
-        # Stereo voice messages (issue #82, core/voice_stereo.py). Off: iPhone
-        # cannot play a stereo voice message.
+        # Stereo voice messages (issue #82, core/voice_stereo.py). Off: a
+        # stereo recording goes out as an audio message, not a voice message.
         "voice_message_stereo": False,
         "system_audio_recording_volume": 100,
         "system_audio_recording_nvda_volume": 100,

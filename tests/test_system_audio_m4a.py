@@ -284,9 +284,11 @@ class TestMixedComposer(unittest.TestCase):
         self.p._is_cancelled_pending = lambda local: local in self.p._cancelled_pending_messages
         self.p._stop_system_audio_recording.side_effect = lambda: setattr(self.p, '_recording_system_audio', False)
         encrypt = functions(ROOT / 'client/core/utils.py', ['encrypt'], {'Fernet': Fernet})['encrypt']
+        from core.voice_stereo import sends_as_audio_file  # pure; no wx
         namespace = dict(logging=logging, os=os, tempfile=tempfile, time=time, uuid=uuid,
                          wave=wave, threading=self.threads, wx=fake_wx,
                          encode_as_stereo=lambda wanted, channels: wanted and channels == 2,
+                         sends_as_audio_file=sends_as_audio_file,
                          encrypt=encrypt, data_path=lambda name: str(self.folder / name),
                          PendingMessage=queue_module.PendingMessage)
         # Bind the actual send handler; no wx/App or capture APIs are imported.
