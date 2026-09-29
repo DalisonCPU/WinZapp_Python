@@ -109,7 +109,8 @@ class ChatListMixin:
                 self.conversations_panel.conversations_list.Hide()
                 self.conversations_panel.Show()
                 self.content_panel.Layout()
-                self.conversations_panel.navigate_to_conversation(chat)
+                self.conversations_panel.navigate_to_conversation(
+                    chat, from_archived=True)
                 return
             # Stale archived state (or panel missing) — fall through to the
             # non-archived path below as a defensive fallback.

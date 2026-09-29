@@ -8,6 +8,7 @@ ConversationsPanel.__init__/init_UI is available here.
 import logging
 import threading
 import wx
+from core.archived_detour import ArchivedDetour
 from core.utils import (
     db_fetch_limit,
     effective_unread_count,
@@ -177,7 +178,42 @@ class ConversationNavigationMixin:
         )
         self.conversation_panel.Layout()
 
-    def navigate_to_conversation(self, conversation):
+    def _archived_detour_state(self):
+        detour = getattr(self, "_archived_detour", None)
+        if detour is None:
+            detour = self._archived_detour = ArchivedDetour()
+        return detour
+
+    def resume_main_after_archived(self):
+        """Back on the main panel after visiting archived chats: drop the
+        archived conversation still open in this shared panel and reopen the
+        main one it replaced. Without focus or read side effects — the caller
+        places focus, and reopening is not reading."""
+        detour = self._archived_detour_state()
+        if not detour.active:
+            return
+        resume = detour.leave()
+        mw = self.main_window
+        current = self.conversation.get("remoteJid", "") if self.conversation else ""
+        if current and mw.is_chat_archived(current):
+            self.close_conversation_for_panel_switch()
+        chat = mw.chats.get(resume) if resume else None
+        # A locked chat must not reappear once the vault has been locked again.
+        if (chat is None or mw.is_chat_archived(resume)
+                or mw.is_chat_locked(resume)):
+            return
+        self.navigate_to_conversation(chat, take_focus=False, mark_read=False)
+
+    def navigate_to_conversation(self, conversation, *, from_archived=False,
+                                 take_focus=True, mark_read=True):
+        detour = self._archived_detour_state()
+        if from_archived:
+            current = self.conversation.get("remoteJid", "") if self.conversation else ""
+            if current and self.main_window.is_chat_archived(current):
+                current = ""
+            detour.enter(current)
+        else:
+            detour.clear()
         if self.conversation is not None and self.conversation.get("remoteJid") == conversation.get("remoteJid"):
             self.conversation = conversation
             self._sync_voice_call_button(conversation.get("remoteJid", ""))
@@ -382,7 +418,9 @@ class ConversationNavigationMixin:
             except Exception:
                 logging.exception("[navigate_to_conversation] message_field.SetFocus() raised")
 
-        if focus_setting == "unread_or_last" or not self.message_field.IsEnabled():
+        if not take_focus:
+            pass
+        elif focus_setting == "unread_or_last" or not self.message_field.IsEnabled():
             wx.CallAfter(_do_focus_messages_list)
         else:
             wx.CallAfter(_do_focus_message_field)
@@ -396,7 +434,8 @@ class ConversationNavigationMixin:
                 args=(jid,),
                 daemon=True,
             ).start()
-        wx.CallAfter(_start_mark_as_read)
+        if mark_read:
+            wx.CallAfter(_start_mark_as_read)
 
     def on_search_query_changed(self, event):
         # Route through add_chats_to_ui so the active filter and proper sort

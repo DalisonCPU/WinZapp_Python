@@ -112,6 +112,12 @@ CORRECCIONES
 
 - Cuando varios mensajes de la misma conversación llegaban juntos, justo después de haber leído esa conversación en WinZapp, el contador de no leídos podía mostrar menos mensajes de los que llegaron: tres archivos enviados a la vez aparecían como dos no leídos. Ahora el contador los muestra todos.
 
+- Dejar una conversación abierta e ir a las conversaciones archivadas (Alt+4) hacía que WinZapp siguiera tratando esa conversación como la que estás leyendo: sus mensajes nuevos se marcaban como leídos, sonaba el sonido de la conversación abierta y se leían en voz alta, aunque estuvieras en otro panel. Ahora eso solo ocurre mientras el panel de la conversación está en pantalla; la conversación sigue abierta y la encuentras donde la dejaste al volver.
+
+- En las conversaciones archivadas, Alt+M no llevaba a la lista de mensajes de la conversación abierta, como hace en las conversaciones principales. Ahora funciona desde cualquier lugar del panel.
+
+- Abrir una conversación archivada con una conversación principal abierta y volver después a las conversaciones principales seguía mostrando la conversación archivada, que ya habías dejado atrás. Ahora WinZapp vuelve a la última conversación principal que tenías abierta.
+
 V1.1.1.0
 
 Esta versión trata de mantener tu cuenta conectada. WinZapp ahora guarda una copia de seguridad del perfil del navegador — que es donde vive realmente tu conexión con WhatsApp — y la restaura por su cuenta cuando deja de ser aceptada, avisando de lo ocurrido. Junto a ella llegan las correcciones de las situaciones que rompían la sesión y hacían que el programa pidiera vincular de nuevo: apagar el ordenador, suspender y reanudar, y el propio programa reiniciando la conexión. También llegan la corrección ortográfica en el campo de mensaje y las acciones sobre enlaces.
