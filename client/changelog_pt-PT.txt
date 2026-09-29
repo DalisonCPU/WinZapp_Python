@@ -112,6 +112,10 @@ CORREÇÕES
 
 - Quando várias mensagens da mesma conversa chegavam juntas, logo depois de ter lido essa conversa no WinZapp, o contador de não lidas podia mostrar menos mensagens do que as que chegaram: três ficheiros enviados de uma vez apareciam como duas não lidas. Agora o contador mostra todas.
 
+- Deixar uma conversa aberta e ir para as conversas arquivadas (Alt+4) fazia o WinZapp continuar a tratar essa conversa como a que está a ler: as mensagens novas dela eram marcadas como lidas, tocavam o som da conversa aberta e eram lidas em voz alta, mesmo com o utilizador noutro painel. Agora isso só acontece enquanto o painel da conversa está no ecrã; a conversa continua aberta e encontra-a onde a deixou ao voltar.
+
+- Nas conversas arquivadas, Alt+M não levava para a lista de mensagens da conversa aberta, como faz nas conversas principais. Agora funciona a partir de qualquer ponto do painel.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta ligada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua ligação ao WhatsApp fica realmente guardada — e a restaurá-la sozinho quando ela deixa de ser aceite, avisando o que aconteceu. Com ela vieram as correções das situações que quebravam a sessão e faziam o programa pedir para emparelhar de novo: desligar o computador, suspender e retomar, e o próprio programa a reiniciar a ligação. Chegaram também a verificação ortográfica no campo de mensagem e as ações sobre ligações.

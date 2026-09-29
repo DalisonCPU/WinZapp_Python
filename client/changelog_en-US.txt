@@ -112,6 +112,10 @@ FIXES
 
 - When several messages from the same chat arrived together, right after you had read that chat in WinZapp, the unread counter could show fewer messages than arrived: three files sent at once showed as two unread. The counter now shows them all.
 
+- Leaving a chat open and switching to archived chats (Alt+4) made WinZapp keep treating that chat as the one you are reading: its new messages were marked as read, played the open-chat sound and were spoken aloud, even though you were in another panel. That now only happens while the chat's panel is on screen; the chat stays open, and you find it where you left it when you come back.
+
+- In archived chats, Alt+M did not move to the messages list of the open chat, as it does in the main chats. It now works from anywhere in the panel.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.

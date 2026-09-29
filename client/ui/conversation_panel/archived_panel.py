@@ -146,6 +146,17 @@ class ArchivedConversationsPanel(wx.Panel):
         self.ID_UNARCHIVE_LIST   = wx.NewIdRef()
         self.ID_LOCK_LIST        = wx.NewIdRef()
         self.ID_PIN_LIST         = wx.NewIdRef()
+        self.ID_ALT_MESSAGES     = wx.NewIdRef()
+        # Alt+<"&Mensagens" mnemonic>: the messages list of the open
+        # conversation, from anywhere in this panel. The label that carries
+        # that mnemonic lives in ConversationsPanel, so the native redirect
+        # never reaches it from here — an explicit accelerator, on the same
+        # letter the i18n label uses (cf. create_accel_conversation).
+        messages_letter = "M"
+        label = self.main_window.i18n.t("messages")
+        amp = label.find("&")
+        if 0 <= amp < len(label) - 1 and label[amp + 1].isalpha():
+            messages_letter = label[amp + 1].upper()
         CS = wx.ACCEL_CTRL | wx.ACCEL_SHIFT
         AS = wx.ACCEL_ALT | wx.ACCEL_SHIFT
         accel_tbl = wx.AcceleratorTable([
@@ -160,8 +171,11 @@ class ArchivedConversationsPanel(wx.Panel):
             (CS,              ord("Q"),      self.ID_UNARCHIVE_LIST),
             (CS,              ord("T"),      self.ID_LOCK_LIST),
             (wx.ACCEL_CTRL,   ord("P"),      self.ID_PIN_LIST),
+            (wx.ACCEL_ALT,    ord(messages_letter), self.ID_ALT_MESSAGES),
         ])
         self.SetAcceleratorTable(accel_tbl)
+        self.Bind(wx.EVT_MENU, self.main_window._on_global_focus_messages,
+                  id=self.ID_ALT_MESSAGES)
         self.Bind(wx.EVT_MENU, self.on_ctrl_f,                    id=self.ID_CTRL_F)
         self.Bind(wx.EVT_MENU, self._on_accel_delete,             id=self.ID_DELETE_CONV)
         self.Bind(wx.EVT_MENU, self._on_accel_copy_number,        id=self.ID_ALT_SHIFT_C_LIST)

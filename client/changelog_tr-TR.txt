@@ -112,6 +112,10 @@ DÜZELTMELER
 
 - Aynı sohbetten birkaç mesaj, o sohbeti WinZapp'ta okuduktan hemen sonra aynı anda geldiğinde, okunmamış sayacı gelenlerden daha az mesaj gösterebiliyordu: aynı anda gönderilen üç dosya iki okunmamış olarak görünüyordu. Artık sayaç hepsini gösteriyor.
 
+- Bir sohbeti açık bırakıp arşivlenmiş sohbetlere geçmek (Alt+4), WinZapp'ın o sohbeti hâlâ okuduğunuz sohbet gibi görmesine yol açıyordu: yeni mesajları okundu olarak işaretleniyor, açık sohbet sesi çalıyor ve başka bir paneldeyken bile sesli okunuyordu. Artık bu yalnızca sohbetin paneli ekrandayken olur; sohbet açık kalır ve geri döndüğünüzde onu bıraktığınız yerde bulursunuz.
+
+- Arşivlenmiş sohbetlerde Alt+M, ana sohbetlerde olduğu gibi açık sohbetin mesaj listesine götürmüyordu. Artık panelin her yerinden çalışıyor.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.

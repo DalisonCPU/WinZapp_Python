@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core.conversation_view import conversation_in_view
 from core.quote_recovery import (
     RECOVERED_FROM_QUOTE,
     UNDECRYPTED_PLACEHOLDER_TYPES,
@@ -1014,8 +1015,7 @@ class MessageEventsMixin:
             # immediately visible to the user and will be marked as read.
             _cp   = getattr(self, "conversations_panel", None)
             _open = (
-                _cp is not None
-                and _cp.conversation is not None
+                conversation_in_view(_cp)
                 and _cp.conversation.get("remoteJid") == remote_jid
             )
             _visible = (
@@ -1148,14 +1148,15 @@ class MessageEventsMixin:
             speech = self.settings.get("speech_content", {})
             # Determine if the incoming message is for the currently-open conversation
             cp = getattr(self, "conversations_panel", None)
+            # A conversation left open behind another panel is not "the
+            # current one": no current-chat sound, no read mark.
+            in_view = conversation_in_view(cp)
             current_jid = (
-                cp.conversation.get("remoteJid", "")
-                if cp is not None and cp.conversation is not None
-                else ""
+                cp.conversation.get("remoteJid", "") if in_view else ""
             )
             is_current_conv = (
                 cp._matches_open_conversation(remote_jid)
-                if cp is not None and hasattr(cp, "_matches_open_conversation") and cp.conversation is not None
+                if in_view and hasattr(cp, "_matches_open_conversation")
                 else (current_jid == remote_jid and bool(current_jid))
             )
 
@@ -1759,14 +1760,13 @@ class MessageEventsMixin:
             )
             if window_active:
                 cp = getattr(self, "conversations_panel", None)
+                in_view = conversation_in_view(cp)
                 current_jid = (
-                    cp.conversation.get("remoteJid", "")
-                    if cp is not None and cp.conversation is not None
-                    else ""
+                    cp.conversation.get("remoteJid", "") if in_view else ""
                 )
                 is_current_conv = (
                     cp._matches_open_conversation(remote_jid)
-                    if cp is not None and hasattr(cp, "_matches_open_conversation") and cp.conversation is not None
+                    if in_view and hasattr(cp, "_matches_open_conversation")
                     else (current_jid == remote_jid and bool(current_jid))
                 )
                 if muted and not is_current_conv:

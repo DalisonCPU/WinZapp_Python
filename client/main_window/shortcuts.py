@@ -129,6 +129,16 @@ class ShortcutsMixin:
             self._ensure_conversations_panel_visible()
             cp._on_accel_jump_unread(event)
 
+    def _on_global_focus_messages(self, event):
+        """Alt+M from a panel that has no messages label of its own (the
+        archived list): bring the open conversation forward and focus its
+        messages list, like _on_global_alt2 does for the last message."""
+        cp = getattr(self, "conversations_panel", None)
+        if cp is not None and cp.conversation is not None:
+            self._ensure_conversations_panel_visible()
+        if cp is not None:
+            cp._on_accel_focus_list(event)
+
     def on_f1(self, event):
         from ui.dialogs.shortcuts_dialog import ShortcutsDialog
         dlg = ShortcutsDialog(self)
