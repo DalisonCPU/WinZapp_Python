@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import wx
+from core.conversation_view import conversation_in_view
 from main_window.log_files import (
     _LazyLogFile,
     _consolidate_legacy_log_dir,
@@ -1017,8 +1018,7 @@ class ChatsStoreMixin:
                                 # that state a minute later. See the comment on
                                 # _open_now in on_chat_unread_update().
                                 open_now = (
-                                    _cp is not None
-                                    and _cp.conversation is not None
+                                    conversation_in_view(_cp)
                                     and self._normalize_jid(
                                         _cp.conversation.get("remoteJid", "")
                                     ) == jid

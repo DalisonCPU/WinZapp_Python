@@ -568,6 +568,8 @@ class MessageMenuMixin:
         messages_label's own "&" mnemonic stops redirecting focus to
         messages_list while the in-conversation search panel is shown.
         """
+        if self._no_conversation_open_announced():
+            return
         if hasattr(self, "messages_list"):
             self.messages_list.SetFocus()
 

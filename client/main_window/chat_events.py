@@ -8,6 +8,7 @@ available here.
 import logging
 import time
 import wx
+from core.conversation_view import conversation_in_view
 from main_window.message_rules import (
     _discount_non_countable_unread,
     note_unread_discount_state,
@@ -729,8 +730,7 @@ class ChatEventsMixin:
         # through to the ordinary closed-chat branches, which already refuse
         # a server count below the local one and accept an honest higher one.
         _open_now = (
-            cp is not None
-            and cp.conversation is not None
+            conversation_in_view(cp)
             and cp.conversation.get("remoteJid") == normalized
             and self._unread_anchored_to_local_read(normalized)
         )
