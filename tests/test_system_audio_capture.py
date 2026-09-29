@@ -333,12 +333,16 @@ class JitteredStampTests(unittest.TestCase):
     def test_fast_device_clock_over_minutes_resyncs_instead_of_aborting(self):
         from core.system_audio_capture import TimelineMixer, AudioPacket
         mix = TimelineMixer(48000, 1, 0, capacity_seconds=2, snap_sources=(0,))
+        import random
+        rng = random.Random(1)
         payload = struct.pack('<480f', *([.5] * 480))
-        # Raw stamps run 0.2% behind the frame count: 20 ms cadence lost per 10 s.
+        # Raw stamps run 0.1% behind the frame count (plus +-3 frames of jitter), so the
+        # 1% retime stops catching up once the offset passes ~5 frames.
         for i in range(6000):
-            mix.add(0, AudioPacket(round(i * 100_000 * .998), payload))
+            stamp = round(i * 100_000 * .999) + (rng.randint(-3, 3) * 208 if i else 0)
+            mix.add(0, AudioPacket(stamp, payload))
             if i % 50 == 49:
-                mix.render_until(round(i * 100_000 * .998) - 3_000_000)
+                mix.render_until(stamp - 3_000_000)
 
 
 
