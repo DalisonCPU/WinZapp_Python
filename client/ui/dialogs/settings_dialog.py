@@ -131,6 +131,7 @@ from core import save_location
 from core.profile_backup import (
     CLOSE_HOURS_MINIMUM, DEFAULT_CLOSE_HOURS, DEFAULT_LIVE_HOURS, LIVE_HOURS_MINIMUM,
     parse_hours_field, stored_hours,
+    size_text as snapshot_size_text,
 )
 
 
@@ -1240,6 +1241,14 @@ class SettingsDialog(wx.Dialog):
         self._profile_backup_page = wx.Panel(self._notebook)
         backup_sizer = wx.BoxSizer(wx.VERTICAL)
 
+        # Off by default: no restore point at all, for someone who would rather
+        # re-pair after a broken profile than give its copy 1-2 GB of disk.
+        # First on the tab because it decides whether the rest means anything.
+        self._no_profile_snapshots_check = wx.CheckBox(
+            self._profile_backup_page, label=i18n.t("profile_backup_disabled_label")
+        )
+        backup_sizer.Add(self._no_profile_snapshots_check, 0, wx.ALL, 8)
+
         self._close_snapshot_hours_label = wx.StaticText(
             self._profile_backup_page, label=i18n.t("profile_backup_close_hours_label")
         )
@@ -1273,6 +1282,7 @@ class SettingsDialog(wx.Dialog):
         self._profile_backup_page.SetSizer(backup_sizer)
         self._notebook.AddPage(self._profile_backup_page, i18n.t("tab_profile_backup"))
         self._live_snapshot_check.Bind(wx.EVT_CHECKBOX, self._on_live_snapshot_toggle)
+        self._no_profile_snapshots_check.Bind(wx.EVT_CHECKBOX, self._on_live_snapshot_toggle)
 
         # ── Reactions tab ────────────────────────────────────────────────────
         # The twelve quick choices of "React to message" (core/reaction_shortcuts.py).
@@ -1486,6 +1496,10 @@ class SettingsDialog(wx.Dialog):
             profile_backup.get("live_snapshot_interval_hours", 24),
             DEFAULT_LIVE_HOURS, LIVE_HOURS_MINIMUM)))
         self._live_snapshot_confirm_check.SetValue(profile_backup.get("live_snapshot_confirm", True))
+        self._no_profile_snapshots_check.SetValue(profile_backup.get("snapshots_disabled", False))
+        # What the box was when the dialog opened: turning it on here is what
+        # offers to delete the copies already on disk (after OK/Apply).
+        self._snapshots_disabled_loaded = self._no_profile_snapshots_check.GetValue()
         self._update_live_snapshot_fields()
 
         reactions = self.main_window.settings.get("reactions", {})
@@ -2479,14 +2493,49 @@ class SettingsDialog(wx.Dialog):
 
     def _update_live_snapshot_fields(self):
         """The interval and the confirmation only mean something while the
-        backup with WinZapp open is on. Hidden rather than disabled, so Tab
-        and the screen reader do not walk through options that do nothing."""
-        show = self._live_snapshot_check.GetValue()
+        backup with WinZapp open is on, and nothing on the tab but the "keep
+        no copies" box means anything while that one is ticked. Hidden rather
+        than disabled, so Tab and the screen reader do not walk through
+        options that do nothing."""
+        copies_on = not self._no_profile_snapshots_check.GetValue()
+        for control in (self._close_snapshot_hours_label,
+                        self._close_snapshot_hours_field,
+                        self._live_snapshot_check):
+            control.Show(copies_on)
+        show = copies_on and self._live_snapshot_check.GetValue()
         for control in (self._live_snapshot_hours_label,
                         self._live_snapshot_hours_field,
                         self._live_snapshot_confirm_check):
             control.Show(show)
         self._profile_backup_page.Layout()
+
+    def _offer_to_delete_profile_snapshots(self):
+        """After OK/Apply: if "keep no copies" was just turned on and copies
+        exist, ask whether to delete them — the space is the whole point.
+
+        Asked, with No as the default, because it cannot be undone: the copy
+        is what spares a re-pairing when the profile breaks. Nothing is asked
+        when there is nothing on disk, and Apply followed by OK asks once.
+        """
+        turned_on = (self._no_profile_snapshots_check.GetValue()
+                     and not getattr(self, "_snapshots_disabled_loaded", False))
+        self._snapshots_disabled_loaded = self._no_profile_snapshots_check.GetValue()
+        if not turned_on:
+            return
+        size_of = getattr(self.main_window, "profile_snapshots_size", None)
+        size = size_of() if callable(size_of) else 0
+        if not size:
+            return
+        i18n = self.main_window.i18n
+        answer = wx.MessageBox(
+            i18n.t("profile_backup_delete_question").format(
+                size=snapshot_size_text(size, i18n.t("decimal_separator"))),
+            i18n.t("tab_profile_backup"),
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+            self,
+        )
+        if answer == wx.YES:
+            self.main_window.delete_profile_snapshots()
 
     def _validate(self) -> bool:
         """Return True if all values are valid; show an error and return False otherwise."""
@@ -2625,6 +2674,11 @@ class SettingsDialog(wx.Dialog):
         if parse_hours_field(self._close_snapshot_hours_field.GetValue(),
                              CLOSE_HOURS_MINIMUM) is None:
             self._notebook.SetSelection(self._notebook.FindPage(self._profile_backup_page))
+            # Hidden while "keep no copies" is ticked; it has to be seen to
+            # be corrected.
+            for control in (self._close_snapshot_hours_label, self._close_snapshot_hours_field):
+                control.Show()
+            self._profile_backup_page.Layout()
             wx.MessageBox(
                 self.main_window.i18n.t("invalid_profile_backup_close_hours"),
                 self.main_window.i18n.t("error").format(app_name=self.main_window.app_name),
@@ -3099,6 +3153,7 @@ class SettingsDialog(wx.Dialog):
         calls["popup_enabled"] = self._call_popup_check.GetValue()
 
         profile_backup = self.main_window.settings.setdefault("profile_backup", {})
+        profile_backup["snapshots_disabled"] = self._no_profile_snapshots_check.GetValue()
         profile_backup["close_snapshot_min_hours"] = parse_hours_field(
             self._close_snapshot_hours_field.GetValue(), CLOSE_HOURS_MINIMUM)
         profile_backup["live_snapshot_enabled"] = self._live_snapshot_check.GetValue()
@@ -3239,6 +3294,7 @@ class SettingsDialog(wx.Dialog):
 
         # Persist and propagate
         self.main_window.save_settings()
+        self._offer_to_delete_profile_snapshots()
         # Reload sound objects so per-event enabled/path changes (and the new
         # alert-tone defaults) take effect immediately, without a restart.
         self.main_window.load_sounds()
@@ -3350,6 +3406,7 @@ class SettingsDialog(wx.Dialog):
         )
         self._fill_quick_reaction_slots()
         self._reset_quick_reactions_btn.SetLabel(i18n.t("reactions_reset_button"))
+        self._no_profile_snapshots_check.SetLabel(i18n.t("profile_backup_disabled_label"))
         self._close_snapshot_hours_label.SetLabel(i18n.t("profile_backup_close_hours_label"))
         self._live_snapshot_check.SetLabel(i18n.t("profile_backup_live_label"))
         self._live_snapshot_hours_label.SetLabel(i18n.t("profile_backup_live_hours_label"))

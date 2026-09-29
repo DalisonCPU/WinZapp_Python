@@ -429,6 +429,66 @@ def pending_snapshot_dir(global_dir, session_name):
     return snapshot_dir(global_dir, session_name) + ".pending"
 
 
+def _snapshot_generations(global_dir, session_name):
+    """Every directory a restore point of this session can occupy: the
+    snapshot, the generation it replaced, a copy staged by a backup with
+    WinZapp open, and a copy caught half-way (`.partial`)."""
+    base = snapshot_dir(global_dir, session_name)
+    return [base, base + ".prev", base + ".pending", base + ".partial"]
+
+
+def _tree_size(path):
+    total = 0
+    for folder, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                total += os.path.getsize(os.path.join(folder, name))
+            except OSError:
+                pass
+    return total
+
+
+def snapshots_size_bytes(global_dir, session_name) -> int:
+    """How much disk this session's restore points take, all generations."""
+    if not global_dir or not session_name:
+        return 0
+    return sum(_tree_size(d) for d in _snapshot_generations(global_dir, session_name)
+               if os.path.isdir(d))
+
+
+def delete_snapshots(global_dir, session_name, lock_wait=60.0):
+    """Remove every restore point of this session; return the bytes freed,
+    or None when a copy in progress kept the lock for `lock_wait` seconds.
+
+    For Settings > Cópia de segurança's "do not keep copies": the user trades
+    the recovery for the disk space, so the space has to come back — not
+    stopping new copies alone, which would leave ~1-2 GB behind for good.
+    Only this session's generations: the snapshot directory is shared by
+    every account on the install. Under the capture lock, so a copy running
+    at that moment (a clean close, a backup with WinZapp open) is never
+    deleted from under itself or recreated half-way after the delete.
+    """
+    if not global_dir or not session_name:
+        return 0
+    if not _CAPTURE_LOCK.acquire(timeout=lock_wait):
+        return None
+    try:
+        freed = 0
+        for directory in _snapshot_generations(global_dir, session_name):
+            if not os.path.isdir(directory):
+                continue
+            size = _tree_size(directory)
+            shutil.rmtree(directory, ignore_errors=True)
+            if not os.path.exists(directory):
+                freed += size
+        logging.info("[profile-snapshot] restore points of session %s deleted "
+                     "(%d bytes freed) — copies turned off in Settings.",
+                     session_name[:12], freed)
+        return freed
+    finally:
+        _CAPTURE_LOCK.release()
+
+
 def capture_snapshot(global_dir, session_name, budget=SNAPSHOT_BUDGET_SECONDS,
                      max_age=SNAPSHOT_MAX_AGE_SECONDS, cancel=None, stage_only=False,
                      lock_wait=0.0):
