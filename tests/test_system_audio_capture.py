@@ -299,3 +299,43 @@ class RecorderTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class JitteredStampTests(unittest.TestCase):
+    def test_stamp_jitter_within_snap_window_leaves_no_silent_holes(self):
+        from core.system_audio_capture import TimelineMixer, AudioPacket
+        # 48 kHz, 480-frame packets whose QPC stamps jitter +-0.5 ms (24 frames)
+        # around the 10 ms cadence, as the microphone reports them.
+        mix = TimelineMixer(48000, 1, 0, snap_sources=(0,))
+        jitter_100ns = [0, 4_800, -4_800, 4_800, 0, -4_800, 4_800, 0]
+        for i, jitter in enumerate(jitter_100ns):
+            mix.add(0, AudioPacket(i * 100_000 + jitter, struct.pack('<480f', *([.5] * 480))))
+        pcm = mix.render_until(len(jitter_100ns) * 100_000 - 100_000)
+        samples = struct.unpack('<%dh' % (len(pcm) // 2), pcm)
+        self.assertGreater(len(samples), 480 * 6)
+        self.assertEqual(set(samples), {8192})
+
+    def test_gap_beyond_snap_window_is_still_silent(self):
+        from core.system_audio_capture import TimelineMixer, AudioPacket
+        mix = TimelineMixer(1000, 1, 0, snap_sources=(0,))
+        mix.add(0, AudioPacket(0, struct.pack('<10f', *([.5] * 10))))
+        mix.add(0, AudioPacket(300_000, struct.pack('<10f', *([.5] * 10))))
+        mix.add(0, AudioPacket(400_000, struct.pack('<f', .5)))
+        samples = struct.unpack('<40h', mix.render_until(400_000))
+        self.assertEqual(samples[:10], (8192,) * 10)
+        self.assertEqual(samples[10:30], (0,) * 20)
+        self.assertEqual(samples[30:], (8192,) * 10)
+
+    def test_sources_not_listed_keep_exact_timestamps(self):
+        from core.system_audio_capture import TimelineMixer, AudioPacket
+        mix = TimelineMixer(1000, 1, 0)
+        mix.add(0, AudioPacket(0, struct.pack('<10f', *([.5] * 10))))
+        mix.add(0, AudioPacket(120_000, struct.pack('<10f', *([.5] * 10))))
+        mix.add(0, AudioPacket(400_000, struct.pack('<f', .5)))
+        samples = struct.unpack('<40h', mix.render_until(400_000))
+        self.assertEqual(samples[10:12], (0, 0))
+
+    def test_recorder_snaps_only_the_microphone(self):
+        import inspect
+        from core import system_audio_capture
+        self.assertEqual(inspect.getsource(system_audio_capture).count('snap_sources=(0,)'), 2)
