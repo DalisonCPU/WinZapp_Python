@@ -356,6 +356,36 @@ class SettingsMixin:
 
     # ── Terms of service ─────────────────────────────────────────────────────
 
+    def _refuse_network_install_location(self):
+        """Stop with a clear explanation when WinZapp runs from a network folder.
+
+        Before anything is installed or opened on it: from a network folder
+        npm install fails with a page of output that explains nothing, and the
+        message database and the Chrome profile would live on a share, where
+        SQLite's locking is not reliable (core/install_location.py). The
+        common way to land here is a virtual machine — Parallels on a Mac maps
+        Windows' Downloads to the Mac's own folder — so the message names the
+        path and says exactly what to do instead.
+        """
+        from app_paths import global_dir
+        from core.install_location import is_network_path
+        location = global_dir()
+        if not is_network_path(location):
+            return
+        logging.warning(
+            "[startup] WinZapp is running from a network folder (%s) — "
+            "refusing to start: npm install and the database cannot work there.",
+            location,
+        )
+        if not self.background_mode:
+            wx.MessageBox(
+                self.i18n.t("network_install_location_message").format(
+                    path=os.path.dirname(os.path.dirname(location))),
+                self.i18n.t("network_install_location_title"),
+                wx.OK | wx.ICON_ERROR,
+            )
+        sys.exit(0)
+
     def _check_terms_acceptance(self):
         """
         Show the terms-of-service dialog exactly once.

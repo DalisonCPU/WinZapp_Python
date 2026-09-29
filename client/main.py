@@ -545,6 +545,10 @@ class MainWindow(
             # well before the 90s WPPConnect update check.
             wx.CallLater(20000, self._show_wpp_reinstall_notice_if_pending)
 
+        # A network folder (e.g. Parallels' Downloads, which is the Mac's)
+        # cannot run WinZapp; say so before anything is installed there.
+        self._refuse_network_install_location()
+
         # Terms of service – show once before anything else happens
         if not self.background_mode:
             logging.info("MainWindow: Checking terms acceptance...")

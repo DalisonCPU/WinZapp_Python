@@ -174,6 +174,8 @@
     "save_audio_as": "Salvați sunetul ca...",
     "show_in_folder": "Afișați în folder",
     "show_in_folder_save_first": "Salvați fișierul folosind opțiunea Salvați ca... înainte de a-l afișa într-un folder",
+    "network_install_location_title": "WinZapp nu poate funcționa din acest folder",
+    "network_install_location_message": "WinZapp se află într-un folder de rețea și nu poate funcționa din el:\n\n{path}\n\nAcest lucru se întâmplă, de exemplu, în mașinile virtuale precum Parallels pe Mac, unde folderul Descărcări este de fapt un folder de pe celălalt computer. Instalați WinZapp cu WinZappInstaller sau mutați folderul WinZapp pe un disc al acestui computer, de exemplu C:\\WinZapp, și deschideți-l de acolo.\n\nWinZapp se va închide acum.",
     "show_in_folder_missing": "Fișierul salvat nu mai este disponibil",
     "show_in_folder_failed": "Nu s-a putut deschide folderul fișierului",
     "save_as_nothing_to_save": "Acest mesaj nu are niciun fișier de salvat",
