@@ -116,6 +116,8 @@ CORRECCIONES
 
 - En las conversaciones archivadas, Alt+M no llevaba a la lista de mensajes de la conversación abierta, como hace en las conversaciones principales. Ahora funciona desde cualquier lugar del panel.
 
+- Abrir una conversación archivada con una conversación principal abierta y volver después a las conversaciones principales seguía mostrando la conversación archivada, que ya habías dejado atrás. Ahora WinZapp vuelve a la última conversación principal que tenías abierta.
+
 V1.1.1.0
 
 Esta versión trata de mantener tu cuenta conectada. WinZapp ahora guarda una copia de seguridad del perfil del navegador — que es donde vive realmente tu conexión con WhatsApp — y la restaura por su cuenta cuando deja de ser aceptada, avisando de lo ocurrido. Junto a ella llegan las correcciones de las situaciones que rompían la sesión y hacían que el programa pidiera vincular de nuevo: apagar el ordenador, suspender y reanudar, y el propio programa reiniciando la conexión. También llegan la corrección ortográfica en el campo de mensaje y las acciones sobre enlaces.

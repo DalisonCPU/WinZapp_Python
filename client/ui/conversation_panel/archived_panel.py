@@ -358,7 +358,7 @@ class ArchivedConversationsPanel(wx.Panel):
         mw.conversations_panel.conversations_label.Hide()
         mw.conversations_panel.conversations_list.Hide()
         mw.content_panel.Layout()
-        mw.conversations_panel.navigate_to_conversation(chat)
+        mw.conversations_panel.navigate_to_conversation(chat, from_archived=True)
 
     def on_context_menu(self, event):
         """Same menu, in the same order, as ConversationsPanel.on_conversations_context_menu() —

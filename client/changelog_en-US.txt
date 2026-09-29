@@ -116,6 +116,8 @@ FIXES
 
 - In archived chats, Alt+M did not move to the messages list of the open chat, as it does in the main chats. It now works from anywhere in the panel.
 
+- Opening an archived chat while a main chat was open, then going back to the main chats, kept showing the archived chat you had already left behind. WinZapp now goes back to the last main chat you had open.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.
