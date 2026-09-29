@@ -198,7 +198,9 @@ class ConversationNavigationMixin:
         if current and mw.is_chat_archived(current):
             self.close_conversation_for_panel_switch()
         chat = mw.chats.get(resume) if resume else None
-        if chat is None or mw.is_chat_archived(resume):
+        # A locked chat must not reappear once the vault has been locked again.
+        if (chat is None or mw.is_chat_archived(resume)
+                or mw.is_chat_locked(resume)):
             return
         self.navigate_to_conversation(chat, take_focus=False, mark_read=False)
 

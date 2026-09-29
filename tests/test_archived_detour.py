@@ -25,9 +25,14 @@ class _MW:
         self.chats = {"main@s.whatsapp.net": {"remoteJid": "main@s.whatsapp.net"},
                       "arch@s.whatsapp.net": {"remoteJid": "arch@s.whatsapp.net"}}
         self.archived = {"arch@s.whatsapp.net"}
+        self.locked = {"locked@s.whatsapp.net"}
+        self.chats["locked@s.whatsapp.net"] = {"remoteJid": "locked@s.whatsapp.net"}
 
     def is_chat_archived(self, jid):
         return jid in self.archived
+
+    def is_chat_locked(self, jid):
+        return jid in self.locked
 
 
 class _Panel:
@@ -86,6 +91,12 @@ def test_resume_target_that_became_archived_or_vanished_is_not_reopened():
         stub = _panel(None, target)
         _resume(stub)
         assert stub.calls == []
+
+
+def test_a_locked_main_chat_is_not_reopened_after_the_vault_locked():
+    stub = _panel(None, "locked@s.whatsapp.net")
+    _resume(stub)
+    assert stub.calls == []
 
 
 def test_no_detour_means_nothing_changes():
