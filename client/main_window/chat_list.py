@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core.view_once import VIEW_ONCE_UNAVAILABLE_TYPE
 from core.call_log import (
     CALL_LOG_MESSAGE_TYPE,
     LEGACY_CALL_LOG_TYPE,
@@ -871,6 +872,7 @@ class ChatListMixin:
         "buttonsMessage", "listMessage", "templateMessage", "interactiveMessage",
         "buttonsResponseMessage", "listResponseMessage", "protocolMessage",
         CALL_LOG_MESSAGE_TYPE, LEGACY_CALL_LOG_TYPE,
+        VIEW_ONCE_UNAVAILABLE_TYPE,
     })
 
     @classmethod
@@ -1201,6 +1203,8 @@ class ChatListMixin:
             content = ", ".join(parts)
         elif msg_type == "stickerMessage":
             content = i18n.t("sticker")
+        elif msg_type == VIEW_ONCE_UNAVAILABLE_TYPE:
+            content = i18n.t("view_once_message")
         elif msg_type == "contactMessage":
             contact = msg_obj.get("contactMessage") or {}
             name = contact.get("displayName") or ""
