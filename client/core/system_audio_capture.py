@@ -93,10 +93,13 @@ class TimelineMixer:
         start = self._frame(packet.timestamp)
         last_end = self._last_end[source]
         if (source in self._snap_sources and last_end is not None and start != last_end
-                and abs(start - last_end) <= self._snap):
+                and (start < last_end or start - last_end <= self._snap)):
             # Timestamp jitter is not a gap: zero-filling it (or dropping the
             # overlap) makes every jittery packet click, heard as ~1% loss.
-            # Real gaps beyond the snap window still stay silent.
+            # Real gaps beyond the snap window still stay silent. A fast
+            # device clock makes the snapped timeline outrun the raw stamps;
+            # that overlap is trimmed here instead of ending the recording.
+            # (The 1% retime below still compares raw stamps to this end.)
             start = last_end
         end = start + count
         if following is not None:

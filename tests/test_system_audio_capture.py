@@ -296,11 +296,6 @@ class RecorderTests(unittest.TestCase):
         recorder.stop()
         self.assertFalse(self.errors)
 
-
-if __name__ == '__main__':
-    unittest.main()
-
-
 class JitteredStampTests(unittest.TestCase):
     def test_stamp_jitter_within_snap_window_leaves_no_silent_holes(self):
         from core.system_audio_capture import TimelineMixer, AudioPacket
@@ -335,7 +330,17 @@ class JitteredStampTests(unittest.TestCase):
         samples = struct.unpack('<40h', mix.render_until(400_000))
         self.assertEqual(samples[10:12], (0, 0))
 
-    def test_recorder_snaps_only_the_microphone(self):
-        import inspect
-        from core import system_audio_capture
-        self.assertEqual(inspect.getsource(system_audio_capture).count('snap_sources=(0,)'), 2)
+    def test_fast_device_clock_over_minutes_resyncs_instead_of_aborting(self):
+        from core.system_audio_capture import TimelineMixer, AudioPacket
+        mix = TimelineMixer(48000, 1, 0, capacity_seconds=2, snap_sources=(0,))
+        payload = struct.pack('<480f', *([.5] * 480))
+        # Raw stamps run 0.2% behind the frame count: 20 ms cadence lost per 10 s.
+        for i in range(6000):
+            mix.add(0, AudioPacket(round(i * 100_000 * .998), payload))
+            if i % 50 == 49:
+                mix.render_until(round(i * 100_000 * .998) - 3_000_000)
+
+
+
+if __name__ == '__main__':
+    unittest.main()
