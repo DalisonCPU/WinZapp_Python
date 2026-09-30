@@ -89,6 +89,36 @@ class TestDeletingTheCopies:
             assert profile_recovery.delete_snapshots(str(tmp_path), "mine", lock_wait=0.05) is None
         assert os.path.isdir(base)
 
+    def test_what_a_replace_left_aside_goes_too(self, tmp_path):
+        """_replace_directory() moves the old copy to `.old`; a process that
+        died before sweeping it leaves a whole copy there."""
+        base = _make_generations(tmp_path, "mine", size=10)
+        for suffix in (".old", ".pending.old"):
+            os.makedirs(base + suffix)
+            with open(os.path.join(base + suffix, "data"), "wb") as f:
+                f.write(b"x" * 5)
+
+        assert profile_recovery.delete_snapshots(str(tmp_path), "mine") == 50
+        assert not os.path.exists(base + ".old")
+        assert not os.path.exists(base + ".pending.old")
+
+    def test_a_delete_cut_short_never_leaves_a_restore_point_behind(self, tmp_path, monkeypatch):
+        """WinZapp closed in the middle of deleting 1-2 GB: what is left must
+        not sit under the snapshot's own name, recent enough to be offered as
+        a restore point. The next delete finishes the job."""
+        base = _make_generations(tmp_path, "mine", size=10)
+        monkeypatch.setattr(profile_recovery.shutil, "rmtree", lambda *a, **kw: None)
+
+        profile_recovery.delete_snapshots(str(tmp_path), "mine")
+
+        assert profile_recovery.snapshot_age_seconds(str(tmp_path), "mine") is None
+        assert not os.path.exists(base)
+        assert os.path.isdir(base + ".deleting")
+
+        monkeypatch.undo()
+        assert profile_recovery.delete_snapshots(str(tmp_path), "mine") == 40
+        assert not any(os.listdir(os.path.dirname(base)))
+
     def test_nothing_to_delete(self, tmp_path):
         assert profile_recovery.delete_snapshots(str(tmp_path), "mine") == 0
         assert profile_recovery.delete_snapshots(None, "mine") == 0

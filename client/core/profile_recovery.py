@@ -429,12 +429,21 @@ def pending_snapshot_dir(global_dir, session_name):
     return snapshot_dir(global_dir, session_name) + ".pending"
 
 
+#: Every directory a restore point of this session can occupy: the snapshot,
+#: the generation it replaced, a copy staged by a backup with WinZapp open, a
+#: copy caught half-way, and what _replace_directory() moves aside (`.old`)
+#: and leaves behind if the process dies before sweeping it.
+_GENERATION_SUFFIXES = ("", ".prev", ".pending", ".partial", ".old", ".pending.old")
+#: delete_snapshots() moves a generation to this name before deleting it.
+_DELETING = ".deleting"
+
+
 def _snapshot_generations(global_dir, session_name):
-    """Every directory a restore point of this session can occupy: the
-    snapshot, the generation it replaced, a copy staged by a backup with
-    WinZapp open, and a copy caught half-way (`.partial`)."""
+    """The directories in _GENERATION_SUFFIXES, then any delete_snapshots()
+    left half-deleted when the process ended."""
     base = snapshot_dir(global_dir, session_name)
-    return [base, base + ".prev", base + ".pending", base + ".partial"]
+    live = [base + suffix for suffix in _GENERATION_SUFFIXES]
+    return live + [directory + _DELETING for directory in live]
 
 
 def _tree_size(path):
@@ -473,8 +482,25 @@ def delete_snapshots(global_dir, session_name, lock_wait=60.0):
     if not _CAPTURE_LOCK.acquire(timeout=lock_wait):
         return None
     try:
+        generations = _snapshot_generations(global_dir, session_name)
+        doomed = [d for d in generations if d.endswith(_DELETING) and os.path.isdir(d)]
+        for directory in generations:
+            if directory.endswith(_DELETING) or not os.path.isdir(directory):
+                continue
+            # Renamed first, all of them, then deleted. An rmtree of 1-2 GB
+            # stopped half-way (WinZapp closed during it) would otherwise leave
+            # a partial snapshot under the real name, recent enough for
+            # snapshot_is_fresh() to offer it as a restore point.
+            aside = directory + _DELETING
+            if aside in doomed:
+                shutil.rmtree(aside, ignore_errors=True)
+            try:
+                os.replace(directory, aside)
+            except OSError:
+                aside = directory
+            doomed.append(aside)
         freed = 0
-        for directory in _snapshot_generations(global_dir, session_name):
+        for directory in dict.fromkeys(doomed):
             if not os.path.isdir(directory):
                 continue
             size = _tree_size(directory)

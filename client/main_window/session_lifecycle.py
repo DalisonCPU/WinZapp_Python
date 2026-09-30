@@ -1505,6 +1505,13 @@ class SessionLifecycleMixin:
                 # confirmed below.
                 queue.release()
                 held = False
+            if _snapshots_disabled(getattr(self, "settings", {})):
+                # "Keep no copies" was ticked while this one was being made:
+                # the user chose the space. Dropped below (finally), and not
+                # announced as a failure.
+                logging.info("[profile-backup] copies were turned off during the "
+                             "backup; the staged copy is dropped.")
+                return
             if (restarted and staged.get("copy")
                     and self._live_snapshot_session_accepted()
                     and profile_recovery.promote_pending_snapshot(global_dir, session_name)):
