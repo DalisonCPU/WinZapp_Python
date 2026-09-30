@@ -128,6 +128,8 @@ DÜZELTMELER
 
 - Bir ağ klasöründen açıldığında —örneğin Mac'teki bir Parallels sanal makinesinin, aslında diğer bilgisayarda bulunan İndirilenler klasöründen— WinZapp yerel sunucuyu kuramıyor ve anlaşılmaz bir hata gösteriyordu. Artık oradan çalışamayacağını söylüyor ve nasıl çözüleceğini açıklıyor: WinZappInstaller ile kurmak ya da klasörü bu bilgisayardaki bir diske taşımak.
 
+- WinZapp henüz başlarken güncelleme istemini yanıtlamak, programı penceresiz ve arka planda çalışır durumda bırakabiliyordu; yeniden açılması ancak işlem sonlandırıldıktan veya bilgisayar yeniden başlatıldıktan sonra mümkündü. Artık istem ana pencerenin açılmasını bekliyor ve kapanış takılırsa WinZapp takılı kalmak yerine kendini sonlandırıyor.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.
