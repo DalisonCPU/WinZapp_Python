@@ -128,6 +128,8 @@ POPRAWKI
 
 - Uruchomiony z folderu sieciowego — na przykład z folderu Pobrane maszyny wirtualnej Parallels na Macu, który w rzeczywistości znajduje się na drugim komputerze — WinZapp nie mógł zainstalować lokalnego serwera i pokazywał niezrozumiały błąd. Teraz informuje, że nie może stamtąd działać, i wyjaśnia, co zrobić: zainstalować go za pomocą WinZappInstaller albo przenieść folder na dysk tego komputera.
 
+- Odpowiedź na monit o aktualizację, gdy WinZapp jeszcze się uruchamiał, mogła zostawić go bez okna, działającego w tle, a otworzył się ponownie dopiero po zakończeniu procesu lub restarcie komputera. Teraz monit czeka na otwarcie głównego okna, a jeśli zamykanie się zawiesi, WinZapp kończy się sam zamiast pozostać zablokowany.
+
 V1.1.1.0
 
 Ta wersja dotyczy utrzymania połączenia z Twoim kontem. WinZapp zapisuje teraz kopię zapasową profilu przeglądarki — to w nim faktycznie przechowywane jest Twoje połączenie z WhatsApp — i sam ją przywraca, gdy przestaje być akceptowana, informując o tym, co się stało. Razem z nią pojawiają się poprawki sytuacji, które przerywały sesję i zmuszały do ponownego parowania: wyłączenie komputera, wstrzymanie i wznowienie oraz samo ponowne uruchamianie połączenia przez program. Doszły również sprawdzanie pisowni w polu wiadomości i akcje na odnośnikach.

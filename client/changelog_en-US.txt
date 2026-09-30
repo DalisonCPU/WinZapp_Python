@@ -128,6 +128,8 @@ FIXES
 
 - Opened from a network folder — for example, the Downloads folder of a Parallels virtual machine on a Mac, which actually lives on the other computer — WinZapp couldn't install its local server and showed an unintelligible error. Now it says it can't run from there and explains how to fix it: install with WinZappInstaller, or move the folder to a drive on the computer itself.
 
+- Answering the update prompt while WinZapp was still starting could leave it without a window, running in the background, and it only opened again after the process was ended or the computer restarted. The prompt now waits for the main window to open, and if a shutdown gets stuck WinZapp ends itself instead of staying stuck.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.

@@ -128,6 +128,8 @@ CORRECCIONES
 
 - Abierto desde una carpeta de red —por ejemplo, la carpeta Descargas de una máquina virtual Parallels en un Mac, que en realidad está en el otro equipo—, WinZapp no podía instalar el servidor local y mostraba un error incomprensible. Ahora avisa de que no puede funcionar desde ahí y explica cómo resolverlo: instalar con WinZappInstaller o mover la carpeta a un disco del propio equipo.
 
+- Responder al aviso de actualización mientras WinZapp todavía se estaba iniciando podía dejarlo sin ventana, ejecutándose en segundo plano, y solo volvía a abrirse tras finalizar el proceso o reiniciar el ordenador. Ahora el aviso espera a que se abra la ventana principal y, si un cierre se bloquea, WinZapp termina por sí mismo en lugar de quedarse colgado.
+
 V1.1.1.0
 
 Esta versión trata de mantener tu cuenta conectada. WinZapp ahora guarda una copia de seguridad del perfil del navegador — que es donde vive realmente tu conexión con WhatsApp — y la restaura por su cuenta cuando deja de ser aceptada, avisando de lo ocurrido. Junto a ella llegan las correcciones de las situaciones que rompían la sesión y hacían que el programa pidiera vincular de nuevo: apagar el ordenador, suspender y reanudar, y el propio programa reiniciando la conexión. También llegan la corrección ortográfica en el campo de mensaje y las acciones sobre enlaces.

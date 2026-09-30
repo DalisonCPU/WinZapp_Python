@@ -128,6 +128,8 @@ CORECTĂRI
 
 - Deschis dintr-un folder de rețea — de exemplu, folderul Descărcări al unei mașini virtuale Parallels pe Mac, care se află de fapt pe celălalt computer —, WinZapp nu putea instala serverul local și afișa o eroare de neînțeles. Acum anunță că nu poate funcționa de acolo și explică ce trebuie făcut: instalarea cu WinZappInstaller sau mutarea folderului pe un disc al acestui computer.
 
+- Răspunsul la solicitarea de actualizare cât timp WinZapp încă pornea îl putea lăsa fără fereastră, rulând în fundal, iar se redeschidea abia după încheierea procesului sau repornirea calculatorului. Acum solicitarea așteaptă deschiderea ferestrei principale, iar dacă o închidere se blochează, WinZapp se încheie singur în loc să rămână blocat.
+
 V1.1.1.0
 
 Această versiune se concentrează pe menținerea contului conectat. WinZapp păstrează acum o copie de siguranță a profilului browserului — locul în care se află de fapt conexiunea cu WhatsApp — și o restaurează singur atunci când nu mai este acceptată, spunându-vă ce s-a întâmplat. Împreună cu aceasta vin corecții pentru situațiile care stricau sesiunea și lăsau aplicația să ceară o nouă asociere: închiderea computerului, suspendarea și reluarea și repornirea conexiunii de către aplicație. Au sosit și verificarea ortografică în câmpul de mesaj și acțiunile pentru linkuri.

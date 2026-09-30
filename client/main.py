@@ -1870,6 +1870,14 @@ if __name__ == "__main__":
         logging.info("Instance lock acquired for account %s (%s).", _account_id, _account_name)
         logging.info("Creating wx.App...")
         app = wx.App()
+        # WinZapp only ever exits on purpose (real_exit(), the tray, Windows
+        # ending the session). wx's default is to end the main loop when the
+        # last VISIBLE top-level window goes away — and with the main window
+        # hidden in the tray, a dialog answered and destroyed was that window:
+        # the loop ended without any teardown and the process lingered with no
+        # window and the instance lock held. It bit the update prompt first
+        # (see updater.py); this makes it impossible for any dialog.
+        app.SetExitOnFrameDelete(False)
         frame = MainWindow(account_id=_account_id, account_name=_account_name,
                            startup_source=startup_source, resume_pending=_resume_pending,
                            registry=_registry, global_dir=gd)

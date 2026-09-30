@@ -75,6 +75,9 @@ class UpdatesMixin:
     # wppconnect-team/wppconnect-server GitHub releases directly.
 
     def wpp_update_may_run_now(self) -> bool:
+        ready = getattr(self, "_ui_ready_event", None)
+        if ready is not None and not ready.is_set():
+            return False  # still inside MainWindow.__init__: no window to ask from
         try:
             if self._is_pairing_dialog_active():
                 return False
@@ -90,8 +93,8 @@ class UpdatesMixin:
             return
         if not force and not self.wpp_update_may_run_now():
             logging.info(
-                "[wpp_update] Pairing in progress — deferring the WPPConnect "
-                "update check by 5 minutes."
+                "[wpp_update] Pairing in progress or the window is not ready yet — "
+                "deferring the WPPConnect update check by 5 minutes."
             )
             wx.CallLater(300000, self._start_wpp_update_checker)
             return
