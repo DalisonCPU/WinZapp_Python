@@ -645,5 +645,18 @@ def test_notices_raised_while_placing_a_call_are_answered():
     assert "buttons[buttons.length - 1].click()" in watcher
     # Dialogs already open before the call are left alone.
     assert "__winzappCallNoticesSeen" in watcher
+    # Detached dialog nodes must not be kept alive by the seen-set.
+    assert "new WeakSet()" in watcher and "new Set()" not in watcher
+    # No more than three buttons: a bigger dialog is not a notice.
+    assert "buttons.length > 3" in watcher
+    # Only informational dialogs (with a "Learn more" link) are answered; a
+    # decision dialog such as "Unblock X to call?" is left alone, and the
+    # link check comes before the click.
+    assert "a[href],[role=\"link\"]" in watcher
+    assert watcher.index("a[href],[role=\"link\"]") < watcher.index(".click()")
+    # The log records the button count, never the dialog text (log-pii.md).
     assert "[call-notice]" in watcher
+    assert "innerText" not in watcher and "textContent" not in watcher
+    # The watcher stops after a minute and when the offer settles.
     assert "60_000" in watcher
+    assert "clearTimeout(limit)" in watcher

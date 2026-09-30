@@ -629,10 +629,14 @@ export async function offerCall(req: Request, res: Response) {
  * manage this call..." [Learn more] [Continue]. The offer then waits on it
  * until the request is aborted at 75 s and the call never rings.
  *
- * The user asked for this call, so a notice raised while placing it is
- * answered with its primary (last) button, WhatsApp's affirmative position,
- * which keeps this independent of the UI language. Only dialogs that appear
- * during the offer are touched, and each is logged with its text.
+ * The user asked for this call, so this notice is answered with its primary
+ * (last) button, WhatsApp's affirmative position, which keeps this independent
+ * of the UI language. Only dialogs that appear during the offer are touched,
+ * and only informational ones: a dialog must carry a link ("Learn more") to be
+ * answered. A decision dialog -- "Unblock X to call?" with Cancel/Unblock, a
+ * permission prompt -- has no link and is left alone, since its last button
+ * can be a destructive one. What was answered is logged without the dialog
+ * text (it can hold a contact or business name; see docs/traps/log-pii.md).
  */
 function watchOutgoingCallNotices(req: Request): () => void {
   const page = getWhatsappPage(req);
@@ -641,23 +645,25 @@ function watchOutgoingCallNotices(req: Request): () => void {
   const tick = async () => {
     if (stopped) return;
     try {
-      const answered: string[] = await page.evaluate(() => {
+      const answered: number[] = await page.evaluate(() => {
         const win = window as any;
-        const seen: Set<Element> = (win.__winzappCallNoticesSeen ||= new Set());
-        const out: string[] = [];
+        const seen: WeakSet<Element> = (win.__winzappCallNoticesSeen ||= new WeakSet());
+        const out: number[] = [];
         for (const dialog of Array.from(document.querySelectorAll('[role="dialog"]'))) {
           if (seen.has(dialog)) continue;
           const buttons = Array.from(dialog.querySelectorAll('button,[role="button"]')) as HTMLElement[];
           if (!buttons.length || buttons.length > 3) continue;
+          // An informational notice carries a "Learn more" link; a decision
+          // dialog does not, and is not ours to answer.
+          if (!dialog.querySelector('a[href],[role="link"]')) continue;
           seen.add(dialog);
-          const text = ((dialog as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim();
           buttons[buttons.length - 1].click();
-          out.push(text.slice(0, 300));
+          out.push(buttons.length);
         }
         return out;
       });
-      for (const text of answered) {
-        logger?.info?.(`[call-notice] answered a notice while placing a call: ${text}`);
+      for (const count of answered) {
+        logger?.info?.(`[call-notice] answered a notice with ${count} buttons while placing a call`);
       }
     } catch (_) {
       // page busy or navigating; try again on the next tick
@@ -668,7 +674,7 @@ function watchOutgoingCallNotices(req: Request): () => void {
   page
     .evaluate(() => {
       const win = window as any;
-      const seen: Set<Element> = (win.__winzappCallNoticesSeen ||= new Set());
+      const seen: WeakSet<Element> = (win.__winzappCallNoticesSeen ||= new WeakSet());
       document.querySelectorAll('[role="dialog"]').forEach((d) => seen.add(d));
     })
     .catch(() => undefined)
