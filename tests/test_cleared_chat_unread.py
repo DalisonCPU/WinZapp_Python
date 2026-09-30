@@ -95,6 +95,22 @@ class TestTheChatListMerge:
 
         assert stub._server_unread[GROUP] == 40
 
+    def test_an_lid_entry_counts_for_the_chat_kept_under_its_phone(self, post):
+        """list-chats may answer a 1:1 chat under its @lid while WinZapp keeps
+        it under the phone JID; that entry is skipped for the merge, but the
+        count is still what opening the chat has to clear on the phone."""
+        phone, lid = "5511999990000@s.whatsapp.net", "123456789012345@lid"
+        existing = {phone: {"remoteJid": phone, "t": CLEARED_AT, "unreadCount": 0,
+                            "messages": {"messages": {"records": []}}}}
+        stub = _make(existing)
+        stub._lid_to_phone = {lid: phone}
+        stub._phone_to_lid = {phone: lid}
+        post["payload"] = [_chat(lid, unreadCount=7, t=CLEARED_AT + 60)]
+
+        stub.get_remote_chats(existing, persist_full=False, notify_errors=False)
+
+        assert stub._server_unread == {phone: 7}
+
 
 # ── Opening a chat sends the read the server needs ──────────────────────────
 
