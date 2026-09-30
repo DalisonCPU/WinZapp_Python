@@ -642,6 +642,9 @@ class ChatEventsMixin:
                 jid, normalized, unread_count, previous_unread,
             )
             return
+        # Recorded whatever the guards below decide for the badge: it is what
+        # the server believes, and opening the chat has to correct it.
+        self._note_server_unread(normalized, unread_count)
         # During the initial sync the WPPConnect handshake can emit
         # chats-update with unreadCount=0 BEFORE get_remote_chats() has
         # fetched the real list — accepting that would wipe the locally

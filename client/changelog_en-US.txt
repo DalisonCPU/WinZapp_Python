@@ -28,7 +28,7 @@ WHAT'S NEW
 
 - Confirmation before marking all chats as read. The command now asks first, with No as the default, so a stray Alt followed by Enter no longer marks everything as read, on your phone too. The question has a "Don't show again" option: ticked and confirmed with Yes, later requests mark everything straight away. To be asked again, use the "Ask for confirmation before marking all chats as read" option in the User Interface tab of Settings.
 
-- Profile backup in Settings. The new Profile backup tab sets how often WinZapp renews, when it closes, the copy of the browser profile it uses to recover the connection, every 24 hours by default. The backup can also be taken while WinZapp is open, at the interval you choose: WhatsApp is disconnected while it runs, which can take a few minutes, and WinZapp can ask before each one. A new backup only replaces the previous one once WhatsApp has connected again with it.
+- Profile backup in Settings. The new Profile backup tab sets how often WinZapp renews, when it closes, the copy of the browser profile it uses to recover the connection, every 24 hours by default. The backup can also be taken while WinZapp is open, at the interval you choose: WhatsApp is disconnected while it runs, which can take a few minutes, and WinZapp can ask before each one. A new backup only replaces the previous one once WhatsApp has connected again with it. If you would rather not spend the space on the backup, tick "Don't keep profile backups", knowing that if the profile is damaged you will need to pair again; when you tick it, WinZapp says how much space the backups take and asks whether to delete them.
 
 - Export and import your settings. In the File menu, “Export settings” writes your preferences to a file and “Import settings” applies that file here, right away, without restarting — for moving everything to another computer or another account. Your WhatsApp connection, and what belongs to one account such as cleared chats and per-chat sounds, stay out of the file. If you run your own API, its address, port and key travel with it.
 
@@ -40,7 +40,7 @@ WHAT'S NEW
 
 - Stereo voice messages. With a microphone that really records in stereo, a voice message can keep the sound of both sides. Tick "Record voice messages in stereo by default" in the Audio Devices tab of Settings, or use the new button below "Record voice message" (Ctrl+Shift+G) to record just one message in the other mode: stereo when the default is mono, mono when it is stereo. Since iPhones can't play stereo voice messages, a stereo recording is sent as audio, and WinZapp tells you so first, with a "Don't show again" option; to be warned again, use the matching option in the User Interface tab. If the microphone doesn't provide two channels, the message is recorded in mono and WinZapp tells you.
 
-- Resync only the open chat with Shift+F5, also in the Sync menu. Unlike F5, which deletes and downloads every chat again, Shift+F5 fetches the open chat's messages from WhatsApp again, puts any missing ones in the right place and removes the ones that no longer exist there, without touching older history. F5 and Shift+F5 now ask for confirmation, with No as the default and a "Don't show again" option; to be asked again, use the matching options in the User Interface tab of Settings.
+- Resync only the open chat with Shift+F5, also in the Sync menu. Unlike F5, which deletes and downloads every chat again, Shift+F5 fetches the open chat's messages from WhatsApp again, puts any missing ones in the right place and removes the ones that no longer exist there, without touching older history. F5 and Shift+F5 now ask for confirmation, with No as the default and a "Don't show again" option; to be asked again, use the matching options in the User Interface tab of Settings. When the chat is already up to date, or WhatsApp has no messages in it, Shift+F5 says so instead of saying it couldn't resync.
 
 - The global hotkey that brings WinZapp back from the system tray now also sends it there: with WinZapp in the foreground, the same hotkey hides it to the tray. In every other situation it still brings the window to the front.
 
@@ -121,6 +121,12 @@ FIXES
 - The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
 
 - Going to archived chats (Alt+4) with a main chat open made that chat disappear until you went back to the main chats. It now stays on screen below the archived list, just as an archived chat already stayed on screen when switching to the main chats. Esc closes the chat and returns focus to the archived list.
+
+- In a chat that had ever been cleared, the unread counter disappeared on its own about a minute after a message arrived, and opening the chat didn't mark it as read on your phone. It happened mostly in busy, muted groups. Now the counter stays until you read the chat, and reading it in WinZapp marks it as read on your phone too.
+
+- View once messages arrived with no counter, sound or notification, and after a sync they stayed forever as a message still waiting to load. Now it shows "View once message. Open it on your phone to see it.", with the sound and notification of a new message. The content itself still stays on the phone, as in WhatsApp Web.
+
+- Opened from a network folder — for example, the Downloads folder of a Parallels virtual machine on a Mac, which actually lives on the other computer — WinZapp couldn't install its local server and showed an unintelligible error. Now it says it can't run from there and explains how to fix it: install with WinZappInstaller, or move the folder to a drive on the computer itself.
 
 V1.1.1.0
 

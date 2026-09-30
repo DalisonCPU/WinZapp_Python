@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core.view_once import VIEW_ONCE_UNAVAILABLE_TYPE
 from core.call_log import (
     CALL_LOG_MESSAGE_TYPE,
     LEGACY_CALL_LOG_TYPE,
@@ -30,6 +31,33 @@ from core.locale_format import (
     get_time_format,
 )
 from main_window.message_rules import is_countable_message
+
+
+def _start_debounce_timer(delay_ms, callback, on_failure=None):
+    """Start a wx.CallLater from whichever thread asked for it.
+
+    wx.CallLater starts a wxTimer, and wx asserts that only the main thread
+    may do that -- from a worker it raises wxAssertionError. The debounced
+    schedulers below are called from sync workers too (Shift+F5's
+    _resync_conversation_worker() was one: it logged every resync as failed
+    after the resync itself had succeeded), so off the main thread the timer
+    is handed over with CallAfter instead. There the failure happens later, on
+    the main thread, where no caller can catch it: `on_failure` is how the
+    scheduler's "pending" flag is released in that case too.
+    """
+    if wx.IsMainThread():
+        wx.CallLater(delay_ms, callback)
+        return
+
+    def _start():
+        try:
+            wx.CallLater(delay_ms, callback)
+        except Exception:
+            logging.exception("[debounce] could not start the timer")
+            if on_failure is not None:
+                on_failure()
+
+    wx.CallAfter(_start)
 
 
 class ChatListMixin:
@@ -743,7 +771,15 @@ class ChatListMixin:
         if getattr(self, "_refresh_messages_pending", False):
             return
         self._refresh_messages_pending = True
-        wx.CallLater(300, self._do_scheduled_refresh_messages)
+        try:
+            _start_debounce_timer(
+                300, self._do_scheduled_refresh_messages,
+                on_failure=lambda: setattr(self, "_refresh_messages_pending", False))
+        except Exception:
+            # A flag left set with no timer behind it would swallow every
+            # later refresh for the rest of the launch.
+            self._refresh_messages_pending = False
+            raise
 
     def _do_scheduled_refresh_messages(self):
         """Run the coalesced rebuild. Re-checks the panel still has a
@@ -763,7 +799,15 @@ class ChatListMixin:
         if getattr(self, "_set_chats_pending", False):
             return
         self._set_chats_pending = True
-        wx.CallLater(300, self._do_scheduled_set_chats)
+        try:
+            _start_debounce_timer(
+                300, self._do_scheduled_set_chats,
+                on_failure=lambda: setattr(self, "_set_chats_pending", False))
+        except Exception:
+            # Same latch as _schedule_refresh_messages(): left set with no
+            # timer behind it, the chat list would stop reordering.
+            self._set_chats_pending = False
+            raise
 
     def _do_scheduled_set_chats(self):
         """Run heavy computation in background; apply UI changes on main thread."""
@@ -844,6 +888,7 @@ class ChatListMixin:
         "buttonsMessage", "listMessage", "templateMessage", "interactiveMessage",
         "buttonsResponseMessage", "listResponseMessage", "protocolMessage",
         CALL_LOG_MESSAGE_TYPE, LEGACY_CALL_LOG_TYPE,
+        VIEW_ONCE_UNAVAILABLE_TYPE,
     })
 
     @classmethod
@@ -1024,6 +1069,8 @@ class ChatListMixin:
                             orig_text = i18n.t("notif_contact")
                         elif orig_type == "locationMessage":
                             orig_text = i18n.t("notif_location")
+                        elif orig_type == VIEW_ONCE_UNAVAILABLE_TYPE:
+                            orig_text = i18n.t("view_once_message")
                         else:
                             orig_text = i18n.t("notif_unsupported")
                         break
@@ -1174,6 +1221,8 @@ class ChatListMixin:
             content = ", ".join(parts)
         elif msg_type == "stickerMessage":
             content = i18n.t("sticker")
+        elif msg_type == VIEW_ONCE_UNAVAILABLE_TYPE:
+            content = i18n.t("view_once_message")
         elif msg_type == "contactMessage":
             contact = msg_obj.get("contactMessage") or {}
             name = contact.get("displayName") or ""

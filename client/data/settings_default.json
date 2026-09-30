@@ -45,6 +45,7 @@
         "popup_enabled": true
     },
     "profile_backup": {
+        "snapshots_disabled": false,
         "close_snapshot_min_hours": 24,
         "live_snapshot_enabled": false,
         "live_snapshot_interval_hours": 24,

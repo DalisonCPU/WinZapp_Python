@@ -361,6 +361,72 @@ def test_the_live_backup_options_follow_their_checkbox(make_dialog):
     assert all(c.IsShown() for c in _live_backup_options(reopened))
 
 
+def _every_other_backup_option(dialog):
+    return (dialog._close_snapshot_hours_label, dialog._close_snapshot_hours_field,
+            dialog._live_snapshot_check) + _live_backup_options(dialog)
+
+
+def _tick(check, value):
+    import wx
+
+    check.SetValue(value)
+    event = wx.CommandEvent(wx.wxEVT_CHECKBOX, check.GetId())
+    event.SetEventObject(check)
+    event.SetInt(int(value))
+    check.GetEventHandler().ProcessEvent(event)
+
+
+def test_keeping_no_copies_hides_the_rest_of_the_tab(make_dialog):
+    """Nothing else on the tab means anything while "keep no profile backups"
+    is ticked — hidden, so Tab and the screen reader skip it. Unticked, the
+    tab is back as it was, live options included."""
+    dialog = make_dialog({"profile_backup": {"live_snapshot_enabled": True}})
+    assert dialog._no_profile_snapshots_check.GetValue() is False
+    assert all(c.IsShown() for c in _every_other_backup_option(dialog))
+
+    _tick(dialog._no_profile_snapshots_check, True)
+    assert dialog._no_profile_snapshots_check.IsShown()
+    assert not any(c.IsShown() for c in _every_other_backup_option(dialog))
+
+    _tick(dialog._no_profile_snapshots_check, False)
+    assert all(c.IsShown() for c in _every_other_backup_option(dialog))
+
+    reopened = make_dialog({"profile_backup": {"snapshots_disabled": True,
+                                               "live_snapshot_enabled": True}})
+    assert reopened._no_profile_snapshots_check.GetValue() is True
+    assert not any(c.IsShown() for c in _every_other_backup_option(reopened))
+
+
+def test_turning_copies_off_offers_to_delete_the_ones_on_disk(make_dialog, monkeypatch):
+    """Apply with the box just ticked asks once, No by default; Yes deletes.
+    A dialog opened with it already ticked does not ask again."""
+    import wx
+    import ui.dialogs.settings_dialog as settings_dialog_module
+
+    asked = []
+    monkeypatch.setattr(settings_dialog_module.wx, "MessageBox",
+                        lambda message, title, style, *a, **kw:
+                        asked.append(style) or wx.YES)
+    dialog = make_dialog({})
+    deleted = []
+    dialog.main_window.profile_snapshots_size = lambda: 1024 ** 3
+    dialog.main_window.delete_profile_snapshots = lambda: deleted.append(True)
+
+    _tick(dialog._no_profile_snapshots_check, True)
+    assert dialog._apply_values() is not False
+    assert dialog._apply_values() is not False
+
+    assert len(asked) == 1 and asked[0] & wx.NO_DEFAULT
+    assert deleted == [True]
+    assert dialog.main_window.settings["profile_backup"]["snapshots_disabled"] is True
+
+    again = make_dialog({"profile_backup": {"snapshots_disabled": True}})
+    again.main_window.profile_snapshots_size = lambda: 1024 ** 3
+    again.main_window.delete_profile_snapshots = lambda: deleted.append(True)
+    assert again._apply_values() is not False
+    assert len(asked) == 1
+
+
 def _quick_reaction_rows(dialog):
     return (dialog._quick_reaction_slots_label, dialog._quick_reaction_slots_list,
             dialog._reset_quick_reactions_btn)

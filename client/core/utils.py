@@ -993,6 +993,10 @@ DEFAULT_SETTINGS = {
         "popup_enabled": True
     },
     "profile_backup": {
+        # Settings > Cópia de segurança: keep no restore point at all
+        # (core/profile_backup.snapshots_disabled()). The pre-existing
+        # behaviour, so no migration: backfill adds it as False.
+        "snapshots_disabled": False,
         "close_snapshot_min_hours": 24,
         "live_snapshot_enabled": False,
         "live_snapshot_interval_hours": 24,
