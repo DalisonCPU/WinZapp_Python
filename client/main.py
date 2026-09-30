@@ -1325,8 +1325,10 @@ class MainWindow(
 
         # Content panel: all panels fill it; only one is shown at a time
         content_sizer = wx.BoxSizer(wx.VERTICAL)
-        content_sizer.Add(self.conversations_panel, 1, wx.EXPAND)
+        # Archived list first: when Alt+4 keeps the open conversation on
+        # screen, it sits below the list the user is on.
         content_sizer.Add(self.archived_conversations_panel, 1, wx.EXPAND)
+        content_sizer.Add(self.conversations_panel, 1, wx.EXPAND)
         content_sizer.Add(self.locked_conversations_panel, 1, wx.EXPAND)
         content_sizer.Add(self.status_panel, 1, wx.EXPAND)
         content_sizer.Add(self.calls_panel, 1, wx.EXPAND)

@@ -9,7 +9,9 @@ import logging
 import threading
 import time
 import wx
-from core.conversation_view import conversation_in_view
+from core.conversation_view import (
+    archived_chat_stays_silent, archived_panel_is_shown, conversation_in_view,
+)
 from core.quote_recovery import (
     RECOVERED_FROM_QUOTE,
     UNDECRYPTED_PLACEHOLDER_TYPES,
@@ -1168,9 +1170,10 @@ class MessageEventsMixin:
                 return
 
             # Archived + not the open conversation: stay silent even with the
-            # window active (archived chats only play sound / speak when the
-            # user currently has that exact conversation open and focused).
-            if archived and not is_current_conv:
+            # window active — unless the archived list is what is on screen,
+            # where it is announced like any other chat in the foreground.
+            if archived and archived_chat_stays_silent(
+                    is_current_conv, archived_panel_is_shown(self)):
                 return
 
             if locked and not is_current_conv:
@@ -1771,7 +1774,8 @@ class MessageEventsMixin:
                 )
                 if muted and not is_current_conv:
                     return
-                if archived and not is_current_conv:
+                if archived and archived_chat_stays_silent(
+                        is_current_conv, archived_panel_is_shown(self)):
                     return
                 # Reactions do not increment the unread-message count. A
                 # count-only locked-chat notification would therefore be

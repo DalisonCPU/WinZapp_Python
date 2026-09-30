@@ -116,7 +116,11 @@ CORRECCIONES
 
 - En las conversaciones archivadas, Alt+M no llevaba a la lista de mensajes de la conversación abierta, como hace en las conversaciones principales. Ahora funciona desde cualquier lugar del panel.
 
-- Abrir una conversación archivada con una conversación principal abierta y volver después a las conversaciones principales seguía mostrando la conversación archivada, que ya habías dejado atrás. Ahora WinZapp vuelve a la última conversación principal que tenías abierta.
+- Abrir una conversación archivada con una conversación principal abierta y volver después a las conversaciones principales seguía mostrando la conversación archivada, que ya habías dejado atrás. Ahora WinZapp vuelve a la última conversación principal que tenías abierta. Si no había ninguna conversación principal abierta, la conversación archivada sigue en pantalla junto a la lista de conversaciones, y solo se marca como leída o se anuncia mientras el foco está en ella.
+
+- Lo mismo ocurre con cualquier otro panel, como Estado o Llamadas: con una conversación abierta detrás, sus mensajes nuevos se anuncian como los de cualquier otra conversación y no se marcan como leídos. Los mensajes de conversaciones archivadas solo se anuncian mientras la lista de archivadas está en pantalla.
+
+- Al ir a las conversaciones archivadas (Alt+4) con una conversación principal abierta, esa conversación desaparecía de la pantalla hasta volver a las principales. Ahora sigue apareciendo debajo de la lista de archivadas, igual que una conversación archivada ya seguía apareciendo al cambiar a las principales. Esc cierra la conversación y devuelve el foco a la lista de archivadas.
 
 - En una conversación que se había vaciado alguna vez, el contador de no leídos desaparecía solo alrededor de un minuto después de llegar un mensaje, y abrir la conversación no la marcaba como leída en el teléfono. Pasaba sobre todo en grupos con mucha actividad y silenciados. Ahora el contador se mantiene hasta que lees la conversación, y leerla en WinZapp la marca como leída también en el teléfono.
 

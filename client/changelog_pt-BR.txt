@@ -116,7 +116,11 @@ CORREÇÕES
 
 - Nas conversas arquivadas, Alt+M não levava para a lista de mensagens da conversa aberta, como faz nas conversas principais. Agora funciona de qualquer lugar do painel.
 
-- Abrir uma conversa arquivada com uma conversa principal aberta e depois voltar para as conversas principais continuava mostrando a conversa arquivada, que você já tinha deixado para trás. Agora o WinZapp volta para a última conversa principal que você tinha aberto.
+- Abrir uma conversa arquivada com uma conversa principal aberta e depois voltar para as conversas principais continuava mostrando a conversa arquivada, que você já tinha deixado para trás. Agora o WinZapp volta para a última conversa principal que você tinha aberto. Se não havia nenhuma conversa principal aberta, a conversa arquivada continua na tela ao lado da lista de conversas, e só é marcada como lida ou anunciada quando o foco está nela.
+
+- O mesmo vale para qualquer outro painel, como Status ou Ligações: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. Mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está na tela.
+
+- Ao ir para as conversas arquivadas (Alt+4) com uma conversa principal aberta, essa conversa sumia da tela até você voltar às principais. Agora ela continua aparecendo abaixo da lista de arquivadas, como uma conversa arquivada já continuava aparecendo ao trocar para as principais. Esc fecha a conversa e devolve o foco à lista de arquivadas.
 
 - Numa conversa que já tinha sido limpa alguma vez, o contador de não lidas sumia sozinho cerca de um minuto depois de chegar uma mensagem, e abrir a conversa não a marcava como lida no celular. Acontecia principalmente em grupos movimentados e silenciados. Agora o contador fica até você ler a conversa, e ler no WinZapp marca como lida também no celular.
 
