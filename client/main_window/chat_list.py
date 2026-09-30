@@ -33,7 +33,7 @@ from core.locale_format import (
 from main_window.message_rules import is_countable_message
 
 
-def _start_debounce_timer(delay_ms, callback):
+def _start_debounce_timer(delay_ms, callback, on_failure=None):
     """Start a wx.CallLater from whichever thread asked for it.
 
     wx.CallLater starts a wxTimer, and wx asserts that only the main thread
@@ -41,12 +41,23 @@ def _start_debounce_timer(delay_ms, callback):
     schedulers below are called from sync workers too (Shift+F5's
     _resync_conversation_worker() was one: it logged every resync as failed
     after the resync itself had succeeded), so off the main thread the timer
-    is handed over with CallAfter instead.
+    is handed over with CallAfter instead. There the failure happens later, on
+    the main thread, where no caller can catch it: `on_failure` is how the
+    scheduler's "pending" flag is released in that case too.
     """
     if wx.IsMainThread():
         wx.CallLater(delay_ms, callback)
-    else:
-        wx.CallAfter(wx.CallLater, delay_ms, callback)
+        return
+
+    def _start():
+        try:
+            wx.CallLater(delay_ms, callback)
+        except Exception:
+            logging.exception("[debounce] could not start the timer")
+            if on_failure is not None:
+                on_failure()
+
+    wx.CallAfter(_start)
 
 
 class ChatListMixin:
@@ -761,7 +772,9 @@ class ChatListMixin:
             return
         self._refresh_messages_pending = True
         try:
-            _start_debounce_timer(300, self._do_scheduled_refresh_messages)
+            _start_debounce_timer(
+                300, self._do_scheduled_refresh_messages,
+                on_failure=lambda: setattr(self, "_refresh_messages_pending", False))
         except Exception:
             # A flag left set with no timer behind it would swallow every
             # later refresh for the rest of the launch.
@@ -787,7 +800,9 @@ class ChatListMixin:
             return
         self._set_chats_pending = True
         try:
-            _start_debounce_timer(300, self._do_scheduled_set_chats)
+            _start_debounce_timer(
+                300, self._do_scheduled_set_chats,
+                on_failure=lambda: setattr(self, "_set_chats_pending", False))
         except Exception:
             # Same latch as _schedule_refresh_messages(): left set with no
             # timer behind it, the chat list would stop reordering.

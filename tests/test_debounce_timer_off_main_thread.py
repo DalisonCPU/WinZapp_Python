@@ -46,7 +46,9 @@ def test_off_the_main_thread_the_timer_is_handed_to_the_main_thread(monkeypatch,
 
     chat_list._start_debounce_timer(300, callback)
 
-    assert wx_calls == [("CallAfter", chat_list.wx.CallLater, (300, callback))]
+    assert [c[0] for c in wx_calls] == ["CallAfter"]
+    wx_calls[0][1]()   # what the main thread then runs
+    assert wx_calls[1:] == [("CallLater", 300, callback)]
 
 
 def test_on_the_main_thread_the_timer_starts_directly(monkeypatch, wx_calls):
@@ -87,3 +89,20 @@ def test_a_timer_that_fails_to_start_does_not_latch_the_flag(monkeypatch, method
         getattr(window, method)()
 
     assert getattr(window, flag) is False
+
+
+def test_a_timer_that_fails_on_the_main_thread_after_the_handover_releases_the_flag(monkeypatch):
+    queued = []
+    monkeypatch.setattr(chat_list.wx, "IsMainThread", lambda: False)
+    monkeypatch.setattr(chat_list.wx, "CallAfter", lambda fn, *a, **k: queued.append(fn))
+
+    def _refuse(*_a, **_k):
+        raise RuntimeError("timer refused")
+    monkeypatch.setattr(chat_list.wx, "CallLater", _refuse)
+    window = _Window()
+
+    window._schedule_set_chats()
+    assert window._set_chats_pending is True    # nothing has failed yet
+    queued[0]()                                 # the main thread runs the handover
+
+    assert window._set_chats_pending is False

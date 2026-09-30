@@ -371,10 +371,11 @@ class SettingsMixin:
         location = global_dir()
         if not is_unc_path(location):
             return
+        # No path in the log: it carries the Windows user name and the share,
+        # and these logs are pasted into public groups.
         logging.warning(
-            "[startup] WinZapp is running from a network folder (%s) — "
+            "[startup] WinZapp is running from a network folder (UNC path) — "
             "refusing to start: npm install cannot run on a UNC path.",
-            location,
         )
         if not self.background_mode:
             wx.MessageBox(
