@@ -610,11 +610,74 @@ export async function offerCall(req: Request, res: Response) {
       return;
     }
     await prepareAudioBridge(req);
-    ok(res, await evaluateWppCall(req, 'offer', body));
+    const stopWatching = watchOutgoingCallNotices(req);
+    try {
+      ok(res, await evaluateWppCall(req, 'offer', body));
+    } finally {
+      stopWatching();
+    }
   } catch (error) {
     await stopAudioBridge(req);
     fail(req, res, 'offerCall', error);
   }
+}
+
+/**
+ * While an outgoing call is being placed, WhatsApp Web can open a notice the
+ * hidden page has no one to answer -- seen live calling a WhatsApp Business
+ * account: "About this call. This business uses a secure service from Meta to
+ * manage this call..." [Learn more] [Continue]. The offer then waits on it
+ * until the request is aborted at 75 s and the call never rings.
+ *
+ * The user asked for this call, so a notice raised while placing it is
+ * answered with its primary (last) button, WhatsApp's affirmative position,
+ * which keeps this independent of the UI language. Only dialogs that appear
+ * during the offer are touched, and each is logged with its text.
+ */
+function watchOutgoingCallNotices(req: Request): () => void {
+  const page = getWhatsappPage(req);
+  const logger = (req as any).logger;
+  let stopped = false;
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      const answered: string[] = await page.evaluate(() => {
+        const win = window as any;
+        const seen: Set<Element> = (win.__winzappCallNoticesSeen ||= new Set());
+        const out: string[] = [];
+        for (const dialog of Array.from(document.querySelectorAll('[role="dialog"]'))) {
+          if (seen.has(dialog)) continue;
+          const buttons = Array.from(dialog.querySelectorAll('button,[role="button"]')) as HTMLElement[];
+          if (!buttons.length || buttons.length > 3) continue;
+          seen.add(dialog);
+          const text = ((dialog as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim();
+          buttons[buttons.length - 1].click();
+          out.push(text.slice(0, 300));
+        }
+        return out;
+      });
+      for (const text of answered) {
+        logger?.info?.(`[call-notice] answered a notice while placing a call: ${text}`);
+      }
+    } catch (_) {
+      // page busy or navigating; try again on the next tick
+    }
+    if (!stopped) setTimeout(tick, 500);
+  };
+  // Dialogs already open before this call are not ours to answer.
+  page
+    .evaluate(() => {
+      const win = window as any;
+      const seen: Set<Element> = (win.__winzappCallNoticesSeen ||= new Set());
+      document.querySelectorAll('[role="dialog"]').forEach((d) => seen.add(d));
+    })
+    .catch(() => undefined)
+    .finally(() => setTimeout(tick, 250));
+  const limit = setTimeout(() => (stopped = true), 60_000);
+  return () => {
+    stopped = true;
+    clearTimeout(limit);
+  };
 }
 
 export async function callDiagnostics(req: Request, res: Response) {
