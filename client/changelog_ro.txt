@@ -62,6 +62,8 @@ NOUTĂȚI
 
 - Fișierele audio lipite în câmpul de mesaj cu Ctrl+V pot fi trimise acum ca audio sau ca document, prin noua opțiune „Fișiere audio lipite în câmpul de mesaj (Ctrl+V)” din fila Fișiere și salvare din Setări; implicit, ca audio. Mesajul apare în conversație de la început cu tipul cu care va fi trimis.
 
+- Conversațiile arhivate și blocate pot fi acum selectate la fel ca cele principale: Ctrl+Spațiu, Shift+săgeți, Shift+Home/End, Ctrl+Shift+Spațiu și Spațiu în modul de selecție, cu același sunet și aceleași anunțuri. Meniul „Acțiuni în bloc” (cu scurtături proprii) permite dezarhivarea, golirea, ștergerea și marcarea ca citite sau necitite a celor arhivate, respectiv deblocarea sau marcarea ca citite sau necitite a celor blocate.
+
 CORECTĂRI
 
 - Când porneați un mesaj vocal cu anunțurile înregistrării dezactivate, cititorul de ecran nu mai începe să spună „Trimiteți” înainte de a fi întrerupt. WinZapp evită acum mutarea automată a focalizării care provoca acest fragment, păstrând disponibile Ctrl+R, Ctrl+Shift+P și Ctrl+Shift+D.

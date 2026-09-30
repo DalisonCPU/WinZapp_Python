@@ -37,7 +37,8 @@ Where to look (and where new code goes):
     bookmarks                message bookmarks
     message_search           search inside the conversation
     chat_menu                conversations-list context menu and chat actions
-    chat_selection           multi-selection of chats and bulk chat actions
+    chat_list_selection      chat multi-selection shared by every chat list (main, archived, locked)
+    chat_selection           the conversations list's keys and bulk chat actions
     conversation_info        conversation data, profile, presence note
     formatting               timestamps, dates, durations, file sizes
 

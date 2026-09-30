@@ -62,6 +62,8 @@ ULEPSZENIA
 
 - Pliki audio wklejone do pola wiadomości skrótem Ctrl+V można teraz wysyłać jako audio lub jako dokument, dzięki nowej opcji „Pliki audio wklejone do pola wiadomości (Ctrl+V)” na karcie Pliki i zapisywanie w Ustawieniach; domyślnie jako audio. Wiadomość od razu pojawia się w czacie z typem, z jakim zostanie wysłana.
 
+- Zarchiwizowane i zablokowane czaty można teraz zaznaczać tak samo jak główne rozmowy: Ctrl+Spacja, Shift+strzałki, Shift+Home/End, Ctrl+Shift+Spacja oraz Spacja w trybie zaznaczania, z tym samym dźwiękiem i komunikatami. Menu „Akcje masowe” (z własnymi skrótami) pozwala przywracać z archiwum, czyścić, usuwać oraz oznaczać jako przeczytane lub nieprzeczytane zarchiwizowane czaty, a w zablokowanych — odblokowywać lub oznaczać jako przeczytane albo nieprzeczytane.
+
 POPRAWKI
 
 - Po rozpoczęciu nagrywania wiadomości głosowej przy wyciszonych komunikatach czytnik ekranu nie zaczyna już wypowiadać „Wyślij”, zanim zostanie przerwany. WinZapp nie wykonuje teraz automatycznego przeniesienia fokusu, które powodowało ten urwany komunikat, a skróty Ctrl+R, Ctrl+Shift+P i Ctrl+Shift+D nadal działają.

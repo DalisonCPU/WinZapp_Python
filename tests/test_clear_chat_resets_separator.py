@@ -50,6 +50,8 @@ class _Stub:
     _on_menu_clear_chat = ConversationsPanel._on_menu_clear_chat
     _on_mass_clear_chats = ConversationsPanel._on_mass_clear_chats
     _reset_view_after_chat_cleared = ConversationsPanel._reset_view_after_chat_cleared
+    _reset_after_chat_cleared = ConversationsPanel._reset_after_chat_cleared
+    _repaint_chat_selection = ConversationsPanel._repaint_chat_selection
 
     def __init__(self, jid):
         self.main_window = _FakeMainWindow()

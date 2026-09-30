@@ -62,6 +62,8 @@ MELHORIAS
 
 - Arquivos de áudio colados no campo de mensagem com Ctrl+V agora podem ser enviados como áudio ou como documento, na nova opção "Arquivos de áudio colados no campo de mensagem (Ctrl+V)" da aba Arquivos e salvamento das Configurações; o padrão é áudio. A mensagem já aparece na conversa com o tipo com que será enviada.
 
+- Conversas arquivadas e trancadas agora podem ser selecionadas como as conversas principais: Ctrl+Espaço, Shift+setas, Shift+Home/End, Ctrl+Shift+Espaço e o Espaço do modo de seleção, com o mesmo som e os mesmos anúncios. O menu "Ações em massa" (e atalhos próprios) permite desarquivar, limpar, apagar e marcar como lidas ou não lidas as arquivadas, e destrancar ou marcar como lidas ou não lidas as trancadas.
+
 CORREÇÕES
 
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de tela não começa mais a dizer “Enviar” antes de ser interrompido. O WinZapp agora evita a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.
