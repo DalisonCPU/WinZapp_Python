@@ -1473,8 +1473,10 @@ class UpdateChecker:
     def _show_update_dialog(self, remote_version: str, changelog: str, zip_url: str, sha256sums_url: str = "",
                             signature_url: str = "", is_alpha: bool = False):
         if getattr(self._mw, "_shutting_down", False):
-            # Quitting: no dialog on a dying app. Nothing to retry either.
+            # Quitting: no dialog on a dying app. The retry covers a shutdown
+            # Windows cancelled, after which the app is still here.
             self._release_prompt()
+            self._schedule_retry()
             return
         if not self._main_window_ready():
             # The check runs 15 s after launch, which a first start or a slow
