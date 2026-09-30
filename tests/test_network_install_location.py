@@ -4,51 +4,42 @@ Reported from a Windows 11 ARM machine in Parallels, whose Downloads folder is
 the Mac's (\\\\Mac\\Home\\Downloads): WinZapp extracted there ran npm install
 on the share, cmd.exe refused the UNC path as its working directory, and the
 user got two pages of npm output and no WinZapp. The database and the Chrome
-profile would have lived on the share too, where SQLite's locking is not
-reliable. See core/install_location.py.
+profile would have lived on the share too. See core/install_location.py,
+also for why a drive letter mapped to a share is not refused.
 """
 
 import pytest
 
 import app_paths
-from core import install_location
-from core.install_location import DRIVE_REMOTE, is_network_path
+from core.install_location import is_unc_path
 from main import MainWindow
 from main_window import settings as settings_module
 
 
-class TestIsNetworkPath:
+class TestIsUncPath:
     @pytest.mark.parametrize("path", [
         r"\\Mac\Home\Downloads\WinZapp (2)\WinZapp",
         r"\\?\UNC\Mac\Home\Downloads\WinZapp",
+        r"\\?\unc\Mac\Home\WinZapp",
         "//server/share/WinZapp",
     ])
     def test_unc_paths(self, path):
-        assert is_network_path(path, drive_type_of=lambda root: 3) is True
+        assert is_unc_path(path) is True
 
-    def test_a_drive_mapped_to_a_share(self):
-        seen = []
-
-        def _drive_type(root):
-            seen.append(root)
-            return DRIVE_REMOTE
-
-        assert is_network_path(r"Y:\WinZapp", drive_type_of=_drive_type) is True
-        assert seen == ["Y:\\"]
-
-    @pytest.mark.parametrize("path", [r"C:\Users\nuno\WinZapp", r"\\?\C:\WinZapp"])
-    def test_a_local_drive(self, path):
-        assert is_network_path(path, drive_type_of=lambda root: 3) is False
+    @pytest.mark.parametrize("path", [
+        r"C:\Users\nuno\WinZapp",
+        r"\\?\C:\WinZapp",
+        r"\\.\C:\WinZapp",
+        # A drive mapped to a share: cmd.exe accepts it and people already run
+        # WinZapp from one; refusing it would lock them out before the updater.
+        r"Z:\WinZapp",
+    ])
+    def test_a_drive_letter_mapped_or_not(self, path):
+        assert is_unc_path(path) is False
 
     @pytest.mark.parametrize("path", ["", None, "WinZapp\\data"])
     def test_nothing_to_judge(self, path):
-        assert is_network_path(path, drive_type_of=lambda root: DRIVE_REMOTE) is False
-
-    def test_a_drive_that_cannot_be_asked_about_is_not_refused(self):
-        def _broken(root):
-            raise OSError("no such drive")
-
-        assert is_network_path(r"Z:\WinZapp", drive_type_of=_broken) is False
+        assert is_unc_path(path) is False
 
 
 class _I18n:
@@ -72,14 +63,13 @@ def boxes(monkeypatch):
     return shown
 
 
-def _installed_at(monkeypatch, base, network):
+def _installed_at(monkeypatch, base):
     monkeypatch.setattr(app_paths, "global_dir", lambda *parts: base + r"\data\global")
-    monkeypatch.setattr(install_location, "is_network_path", lambda path: network)
 
 
 class TestTheStartupCheck:
     def test_a_network_folder_is_explained_and_the_app_closes(self, monkeypatch, boxes):
-        _installed_at(monkeypatch, r"\\Mac\Home\Downloads\WinZapp", network=True)
+        _installed_at(monkeypatch, r"\\Mac\Home\Downloads\WinZapp")
 
         with pytest.raises(SystemExit):
             _Window()._refuse_network_install_location()
@@ -89,8 +79,9 @@ class TestTheStartupCheck:
             "network_install_location_title",
         )]
 
-    def test_a_local_folder_starts_normally(self, monkeypatch, boxes):
-        _installed_at(monkeypatch, r"C:\WinZapp", network=False)
+    @pytest.mark.parametrize("base", [r"C:\WinZapp", r"Z:\WinZapp"])
+    def test_a_drive_letter_starts_normally(self, monkeypatch, boxes, base):
+        _installed_at(monkeypatch, base)
 
         _Window()._refuse_network_install_location()
 
@@ -98,7 +89,7 @@ class TestTheStartupCheck:
 
     def test_in_the_background_it_closes_without_a_dialog(self, monkeypatch, boxes):
         """An autostart at logon has nobody to read a dialog; the log says why."""
-        _installed_at(monkeypatch, r"\\Mac\Home\Downloads\WinZapp", network=True)
+        _installed_at(monkeypatch, r"\\Mac\Home\Downloads\WinZapp")
 
         with pytest.raises(SystemExit):
             _Window(background_mode=True)._refuse_network_install_location()

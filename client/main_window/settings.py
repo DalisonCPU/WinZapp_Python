@@ -357,24 +357,23 @@ class SettingsMixin:
     # ── Terms of service ─────────────────────────────────────────────────────
 
     def _refuse_network_install_location(self):
-        """Stop with a clear explanation when WinZapp runs from a network folder.
+        """Stop with a clear explanation when WinZapp runs from a UNC path.
 
-        Before anything is installed or opened on it: from a network folder
-        npm install fails with a page of output that explains nothing, and the
-        message database and the Chrome profile would live on a share, where
-        SQLite's locking is not reliable (core/install_location.py). The
-        common way to land here is a virtual machine — Parallels on a Mac maps
+        Before anything is installed: from //server/share npm install fails
+        with a page of output that explains nothing (core/install_location.py,
+        which also says why a mapped drive letter is not refused). The common
+        way to land here is a virtual machine — Parallels on a Mac maps
         Windows' Downloads to the Mac's own folder — so the message names the
         path and says exactly what to do instead.
         """
         from app_paths import global_dir
-        from core.install_location import is_network_path
+        from core.install_location import is_unc_path
         location = global_dir()
-        if not is_network_path(location):
+        if not is_unc_path(location):
             return
         logging.warning(
             "[startup] WinZapp is running from a network folder (%s) — "
-            "refusing to start: npm install and the database cannot work there.",
+            "refusing to start: npm install cannot run on a UNC path.",
             location,
         )
         if not self.background_mode:
