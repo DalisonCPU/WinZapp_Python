@@ -1,0 +1,13 @@
+{
+  "autostart_label": "Iniciar WinZapp en segundo plano al iniciar sesión en el Mac",
+  "autostart_ask_title": "Iniciar WinZapp al iniciar sesión",
+  "autostart_ask_message": "¿Deseas permitir que WinZapp se inicie automáticamente en segundo plano al iniciar sesión en el Mac?",
+  "autostart_success_message": "WinZapp ahora se iniciará en segundo plano al iniciar sesión.",
+  "spell_check_mode_windows": "Seguir la configuración de macOS (predeterminado)",
+  "audio_device_failed_input": "Error al abrir el dispositivo de grabación \"{device}\". WinZapp volverá a usar el dispositivo de grabación predeterminado del sistema.",
+  "audio_device_failed_output": "Error al abrir el dispositivo de reproducción \"{device}\". WinZapp volverá a usar el dispositivo de reproducción predeterminado del sistema.",
+  "accessibility_sapi_fallback_label": "Usar la voz del sistema cuando VoiceOver no esté activo",
+  "voice_recording_device_failed": "No se pudo abrir el micrófono. Comprueba que está conectado y que WinZapp tiene permiso para usarlo en Ajustes del Sistema, Privacidad y seguridad, Micrófono.",
+  "save_folder_mode_label": "&Comportamiento predeterminado de macOS al guardar archivos",
+  "mac_not_yet_available": "aún no disponible en Mac"
+}

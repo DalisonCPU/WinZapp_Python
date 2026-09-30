@@ -1,0 +1,13 @@
+{
+  "autostart_label": "Start WinZapp in the background when you log in",
+  "autostart_ask_title": "Start WinZapp at login",
+  "autostart_ask_message": "Would you like WinZapp to start automatically in the background when you log in to your Mac?",
+  "autostart_success_message": "WinZapp will now start in the background when you log in.",
+  "spell_check_mode_windows": "Follow the macOS setting (default)",
+  "audio_device_failed_input": "Failed to open the recording device \"{device}\". WinZapp will fall back to the system default recording device.",
+  "audio_device_failed_output": "Failed to open the playback device \"{device}\". WinZapp will fall back to the system default playback device.",
+  "accessibility_sapi_fallback_label": "Use the system voice when VoiceOver is not running",
+  "voice_recording_device_failed": "Could not open the microphone. Check that it is connected and that WinZapp is allowed to use it in System Settings, Privacy & Security, Microphone.",
+  "save_folder_mode_label": "&Default macOS behavior when saving files",
+  "mac_not_yet_available": "not yet available on Mac"
+}

@@ -1,0 +1,13 @@
+{
+  "autostart_label": "Mac'te oturum açtığınızda WinZapp'i arka planda başlat",
+  "autostart_ask_title": "WinZapp'i Oturum Açıldığında Başlat",
+  "autostart_ask_message": "Mac'te oturum açtığınızda WinZapp'in arka planda otomatik olarak başlamasını ister misiniz?",
+  "autostart_success_message": "WinZapp artık oturum açtığınızda arka planda başlayacak.",
+  "spell_check_mode_windows": "macOS ayarını izle (varsayılan)",
+  "audio_device_failed_input": "\"{device}\" kayıt cihazı açılamadı. WinZapp varsayılan sistem kayıt cihazına dönecektir.",
+  "audio_device_failed_output": "\"{device}\" oynatma cihazı açılamadı. WinZapp varsayılan sistem oynatma cihazına dönecektir.",
+  "accessibility_sapi_fallback_label": "VoiceOver çalışmadığında sistem sesini kullan",
+  "voice_recording_device_failed": "Mikrofon açılamadı. Mikrofonun bağlı olduğundan ve Sistem Ayarları, Gizlilik ve Güvenlik, Mikrofon bölümünde WinZapp'in mikrofonu kullanmasına izin verildiğinden emin olun.",
+  "save_folder_mode_label": "Dosyaları kaydederken &varsayılan macOS davranışı",
+  "mac_not_yet_available": "Mac'te henüz kullanılamıyor"
+}

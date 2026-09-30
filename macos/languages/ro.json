@@ -1,0 +1,13 @@
+{
+  "autostart_label": "Porniți WinZapp în fundal când vă conectați la Mac",
+  "autostart_ask_title": "Porniți WinZapp la conectare",
+  "autostart_ask_message": "Doriți ca WinZapp să pornească automat în fundal când vă conectați la Mac?",
+  "autostart_success_message": "WinZapp va porni acum în fundal când vă conectați.",
+  "spell_check_mode_windows": "Urmează setarea macOS (implicit)",
+  "audio_device_failed_input": "Nu s-a putut deschide dispozitivul de înregistrare „{device}”. WinZapp va reveni la dispozitivul de înregistrare implicit al sistemului.",
+  "audio_device_failed_output": "Nu s-a putut deschide dispozitivul de redare „{device}”. WinZapp va reveni la dispozitivul de redare implicit al sistemului.",
+  "accessibility_sapi_fallback_label": "Utilizați vocea sistemului când VoiceOver nu rulează",
+  "voice_recording_device_failed": "Nu s-a putut deschide microfonul. Verificați dacă este conectat și dacă WinZapp are permisiunea de a-l folosi în Configurări sistem, Confidențialitate și securitate, Microfon.",
+  "save_folder_mode_label": "&Comportament implicit macOS la salvarea fișierelor",
+  "mac_not_yet_available": "încă indisponibil pe Mac"
+}

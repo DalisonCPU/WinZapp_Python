@@ -1,0 +1,13 @@
+{
+  "autostart_label": "Uruchamiaj WinZapp w tle po zalogowaniu na Macu",
+  "autostart_ask_title": "Uruchamiaj WinZapp po zalogowaniu",
+  "autostart_ask_message": "Czy chcesz, aby WinZapp uruchamiał się automatycznie w tle po zalogowaniu na Macu?",
+  "autostart_success_message": "WinZapp będzie teraz uruchamiany w tle po zalogowaniu.",
+  "spell_check_mode_windows": "Zgodnie z ustawieniem systemu macOS (domyślnie)",
+  "audio_device_failed_input": "Nie udało się otworzyć urządzenia nagrywającego \"{device}\". WinZapp użyje domyślnego urządzenia nagrywającego systemu.",
+  "audio_device_failed_output": "Nie udało się otworzyć urządzenia odtwarzającego \"{device}\". WinZapp użyje domyślnego urządzenia odtwarzającego systemu.",
+  "accessibility_sapi_fallback_label": "Używaj głosu systemowego, gdy VoiceOver nie jest włączony",
+  "voice_recording_device_failed": "Nie udało się otworzyć mikrofonu. Sprawdź, czy jest podłączony i czy WinZapp ma do niego dostęp w Ustawieniach systemowych, Prywatność i ochrona, Mikrofon.",
+  "save_folder_mode_label": "&Domyślne zachowanie systemu macOS podczas zapisywania plików",
+  "mac_not_yet_available": "jeszcze niedostępne na Macu"
+}
