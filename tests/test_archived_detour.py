@@ -79,11 +79,12 @@ def test_returning_after_the_archived_chat_was_closed_still_restores_main():
                            {"take_focus": False, "mark_read": False})]
 
 
-def test_returning_with_no_main_conversation_just_drops_the_archived_one():
+def test_returning_with_no_main_conversation_keeps_the_archived_one_visible():
     stub = _panel({"remoteJid": "arch@s.whatsapp.net"}, "")
     _resume(stub)
-    assert stub.calls == ["close"]
-    assert stub.conversation is None
+    assert stub.calls == []
+    assert stub.conversation["remoteJid"] == "arch@s.whatsapp.net"
+    assert not stub._detour.active
 
 
 def test_resume_target_that_became_archived_or_vanished_is_not_reopened():
@@ -91,6 +92,14 @@ def test_resume_target_that_became_archived_or_vanished_is_not_reopened():
         stub = _panel(None, target)
         _resume(stub)
         assert stub.calls == []
+
+
+def test_an_unusable_resume_target_leaves_the_archived_chat_on_screen():
+    for target in ("locked@s.whatsapp.net", "gone@s.whatsapp.net"):
+        stub = _panel({"remoteJid": "arch@s.whatsapp.net"}, target)
+        _resume(stub)
+        assert stub.calls == []
+        assert stub.conversation["remoteJid"] == "arch@s.whatsapp.net"
 
 
 def test_a_locked_main_chat_is_not_reopened_after_the_vault_locked():

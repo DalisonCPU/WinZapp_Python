@@ -27,13 +27,27 @@ def conversation_in_view(panel) -> bool:
             return False
     except RuntimeError:  # wx object already destroyed
         return False
-    # The archived list can sit next to the open conversation (Alt+4 keeps it
-    # visible). Then the conversation is being read only while focus is
-    # inside it (Tab, Alt+2, Alt+M all move it there); on the list it is
-    # visible but not read.
-    if not archived_panel_is_shown(getattr(panel, "main_window", None)):
-        return True
-    return _focus_is_inside(panel)
+    # A conversation can sit next to a list it does not belong to: a main chat
+    # under the archived list (Alt+4 keeps it visible), or an archived chat
+    # beside the main list (Alt+1 keeps it visible). It is being read only
+    # while focus is inside it (Tab, Alt+2, Alt+M all move it there); on the
+    # list it is visible but not read.
+    main_window = getattr(panel, "main_window", None)
+    if archived_panel_is_shown(main_window) or _archived_beside_main_list(panel, main_window):
+        return _focus_is_inside(getattr(panel, "conversation_panel", panel))
+    return True
+
+
+def _archived_beside_main_list(panel, main_window) -> bool:
+    is_archived = getattr(main_window, "is_chat_archived", None)
+    main_list = getattr(panel, "conversations_list", None)
+    if is_archived is None or main_list is None:
+        return False
+    try:
+        jid = panel.conversation.get("remoteJid", "")
+        return bool(jid) and bool(is_archived(jid)) and bool(main_list.IsShown())
+    except RuntimeError:  # wx object already destroyed
+        return False
 
 
 def _focused_window():
@@ -44,10 +58,10 @@ def _focused_window():
         return None
 
 
-def _focus_is_inside(panel) -> bool:
+def _focus_is_inside(pane) -> bool:
     window = _focused_window()
     while window is not None:
-        if window is panel:
+        if window is pane:
             return True
         try:
             window = window.GetParent()

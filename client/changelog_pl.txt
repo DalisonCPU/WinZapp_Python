@@ -116,7 +116,7 @@ POPRAWKI
 
 - W zarchiwizowanych czatach Alt+M nie przenosił do listy wiadomości otwartego czatu, tak jak w głównych czatach. Teraz działa z dowolnego miejsca w panelu.
 
-- Otwarcie zarchiwizowanego czatu przy otwartym czacie głównym, a potem powrót do czatów głównych, nadal pokazywało zarchiwizowany czat, który był już za tobą. Teraz WinZapp wraca do ostatniego głównego czatu, który miałeś otwarty.
+- Otwarcie zarchiwizowanego czatu przy otwartym czacie głównym, a potem powrót do czatów głównych, nadal pokazywało zarchiwizowany czat, który był już za tobą. Teraz WinZapp wraca do ostatniego głównego czatu, który miałeś otwarty. Jeśli żaden główny czat nie był otwarty, zarchiwizowany czat pozostaje na ekranie obok listy czatów i jest oznaczany jako przeczytany lub zapowiadany tylko wtedy, gdy jest w nim fokus.
 
 - To samo dotyczy każdego innego panelu, takiego jak Status czy Połączenia: gdy za nim zostaje otwarty czat, jego nowe wiadomości są zapowiadane jak wiadomości z innych czatów i nie są oznaczane jako przeczytane. Wiadomości z zarchiwizowanych czatów są zapowiadane tylko wtedy, gdy lista zarchiwizowanych jest na ekranie.
 
