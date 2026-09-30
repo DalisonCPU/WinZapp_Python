@@ -26,3 +26,20 @@ def conversation_in_view(panel) -> bool:
         return bool(shown())
     except RuntimeError:  # wx object already destroyed
         return False
+
+
+def archived_chat_stays_silent(is_current_conv: bool, archived_panel_shown: bool) -> bool:
+    """An archived chat announces only while it is the conversation in view or
+    the archived list itself is on screen; from any other panel it is silent
+    (neither the current-chat nor the foreground sound)."""
+    return not is_current_conv and not archived_panel_shown
+
+
+def archived_panel_is_shown(main_window) -> bool:
+    panel = getattr(main_window, "archived_conversations_panel", None)
+    if panel is None:
+        return False
+    try:
+        return bool(panel.IsShown())
+    except RuntimeError:  # wx object already destroyed
+        return False

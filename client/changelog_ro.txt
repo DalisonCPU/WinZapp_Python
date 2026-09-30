@@ -118,6 +118,8 @@ CORECTĂRI
 
 - Deschiderea unei conversații arhivate cu o conversație principală deschisă, apoi întoarcerea la conversațiile principale, continua să arate conversația arhivată, pe care o lăsaseți deja în urmă. Acum WinZapp revine la ultima conversație principală pe care o aveați deschisă.
 
+- Același lucru este valabil pentru orice alt panou, precum Stare sau Apeluri: cu o conversație lăsată deschisă în spatele lui, mesajele ei noi sunt anunțate ca ale oricărei alte conversații și nu sunt marcate ca citite. Mesajele conversațiilor arhivate sunt anunțate doar cât timp lista celor arhivate este pe ecran.
+
 V1.1.1.0
 
 Această versiune se concentrează pe menținerea contului conectat. WinZapp păstrează acum o copie de siguranță a profilului browserului — locul în care se află de fapt conexiunea cu WhatsApp — și o restaurează singur atunci când nu mai este acceptată, spunându-vă ce s-a întâmplat. Împreună cu aceasta vin corecții pentru situațiile care stricau sesiunea și lăsau aplicația să ceară o nouă asociere: închiderea computerului, suspendarea și reluarea și repornirea conexiunii de către aplicație. Au sosit și verificarea ortografică în câmpul de mesaj și acțiunile pentru linkuri.

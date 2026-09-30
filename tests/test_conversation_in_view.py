@@ -62,3 +62,21 @@ def test_alt_m_without_an_open_conversation_only_asks_the_panel_to_announce():
     stub = _Stub(None)
     ShortcutsMixin._on_global_focus_messages(stub, None)
     assert stub.calls == ["focus"]
+
+
+def test_archived_chat_is_silent_unless_current_or_archived_list_visible():
+    from core.conversation_view import archived_chat_stays_silent
+    assert archived_chat_stays_silent(False, False)      # status/main panel
+    assert not archived_chat_stays_silent(False, True)   # archived list shown
+    assert not archived_chat_stays_silent(True, False)   # open and in view
+
+
+def test_archived_panel_is_shown_reads_the_panel_flag():
+    from core.conversation_view import archived_panel_is_shown
+
+    class _MW:
+        archived_conversations_panel = _Panel(None, shown=True)
+    assert archived_panel_is_shown(_MW())
+    _MW.archived_conversations_panel = _Panel(None, shown=False)
+    assert not archived_panel_is_shown(_MW())
+    assert not archived_panel_is_shown(object())
