@@ -9,6 +9,7 @@ import logging
 import threading
 import wx
 from core.archived_detour import ArchivedDetour
+from core.conversation_view import archived_panel_is_shown
 from core.utils import (
     db_fetch_limit,
     effective_unread_count,
@@ -583,11 +584,24 @@ class ConversationNavigationMixin:
         elif (closed_jid and mw.is_chat_archived(closed_jid)
                 and hasattr(mw, "archived_conversations_panel")):
             wx.CallAfter(self._restore_to_archived_list, closed_jid)
+        elif archived_panel_is_shown(mw):
+            # Closed while sitting under the archived list (Alt+4 keeps the
+            # open conversation on screen): the main list is hidden, so
+            # focus goes back to the list the user is on.
+            wx.CallAfter(self._return_to_shown_archived_list)
         else:
             # Defer focus restoration so it runs after the accelerator event is
             # fully processed — calling SetFocus() synchronously inside an EVT_MENU
             # handler can be overridden by wx's post-event focus management on Win32.
             wx.CallAfter(self._restore_conversation_selection)
+
+    def _return_to_shown_archived_list(self):
+        mw = self.main_window
+        self.conversations_label.Show()
+        self.conversations_list.Show()
+        self.Hide()
+        mw.content_panel.Layout()
+        mw.archived_conversations_panel.restore_selection()
 
     def close_conversation_for_panel_switch(self):
         """Same cleanup as close_conversation() but without its focus-

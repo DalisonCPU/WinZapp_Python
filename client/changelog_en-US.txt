@@ -118,6 +118,10 @@ FIXES
 
 - Opening an archived chat while a main chat was open, then going back to the main chats, kept showing the archived chat you had already left behind. WinZapp now goes back to the last main chat you had open.
 
+- The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
+
+- Going to archived chats (Alt+4) with a main chat open made that chat disappear until you went back to the main chats. It now stays on screen below the archived list, just as an archived chat already stayed on screen when switching to the main chats. Esc closes the chat and returns focus to the archived list.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.

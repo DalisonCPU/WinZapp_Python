@@ -162,6 +162,7 @@ class NavigationPanel(wx.Panel):
                 )
         elif key == "archived" and hasattr(mw, "archived_conversations_panel"):
             mw.archived_conversations_panel.Show()
+            mw._keep_open_conversation_beside_archived()
             mw.content_panel.Layout()
             mw.archived_conversations_panel.restore_selection()
         elif key == "status" and hasattr(mw, "status_panel"):

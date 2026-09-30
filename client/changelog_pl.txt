@@ -118,6 +118,10 @@ POPRAWKI
 
 - Otwarcie zarchiwizowanego czatu przy otwartym czacie głównym, a potem powrót do czatów głównych, nadal pokazywało zarchiwizowany czat, który był już za tobą. Teraz WinZapp wraca do ostatniego głównego czatu, który miałeś otwarty.
 
+- To samo dotyczy każdego innego panelu, takiego jak Status czy Połączenia: gdy za nim zostaje otwarty czat, jego nowe wiadomości są zapowiadane jak wiadomości z innych czatów i nie są oznaczane jako przeczytane. Wiadomości z zarchiwizowanych czatów są zapowiadane tylko wtedy, gdy lista zarchiwizowanych jest na ekranie.
+
+- Przejście do zarchiwizowanych czatów (Alt+4) przy otwartym czacie głównym powodowało, że ten czat znikał z ekranu do czasu powrotu do czatów głównych. Teraz pozostaje na ekranie pod listą zarchiwizowanych, tak jak zarchiwizowany czat już pozostawał na ekranie po przełączeniu na czaty główne. Esc zamyka czat i przywraca fokus na listę zarchiwizowanych.
+
 V1.1.1.0
 
 Ta wersja dotyczy utrzymania połączenia z Twoim kontem. WinZapp zapisuje teraz kopię zapasową profilu przeglądarki — to w nim faktycznie przechowywane jest Twoje połączenie z WhatsApp — i sam ją przywraca, gdy przestaje być akceptowana, informując o tym, co się stało. Razem z nią pojawiają się poprawki sytuacji, które przerywały sesję i zmuszały do ponownego parowania: wyłączenie komputera, wstrzymanie i wznowienie oraz samo ponowne uruchamianie połączenia przez program. Doszły również sprawdzanie pisowni w polu wiadomości i akcje na odnośnikach.

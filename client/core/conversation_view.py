@@ -23,6 +23,51 @@ def conversation_in_view(panel) -> bool:
     if shown is None:
         return True
     try:
-        return bool(shown())
+        if not shown():
+            return False
+    except RuntimeError:  # wx object already destroyed
+        return False
+    # The archived list can sit next to the open conversation (Alt+4 keeps it
+    # visible). Then the conversation is being read only while focus is
+    # inside it (Tab, Alt+2, Alt+M all move it there); on the list it is
+    # visible but not read.
+    if not archived_panel_is_shown(getattr(panel, "main_window", None)):
+        return True
+    return _focus_is_inside(panel)
+
+
+def _focused_window():
+    try:
+        import wx
+        return wx.Window.FindFocus()
+    except Exception:
+        return None
+
+
+def _focus_is_inside(panel) -> bool:
+    window = _focused_window()
+    while window is not None:
+        if window is panel:
+            return True
+        try:
+            window = window.GetParent()
+        except RuntimeError:  # wx object already destroyed
+            return False
+    return False
+
+
+def archived_chat_stays_silent(is_current_conv: bool, archived_panel_shown: bool) -> bool:
+    """An archived chat announces only while it is the conversation in view or
+    the archived list itself is on screen; from any other panel it is silent
+    (neither the current-chat nor the foreground sound)."""
+    return not is_current_conv and not archived_panel_shown
+
+
+def archived_panel_is_shown(main_window) -> bool:
+    panel = getattr(main_window, "archived_conversations_panel", None)
+    if panel is None:
+        return False
+    try:
+        return bool(panel.IsShown())
     except RuntimeError:  # wx object already destroyed
         return False

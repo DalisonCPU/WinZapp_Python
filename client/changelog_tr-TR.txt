@@ -118,6 +118,10 @@ DÜZELTMELER
 
 - Ana sohbetlerden biri açıkken arşivlenmiş bir sohbeti açıp sonra ana sohbetlere dönmek, geride bıraktığınız arşivlenmiş sohbeti göstermeye devam ediyordu. Artık WinZapp, en son açık olan ana sohbete geri dönüyor.
 
+- Aynısı Durumlar veya Aramalar gibi diğer tüm paneller için de geçerli: arkasında açık bir sohbet varken o sohbetin yeni mesajları diğer sohbetlerinki gibi duyurulur ve okundu olarak işaretlenmez. Arşivlenmiş sohbetlerin mesajları yalnızca arşivlenmiş listesi ekrandayken duyurulur.
+
+- Ana sohbetlerden biri açıkken arşivlenmiş sohbetlere geçmek (Alt+4), o sohbetin ana sohbetlere dönene kadar ekrandan kaybolmasına yol açıyordu. Artık arşivlenmiş sohbetin ana sohbetlere geçilince ekranda kalması gibi, o sohbet de arşivlenmiş listesinin altında görünmeye devam ediyor. Esc sohbeti kapatır ve odağı arşivlenmiş listesine geri verir.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.

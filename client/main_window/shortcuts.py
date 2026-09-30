@@ -292,6 +292,18 @@ class ShortcutsMixin:
         # when navigating back from a conversation or another panel.
         self.conversations_panel._restore_conversation_selection()
 
+    def _keep_open_conversation_beside_archived(self):
+        """Alt+4 from a panel with a conversation open: leave that
+        conversation on screen (detail pane only) under the archived list,
+        the same way an open archived chat stays on screen next to the main
+        list. It is visible, not "in view" — see conversation_in_view()."""
+        cp = self.conversations_panel
+        if cp.conversation is None:
+            return
+        cp.conversations_label.Hide()
+        cp.conversations_list.Hide()
+        cp.Show()
+
     def on_alt_4(self, event):
         self.lock_chat_vault(silent=True, show_conversations=False)
         self.conversations_panel.Hide()
@@ -303,6 +315,7 @@ class ShortcutsMixin:
             self.calls_panel.Hide()
         if hasattr(self, "archived_conversations_panel"):
             self.archived_conversations_panel.Show()
+            self._keep_open_conversation_beside_archived()
             self.content_panel.Layout()
             self.archived_conversations_panel.restore_selection()
 
