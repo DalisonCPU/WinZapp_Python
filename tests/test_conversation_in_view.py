@@ -1,4 +1,5 @@
 """An open conversation behind another panel is not being read."""
+from core import conversation_view
 from core.conversation_view import conversation_in_view
 from main_window.shortcuts import ShortcutsMixin
 
@@ -82,14 +83,34 @@ def test_archived_panel_is_shown_reads_the_panel_flag():
     assert not archived_panel_is_shown(object())
 
 
-def test_open_conversation_beside_the_archived_list_is_visible_but_not_in_view():
+def test_open_conversation_beside_the_archived_list_is_visible_but_not_in_view(monkeypatch):
     class _MW:
         archived_conversations_panel = _Panel(None, shown=True)
     panel = _Panel({"remoteJid": "1@s.whatsapp.net"})
     panel.main_window = _MW()
+    monkeypatch.setattr(conversation_view, "_focused_window", lambda: None)
     assert not conversation_in_view(panel)
     _MW.archived_conversations_panel = _Panel(None, shown=False)
     assert conversation_in_view(panel)
+
+
+def test_focus_inside_the_beside_pane_makes_it_in_view_again(monkeypatch):
+    class _Win:
+        def __init__(self, parent=None):
+            self.parent = parent
+        def GetParent(self):
+            return self.parent
+
+    class _MW:
+        archived_conversations_panel = _Panel(None, shown=True)
+    panel = _Panel({"remoteJid": "1@s.whatsapp.net"})
+    panel.main_window = _MW()
+    panel.GetParent = lambda: None
+    child = _Win(_Win(panel))
+    monkeypatch.setattr(conversation_view, "_focused_window", lambda: child)
+    assert conversation_in_view(panel)          # composer focused (Tab, Alt+2)
+    monkeypatch.setattr(conversation_view, "_focused_window", lambda: _Win())
+    assert not conversation_in_view(panel)      # focus on the archived list
 
 
 def test_alt_4_keeps_the_open_conversation_on_screen_without_the_main_list():
