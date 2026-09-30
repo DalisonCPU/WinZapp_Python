@@ -62,6 +62,8 @@ YENİLİKLER
 
 - Ctrl+V ile mesaj alanına yapıştırılan ses dosyaları artık, Ayarlar'ın Dosyalar ve kaydetme sekmesindeki yeni "Mesaj alanına yapıştırılan ses dosyaları (Ctrl+V)" seçeneğiyle ses ya da belge olarak gönderilebilir; varsayılan olarak ses olarak gönderilir. Mesaj, sohbette en baştan gönderileceği türle görünür.
 
+- Arşivlenmiş ve kilitli sohbetler artık ana sohbetler gibi seçilebiliyor: Ctrl+Boşluk, Shift+ok tuşları, Shift+Home/End, Ctrl+Shift+Boşluk ve seçim modundaki Boşluk; aynı ses ve aynı duyurularla. "Toplu işlemler" menüsü (kendi kısayollarıyla) arşivlenmişlerde arşivden çıkarma, temizleme, silme ve okundu/okunmadı işaretleme; kilitlilerde kilit kaldırma ve okundu/okunmadı işaretleme sağlar.
+
 DÜZELTMELER
 
 - Sesli mesaj kayıt anonsları susturulduğunda, kayıt başlatılırken ekran okuyucunun sözü kesilmeden önce "Gönder" düğmesini seslendirmesi sorunu giderildi. WinZapp artık anonsun yarıda kesilmesine (kırpılmasına) yol açan otomatik odak hareketini önlerken Ctrl+R, Ctrl+Shift+P ve Ctrl+Shift+D kısayollarını kullanılabilir durumda tutar.

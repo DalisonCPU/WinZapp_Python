@@ -357,9 +357,13 @@ class _EmptyListMainWindow:
     def _last_msg_preview(self, chat):
         return ""
 
+    settings = {}
+
 
 class _LockedPanelListStub:
     refresh = LockedConversationsPanel.refresh
+    _row_text = LockedConversationsPanel._row_text
+    selected_chats = frozenset()
 
     def __init__(self, chats=()):
         self.main_window = _EmptyListMainWindow()

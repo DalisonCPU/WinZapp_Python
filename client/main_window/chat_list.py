@@ -485,6 +485,7 @@ class ChatListMixin:
             self.archived_conversations_panel._all_chat_names = arch_names
             self.archived_conversations_panel.chats_list = arch_chats
             self.archived_conversations_panel.chat_names = arch_names
+            self.archived_conversations_panel._prune_stale_chat_selection(arch_chats)
 
         if hasattr(self, "locked_conversations_panel"):
             if getattr(self, "_chat_lock_unlocked", False):
@@ -1389,6 +1390,9 @@ class ChatListMixin:
         new_arch_chats: list = []
         new_arch_names: list = []
         new_arch_texts: list = []
+        _marker_position = self.settings.get("user_interface", {}).get(
+            "selected_announcement_position", "end"
+        )
         for chat, name in zip(filtered_chats, filtered_names):
             unread = effective_unread_count(chat)
             unread_str = (
@@ -1399,6 +1403,12 @@ class ChatListMixin:
             item_text = name + unread_str
             if item_text and preview:
                 item_text += f" {preview}"
+            # Same "selecionado" marker, in the same configured position, as
+            # _build_chat_item_text() gives the conversations list.
+            item_text = append_selected_marker(
+                item_text, self.i18n.t("selected_suffix"), _marker_position,
+                bool(chat.get("remoteJid")) and chat.get("remoteJid") in panel.selected_chats,
+            )
             new_arch_chats.append(chat)
             new_arch_names.append(name)
             new_arch_texts.append(item_text)
