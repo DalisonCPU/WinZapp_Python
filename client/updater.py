@@ -1472,6 +1472,10 @@ class UpdateChecker:
 
     def _show_update_dialog(self, remote_version: str, changelog: str, zip_url: str, sha256sums_url: str = "",
                             signature_url: str = "", is_alpha: bool = False):
+        if getattr(self._mw, "_shutting_down", False):
+            # Quitting: no dialog on a dying app. Nothing to retry either.
+            self._release_prompt()
+            return
         if not self._main_window_ready():
             # The check runs 15 s after launch, which a first start or a slow
             # machine spends inside the "starting the API" dialog. A second
@@ -1479,7 +1483,9 @@ class UpdateChecker:
             # windowless: answering it left the startup loop and the exit
             # path fighting over the same event loop, and the process lived
             # on with no window and the instance lock held. The prompt keeps
-            # its claim and simply waits for the main window.
+            # its claim and simply waits for the main window (other accounts'
+            # prompts stay suppressed meanwhile; the retry is cheap and ends
+            # with the launch either way).
             wx.CallLater(self._UI_NOT_READY_RETRY_MS, self._show_update_dialog,
                          remote_version, changelog, zip_url, sha256sums_url,
                          signature_url=signature_url, is_alpha=is_alpha)
@@ -1502,9 +1508,14 @@ class UpdateChecker:
             self._schedule_retry()
 
     def _main_window_ready(self) -> bool:
-        """False while MainWindow.__init__ is still running (no window yet)."""
+        """False while MainWindow.__init__ is still running (no window yet) or
+        another modal flow (pairing) owns the screen — the same rule the
+        WPPConnect update check follows."""
         ready = getattr(self._mw, "_ui_ready_event", None)
-        return ready is None or ready.is_set()
+        if ready is not None and not ready.is_set():
+            return False
+        may_run = getattr(self._mw, "wpp_update_may_run_now", None)
+        return may_run is None or bool(may_run())
 
     def _do_install(self, new_version: str, zip_url: str, sha256sums_url: str = "",
                     signature_url: str = "", is_alpha: bool = False):

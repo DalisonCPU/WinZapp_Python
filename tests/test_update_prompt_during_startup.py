@@ -60,6 +60,7 @@ def test_the_prompt_waits_while_the_main_window_is_still_being_built(monkeypatch
     checker._show_update_dialog("2.0.0.9", "notes", "http://zip", "", signature_url="sig", is_alpha=True)
 
     assert no_dialog == []
+    assert checker.claims_released == 0   # the claim is kept while it waits
     assert later == [(2000, checker._show_update_dialog,
                       ("2.0.0.9", "notes", "http://zip", ""),
                       {"signature_url": "sig", "is_alpha": True})]
@@ -91,6 +92,46 @@ def test_the_prompt_opens_once_the_main_window_exists(monkeypatch):
 
 def test_a_main_window_without_the_event_counts_as_ready():
     assert _Checker(None)._main_window_ready() is True
+
+
+def test_the_prompt_also_waits_while_pairing_owns_the_screen(monkeypatch, no_dialog):
+    later = []
+    monkeypatch.setattr(updater.wx, "CallLater", lambda ms, fn, *a, **k: later.append(ms))
+    ready = threading.Event()
+    ready.set()
+    checker = _Checker(ready)
+    checker._mw.wpp_update_may_run_now = lambda: False
+
+    checker._show_update_dialog("2.0.0.9", "notes", "http://zip")
+
+    assert no_dialog == [] and later == [2000]
+
+
+def test_no_prompt_opens_on_an_app_that_is_quitting(monkeypatch, no_dialog):
+    later = []
+    monkeypatch.setattr(updater.wx, "CallLater", lambda ms, fn, *a, **k: later.append(ms))
+    ready = threading.Event()
+    ready.set()
+    checker = _Checker(ready)
+    checker._mw._shutting_down = True
+
+    checker._show_update_dialog("2.0.0.9", "notes", "http://zip")
+
+    assert no_dialog == [] and later == []
+    assert checker.claims_released == 1
+
+
+def test_the_app_never_exits_just_because_the_last_window_closed():
+    # wx ends the main loop when the last VISIBLE top-level window closes; with
+    # the main window in the tray that is a dialog. Needs no window to check:
+    # the guard has to sit between creating the app and building the window.
+    import pathlib
+    source = (pathlib.Path(__file__).resolve().parents[1] / "client" / "main.py").read_text(
+        encoding="utf-8")
+    app_at = source.index("app = wx.App()")
+    guard_at = source.index("app.SetExitOnFrameDelete(False)", app_at)
+    window_at = source.index("frame = MainWindow(", app_at)
+    assert app_at < guard_at < window_at
 
 
 def test_the_wpp_update_check_also_waits_for_the_window():
@@ -171,6 +212,27 @@ def test_a_quit_has_an_overall_deadline(monkeypatch, timers):
 
     assert timers == [150.0]
     assert started == ["winzapp-shutdown"]
+
+
+def test_the_forced_exit_is_written_to_the_audit_log_that_survives_a_launch(monkeypatch):
+    lines = []
+    fired = []
+
+    class _Timer:
+        def __init__(self, seconds, fn):
+            fired.append(fn)
+            self.daemon = False
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr(lifecycle.threading, "Timer", _Timer)
+    monkeypatch.setattr(lifecycle.os, "_exit", lambda code: None)
+
+    lifecycle._arm_hard_exit(150, "quit did not finish", audit=lines.append)
+    fired[0]()
+
+    assert lines and "quit did not finish within 150s" in lines[0]
 
 
 def test_the_forced_exit_logs_and_exits(monkeypatch):

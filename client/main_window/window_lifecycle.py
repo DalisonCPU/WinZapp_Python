@@ -17,15 +17,24 @@ if sys.platform == "win32":
     from core.tray_manager import TrayIcon
 
 
+def _arm_hard_exit(seconds: float, reason: str, audit=None) -> threading.Timer:
+    """os._exit(0) after `seconds`, whatever else is stuck by then.
 
-def _arm_hard_exit(seconds: float, reason: str) -> threading.Timer:
-    """os._exit(0) after `seconds`, whatever else is stuck by then."""
+    `audit` is the shutdown-audit writer: shutdown_audit.log is the only log
+    that survives the next launch, and that next launch is where a report of a
+    forced exit gets read.
+    """
     def _fire():
+        line = f"[shutdown] {reason} within {seconds:.0f}s — forcing the process to exit."
         try:
-            logging.error("[shutdown] %s within %.0fs — forcing the process to exit.",
-                          reason, seconds)
+            logging.error(line)
         except Exception:
             pass
+        if audit is not None:
+            try:
+                audit(line)
+            except Exception:
+                pass
         os._exit(0)
 
     timer = threading.Timer(seconds, _fire)
@@ -378,7 +387,9 @@ class WindowLifecycleMixin:
     # opens again" until the machine restarts (reported with an update prompt
     # answered during startup; the audit log showed a process that finished
     # its teardown and then lived on for hours). Well above the graceful-stop
-    # budgets, so a slow but healthy shutdown is never cut short.
+    # budgets, so a slow but healthy shutdown is never cut short. Note what a
+    # forced exit skips: atexit and the rest of _stop_wpp_server(), so the Node
+    # can outlive it and the next launch adopts it ("already listening").
     _QUIT_HARD_DEADLINE_SECONDS = 150.0
     # After the teardown is done the only thing left is os._exit(); this bounds
     # the wx calls in front of it (Hide, ExitMainLoop), which can block.
@@ -411,7 +422,8 @@ class WindowLifecycleMixin:
             self.Hide()
         except Exception:
             pass
-        _arm_hard_exit(self._QUIT_HARD_DEADLINE_SECONDS, "quit did not finish")
+        _arm_hard_exit(self._QUIT_HARD_DEADLINE_SECONDS, "quit did not finish",
+                       audit=getattr(self, "_shutdown_audit", None))
 
         def _teardown():
             did_work = False
@@ -547,7 +559,8 @@ class WindowLifecycleMixin:
         # Armed BEFORE the wx calls below: they are the ones that can block
         # (a cross-thread Hide() waits for a main thread that may be busy in a
         # modal loop), and a blocked exit is a zombie process.
-        _arm_hard_exit(self._EXIT_HARD_DEADLINE_SECONDS, "exit did not complete")
+        _arm_hard_exit(self._EXIT_HARD_DEADLINE_SECONDS, "exit did not complete",
+                       audit=getattr(self, "_shutdown_audit", None))
         try:
             self.Hide()
         except Exception:
