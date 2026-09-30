@@ -120,6 +120,8 @@ CORREÇÕES
 
 - O mesmo vale para qualquer outro painel, como Status ou Ligações: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. Mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está na tela.
 
+- Ao ir para as conversas arquivadas (Alt+4) com uma conversa principal aberta, essa conversa sumia da tela até você voltar às principais. Agora ela continua aparecendo abaixo da lista de arquivadas, como uma conversa arquivada já continuava aparecendo ao trocar para as principais. Esc fecha a conversa e devolve o foco à lista de arquivadas.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta conectada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua conexão com o WhatsApp realmente fica guardada — e a restaurá-la sozinho quando ela deixa de ser aceita, avisando o que aconteceu. Junto vieram as correções das situações que quebravam a sessão e faziam o programa pedir para parear de novo: desligar o computador, suspender e retomar, e o próprio programa reiniciando a conexão. Também chegaram a verificação ortográfica no campo de mensagem e as ações sobre links.

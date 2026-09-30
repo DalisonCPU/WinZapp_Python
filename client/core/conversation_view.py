@@ -23,9 +23,14 @@ def conversation_in_view(panel) -> bool:
     if shown is None:
         return True
     try:
-        return bool(shown())
+        if not shown():
+            return False
     except RuntimeError:  # wx object already destroyed
         return False
+    # The archived list can sit next to the open conversation (Alt+4 keeps it
+    # visible): what the user is actually on is that list, so the
+    # conversation is visible but not being read.
+    return not archived_panel_is_shown(getattr(panel, "main_window", None))
 
 
 def archived_chat_stays_silent(is_current_conv: bool, archived_panel_shown: bool) -> bool:

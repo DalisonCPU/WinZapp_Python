@@ -80,3 +80,63 @@ def test_archived_panel_is_shown_reads_the_panel_flag():
     _MW.archived_conversations_panel = _Panel(None, shown=False)
     assert not archived_panel_is_shown(_MW())
     assert not archived_panel_is_shown(object())
+
+
+def test_open_conversation_beside_the_archived_list_is_visible_but_not_in_view():
+    class _MW:
+        archived_conversations_panel = _Panel(None, shown=True)
+    panel = _Panel({"remoteJid": "1@s.whatsapp.net"})
+    panel.main_window = _MW()
+    assert not conversation_in_view(panel)
+    _MW.archived_conversations_panel = _Panel(None, shown=False)
+    assert conversation_in_view(panel)
+
+
+def test_alt_4_keeps_the_open_conversation_on_screen_without_the_main_list():
+    class _Widget:
+        def __init__(self):
+            self.calls = []
+        def Hide(self):
+            self.calls.append("hide")
+        def Show(self):
+            self.calls.append("show")
+
+    class _CP(_Widget):
+        def __init__(self, conversation):
+            super().__init__()
+            self.conversation = conversation
+            self.conversations_label, self.conversations_list = _Widget(), _Widget()
+
+    class _Stub:
+        pass
+
+    for conversation, expected in (({"remoteJid": "1@s.whatsapp.net"}, ["show"]), (None, [])):
+        stub = _Stub()
+        stub.conversations_panel = _CP(conversation)
+        ShortcutsMixin._keep_open_conversation_beside_archived(stub)
+        cp = stub.conversations_panel
+        assert cp.calls == expected
+        assert cp.conversations_list.calls == (["hide"] if conversation else [])
+        assert cp.conversations_label.calls == (["hide"] if conversation else [])
+
+
+def test_closing_beside_the_archived_list_returns_focus_to_that_list(monkeypatch):
+    import wx
+    from ui.conversation_panel.conversation_navigation import ConversationNavigationMixin
+
+    queued = []
+    monkeypatch.setattr(wx, "CallAfter", lambda fn, *a: queued.append((fn.__name__, a)))
+
+    class _MW:
+        archived_conversations_panel = _Panel(None, shown=True)
+        def is_chat_locked(self, jid): return False
+        def is_chat_archived(self, jid): return False
+
+    class _Stub:
+        main_window = _MW()
+        def _close_conversation_core(self): return True, "1@s.whatsapp.net"
+        def _return_to_shown_archived_list(self): pass
+        def _restore_conversation_selection(self): pass
+
+    ConversationNavigationMixin.close_conversation(_Stub())
+    assert queued == [("_return_to_shown_archived_list", ())]
