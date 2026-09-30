@@ -116,7 +116,7 @@ DÜZELTMELER
 
 - Arşivlenmiş sohbetlerde Alt+M, ana sohbetlerde olduğu gibi açık sohbetin mesaj listesine götürmüyordu. Artık panelin her yerinden çalışıyor.
 
-- Ana sohbetlerden biri açıkken arşivlenmiş bir sohbeti açıp sonra ana sohbetlere dönmek, geride bıraktığınız arşivlenmiş sohbeti göstermeye devam ediyordu. Artık WinZapp, en son açık olan ana sohbete geri dönüyor.
+- Ana sohbetlerden biri açıkken arşivlenmiş bir sohbeti açıp sonra ana sohbetlere dönmek, geride bıraktığınız arşivlenmiş sohbeti göstermeye devam ediyordu. Artık WinZapp, en son açık olan ana sohbete geri dönüyor. Açık bir ana sohbet yoksa arşivlenmiş sohbet, sohbet listesinin yanında ekranda kalır ve yalnızca odak içindeyken okundu olarak işaretlenir veya duyurulur.
 
 - Aynısı Durumlar veya Aramalar gibi diğer tüm paneller için de geçerli: arkasında açık bir sohbet varken o sohbetin yeni mesajları diğer sohbetlerinki gibi duyurulur ve okundu olarak işaretlenmez. Arşivlenmiş sohbetlerin mesajları yalnızca arşivlenmiş listesi ekrandayken duyurulur.
 

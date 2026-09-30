@@ -186,23 +186,26 @@ class ConversationNavigationMixin:
         return detour
 
     def resume_main_after_archived(self):
-        """Back on the main panel after visiting archived chats: drop the
-        archived conversation still open in this shared panel and reopen the
-        main one it replaced. Without focus or read side effects — the caller
-        places focus, and reopening is not reading."""
+        """Back on the main panel after visiting archived chats: if a main
+        conversation was open before, it replaces the archived one still open
+        in this shared panel. With none to go back to, the archived one simply
+        stays on screen beside the main list (conversation_in_view() keeps it
+        from being read or announced while focus is on the list). Without
+        focus or read side effects — the caller places focus, and reopening is
+        not reading."""
         detour = self._archived_detour_state()
         if not detour.active:
             return
         resume = detour.leave()
         mw = self.main_window
-        current = self.conversation.get("remoteJid", "") if self.conversation else ""
-        if current and mw.is_chat_archived(current):
-            self.close_conversation_for_panel_switch()
         chat = mw.chats.get(resume) if resume else None
         # A locked chat must not reappear once the vault has been locked again.
         if (chat is None or mw.is_chat_archived(resume)
                 or mw.is_chat_locked(resume)):
             return
+        current = self.conversation.get("remoteJid", "") if self.conversation else ""
+        if current and mw.is_chat_archived(current):
+            self.close_conversation_for_panel_switch()
         self.navigate_to_conversation(chat, take_focus=False, mark_read=False)
 
     def navigate_to_conversation(self, conversation, *, from_archived=False,
@@ -582,7 +585,11 @@ class ConversationNavigationMixin:
                 and hasattr(mw, "locked_conversations_panel")):
             wx.CallAfter(self._restore_to_locked_list, closed_jid)
         elif (closed_jid and mw.is_chat_archived(closed_jid)
-                and hasattr(mw, "archived_conversations_panel")):
+                and hasattr(mw, "archived_conversations_panel")
+                and not self.conversations_list.IsShown()):
+            # Only when the archived list is what it was opened from: with the
+            # main list showing beside it (Alt+1 kept it on screen), focus
+            # belongs to that list.
             wx.CallAfter(self._restore_to_archived_list, closed_jid)
         elif archived_panel_is_shown(mw):
             # Closed while sitting under the archived list (Alt+4 keeps the
