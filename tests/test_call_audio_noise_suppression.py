@@ -55,3 +55,75 @@ def test_frames_dropped_for_latency_are_reported_to_the_echo_canceller():
     session._stop_event.set()
     thread.join(timeout=2)
     assert skipped and skipped[0] % CALL_FRAME_SAMPLES == 0
+
+
+def test_reference_resampling_keeps_the_clock_across_odd_device_periods():
+    # 44.1 kHz in 448-frame periods: rounding each chunk on its own gains 0.34
+    # samples per chunk (~780 ppm) and the reference slides off the microphone.
+    from core.call_audio import _ReferenceResampler
+
+    resampler = _ReferenceResampler()
+    chunk = np.zeros(448, dtype=np.float32)
+    total = sum(len(resampler.process(chunk, 44_100)) for _ in range(2000))
+    assert abs(total - 2000 * 448 * CALL_SAMPLE_RATE / 44_100) <= 1
+
+
+def test_reference_resampler_passes_the_call_rate_through_and_restarts_on_a_rate_change():
+    from core.call_audio import _ReferenceResampler
+
+    resampler = _ReferenceResampler()
+    data = np.arange(960, dtype=np.float32)
+    assert np.array_equal(resampler.process(data, CALL_SAMPLE_RATE), data)
+    first = len(resampler.process(np.zeros(441, dtype=np.float32), 44_100))
+    resampler.process(np.zeros(480, dtype=np.float32), 32_000)
+    assert len(resampler.process(np.zeros(441, dtype=np.float32), 44_100)) == first
+
+
+def test_reference_played_before_a_drop_reaches_the_canceller_first():
+    session = CallAudioSession(_Socket(), CallAudioConfig(session="s", echo_cancellation=True))
+    order = []
+    session._echo_canceller.push_reference = lambda samples: order.append("reference")
+    session._echo_canceller.skip_microphone = lambda samples: order.append("skip")
+    session._echo_reference_tap.append((np.zeros(480, dtype=np.float32), CALL_SAMPLE_RATE))
+    for _ in range(6):
+        session._mic_queue.put(_pcm16_bytes(np.zeros(CALL_FRAME_SAMPLES, dtype=np.float32)))
+    thread = threading.Thread(target=session._send_microphone_loop, daemon=True)
+    thread.start()
+    _wait_for(lambda: session._mic_queue.qsize() == 0)
+    session._stop_event.set()
+    thread.join(timeout=2)
+    assert order[:2] == ["reference", "skip"]
+
+
+def test_the_saved_call_settings_reach_the_audio_session(monkeypatch):
+    # Voice and video calls both build their audio here.
+    import core.call_audio as call_audio
+    from main_window.calls import CallsMixin
+
+    built = []
+
+    class _Session:
+        def __init__(self, sio, config):
+            built.append(config)
+
+    monkeypatch.setattr(call_audio, "CallAudioSession", _Session)
+
+    class _WS:
+        sio = object()
+        instance_name = "acct"
+
+    class _Stub:
+        ws = _WS()
+        token = "acct:secret"
+        settings = {"call_audio_devices": {"echo_cancellation": True, "noise_suppression": True}}
+
+        def call_audio_device(self, kind):
+            return ""
+
+    CallsMixin._build_call_audio_session(_Stub())
+    assert built[0].echo_cancellation is True
+    assert built[0].noise_suppression is True
+    _Stub.settings = {"call_audio_devices": {}}
+    CallsMixin._build_call_audio_session(_Stub())
+    assert built[1].echo_cancellation is False
+    assert built[1].noise_suppression is False

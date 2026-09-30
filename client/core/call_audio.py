@@ -116,6 +116,43 @@ def _resample_mono(samples: np.ndarray, source_rate: int, target_rate: int) -> n
     return np.interp(target_x, source_x, data).astype(np.float32)
 
 
+class _ReferenceResampler:
+    """Resample the echo reference to the call rate without losing count.
+
+    Each device period resampled on its own is rounded to a whole number of
+    samples; at 44.1 kHz with 448-frame periods that gains 0.34 samples per
+    chunk (~780 ppm) and the reference slides away from the microphone until
+    the canceller cannot follow. Here the running totals decide how many
+    samples each chunk yields, so the reference stays locked to the clock.
+    """
+
+    def __init__(self):
+        self._rate = None
+        self._total_in = 0
+        self._total_out = 0
+
+    def process(self, chunk: np.ndarray, rate: int) -> np.ndarray:
+        data = np.asarray(chunk, dtype=np.float32)
+        if data.ndim > 1:
+            data = data.mean(axis=1, dtype=np.float32)
+        data = data.reshape(-1)
+        if rate != self._rate:
+            self._rate, self._total_in, self._total_out = rate, 0, 0
+        if not data.size or rate == CALL_SAMPLE_RATE:
+            return data.astype(np.float32, copy=False)
+        self._total_in += data.size
+        wanted = int(round(self._total_in * CALL_SAMPLE_RATE / rate)) - self._total_out
+        self._total_out += max(wanted, 0)
+        if wanted <= 0:
+            return np.empty(0, dtype=np.float32)
+        source_x = np.linspace(0.0, 1.0, num=data.size, endpoint=False)
+        target_x = np.linspace(0.0, 1.0, num=wanted, endpoint=False)
+        return np.interp(target_x, source_x, data).astype(np.float32)
+
+    def reset(self) -> None:
+        self._rate, self._total_in, self._total_out = None, 0, 0
+
+
 def _pcm16_bytes(samples: np.ndarray) -> bytes:
     clipped = np.clip(samples, -1.0, 1.0)
     return (clipped * 32767.0).astype("<i2", copy=False).tobytes()
@@ -383,6 +420,7 @@ class CallAudioSession:
         # thread resamples them into the canceller, so the realtime callback
         # only pays for a copy. Bounded: nobody drains it while ringing.
         self._echo_reference_tap: "deque[tuple[np.ndarray, int]]" = deque(maxlen=64)
+        self._reference_resampler = _ReferenceResampler()
 
     @property
     def microphone_muted(self) -> bool:
@@ -528,6 +566,7 @@ class CallAudioSession:
         self._drain_queue(self._output_queue)
         self._output_buffer.reset()
         self._echo_reference_tap.clear()
+        self._reference_resampler.reset()
         if self._echo_canceller is not None:
             self._echo_canceller.reset()
         if self._noise_suppressor is not None:
@@ -956,7 +995,10 @@ class CallAudioSession:
             if dropped:
                 if self._echo_canceller is not None:
                     # Those frames were real time that went by: the canceller
-                    # pairs microphone and reference by sample index.
+                    # pairs microphone and reference by sample index. The
+                    # reference played so far goes in first, so the history it
+                    # rebuilds for the skipped time is complete.
+                    self._drain_echo_reference()
                     self._echo_canceller.skip_microphone(dropped * CALL_FRAME_SAMPLES)
                 previous_dropped = self._mic_frames_dropped_for_latency
                 self._mic_frames_dropped_for_latency += dropped
@@ -1020,14 +1062,16 @@ class CallAudioSession:
 
         May return fewer bytes than it was given (whole blocks only) or none.
         """
-        canceller = self._echo_canceller
+        self._drain_echo_reference()
+        return _pcm16_bytes(self._echo_canceller.process(_pcm16_float32(pcm)))
+
+    def _drain_echo_reference(self) -> None:
         while True:
             try:
                 chunk, rate = self._echo_reference_tap.popleft()
             except IndexError:
-                break
-            canceller.push_reference(_resample_mono(chunk, rate, CALL_SAMPLE_RATE))
-        return _pcm16_bytes(canceller.process(_pcm16_float32(pcm)))
+                return
+            self._echo_canceller.push_reference(self._reference_resampler.process(chunk, rate))
 
     def _on_output_frames(self, outdata, _frames, _time_info, _status) -> None:
         """PortAudio's realtime thread asking for one device period.

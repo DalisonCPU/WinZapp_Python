@@ -168,10 +168,17 @@ def test_reset_forgets_the_learned_path_and_alignment():
     assert aec.diagnostics() == {"cancelling": False, "echo_lag_ms": None, "reduction_db": 0.0}
 
 
-def test_diagnostics_report_the_echo_lag():
+def test_diagnostics_report_the_echo_lag_not_the_internal_alignment():
+    # A 300 ms echo used to report 40 ms: the filter's own lag, which the
+    # alignment pins to a constant.
     far = _speech_like(10, 10)
-    echo = _through(far, _room(60))
+    echo = _through(far, _room(300))
     aec = EchoCanceller()
-    _run(aec, far[:6 * SR], echo[:6 * SR], lead=4800)
-    report = aec.diagnostics()
-    assert 40 <= report["echo_lag_ms"] <= 100
+    _run(aec, far[:7 * SR], echo[:7 * SR])
+    assert 250 <= aec.diagnostics()["echo_lag_ms"] <= 350
+
+
+def test_reduction_report_is_clamped():
+    aec = EchoCanceller()
+    aec._eng_mic, aec._eng_out = 1.0, 1e-15
+    assert aec.diagnostics()["reduction_db"] == 60.0

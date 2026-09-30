@@ -171,10 +171,13 @@ class EchoCanceller:
         with self._lock:
             lag_ms = None
             if self.lag_samples is not None:
-                lag_ms = round((self._shift + self.lag_samples) * 1000 / AEC_SAMPLE_RATE)
+                # How much later the microphone hears the reference than the
+                # streams' own pairing says; not the filter's internal lag,
+                # which the alignment keeps at a constant 40 ms.
+                lag_ms = round(self.lag_samples * 1000 / AEC_SAMPLE_RATE)
             reduction = 0.0
             if self._eng_mic > 1e-6:
-                reduction = round(float(10 * np.log10(self._eng_mic / self._eng_out)), 1)
+                reduction = round(float(min(60.0, 10 * np.log10(self._eng_mic / self._eng_out))), 1)
             return {
                 "cancelling": self._gate > 0.5,
                 "echo_lag_ms": lag_ms,
@@ -227,6 +230,8 @@ class EchoCanceller:
         if not confident:
             self._hold = max(0, self._hold - 1)
             self._last_lag = None
+            if not self._hold:
+                self.lag_samples = None
             return
         lag = SEARCH_BACK + (peak_at - span)
         consistent = self._last_lag is not None and abs(lag - self._last_lag) <= CONSISTENT_SAMPLES

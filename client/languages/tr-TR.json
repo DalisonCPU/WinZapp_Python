@@ -998,7 +998,7 @@
   "calls_exclusive_output_label": "Arama sırasında hoparlör için özel modu kullan",
   "calls_exclusive_output_warning": "Uyarı: özel modda hoparlör arama için ayrılır. Arama sürdüğü sürece ekran okuyucunuz dahil başka hiçbir program bu cihazda ses çalamaz. Yine de açılsın mı?",
   "calls_echo_cancellation_label": "Yankı önlemeyi etkinleştir (mikrofondan gelen ses geri dönüşünü azaltır)",
-  "calls_noise_suppression_label": "Mikrofon gürültü azaltmayı etkinleştir (fan ve cızırtı gibi sürekli gürültüyü azaltır)",
+  "calls_noise_suppression_label": "Aramada mikrofon gürültü azaltmayı etkinleştir (fan, cızırtı)",
   "tab_profile_backup": "Profil yedekleme",
   "tab_reactions": "Tepkiler",
   "reactions_fixed_label": "Sabit hızlı tepkiler kullan: tepkileri en çok kullanılana göre sıralamak yerine 12 konumun her biri için emojiyi seç",
