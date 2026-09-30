@@ -30,6 +30,8 @@ from ui.dialogs.checkbox_confirm import confirm_with_checkbox
 from app_paths import data_path
 from core.conversation_resync import (
     deletions_to_apply,
+    record_fingerprints,
+    resync_outcome,
     stale_ids_in_fetched_window,
 )
 from main_window.message_rules import is_countable_message
@@ -177,40 +179,41 @@ class SyncMixin:
         """Background worker for _on_menu_resync_conversation()."""
         try:
             chat = self.chats.get(remote_jid)
-            known_before = {((r.get("key") or {}).get("id") or "")
-                            for r in _chat_message_records(chat or {})
-                            if isinstance(r, dict)}
+            before = record_fingerprints(_chat_message_records(chat or {}))
+            known_before = set(before)
             fetched_ids = set()
+            outcome = {}
             ok = bool(chat) and bool(self.sync_chat_messages(
-                chat, sync_mode="full", fetched_ids_out=fetched_ids))
+                chat, sync_mode="full", fetched_ids_out=fetched_ids,
+                outcome_out=outcome))
             if not ok or not fetched_ids:
-                logging.info("[resync-conversation] %s: nothing fetched (ok=%s)",
-                             remote_jid, ok)
-                # ok with nothing fetched is WhatsApp answering, not failing:
-                # it holds no messages for this chat (chat_not_found also lands
-                # here). Nothing was touched either way, but "try again" would
-                # send the user retrying an answer that will not change.
-                key = ("resync_conversation_nothing_remote" if ok
-                       else "resync_conversation_failed")
-                wx.CallAfter(self.output, self.i18n.t(key), True)
+                logging.info("[resync-conversation] %s: nothing fetched (ok=%s, "
+                             "chat_absent=%s)", remote_jid, ok,
+                             outcome.get("chat_absent", False))
+                # Nothing was touched. Only chat_not_found is WhatsApp saying it
+                # has no messages here; an empty page may just be WhatsApp Web
+                # not having loaded the chat yet (resync_outcome()).
+                wx.CallAfter(self.output, self.i18n.t(resync_outcome(
+                    ok, outcome.get("chat_absent", False), fetched_ids,
+                    known_before, removed=False, withheld=False,
+                    content_changed=False)), True)
                 return
             chat = self.chats.get(remote_jid) or chat
             records = _chat_message_records(chat)
+            # Same rules as the open-chat deletion mirror, including the
+            # periods a profile restore left a hole in (core/conversation_resync.py).
+            judged = _outside_rollback_gaps(records, self._rollback_gaps())
+            apparent = stale_ids_in_fetched_window(judged, fetched_ids, is_countable_message)
             if getattr(self, "_remote_deletions_untrusted", False):
                 # A profile restore rolled WhatsApp Web's store back behind our
                 # database: its silence about a message proves nothing.
                 stale = []
             else:
-                # Same rules as the open-chat deletion mirror, including the
-                # periods a profile restore left a hole in (core/conversation_resync.py).
-                judged = _outside_rollback_gaps(records, self._rollback_gaps())
-                stale = stale_ids_in_fetched_window(judged, fetched_ids, is_countable_message)
-                apparent = len(stale)
-                stale = deletions_to_apply(stale)
+                stale = deletions_to_apply(apparent)
                 if apparent and not stale:
                     logging.warning(
                         "[resync-conversation] %s: %d apparent deletions exceed the "
-                        "cap of %d; none removed", remote_jid, apparent,
+                        "cap of %d; none removed", remote_jid, len(apparent),
                         MAX_MIRRORED_DELETIONS)
             if stale:
                 stale_set = set(stale)
@@ -234,10 +237,13 @@ class SyncMixin:
                          remote_jid, len(fetched_ids), len(stale))
             self._refresh_open_conversation_after_sync(remote_jid, chat)
             self._schedule_set_chats()
-            changed = bool(stale) or bool(fetched_ids - known_before)
-            wx.CallAfter(self.output, self.i18n.t(
-                "resync_conversation_done" if changed
-                else "resync_conversation_up_to_date"), True)
+            after = record_fingerprints(records)
+            content_changed = any(after.get(mid, fingerprint) != fingerprint
+                                  for mid, fingerprint in before.items())
+            wx.CallAfter(self.output, self.i18n.t(resync_outcome(
+                ok, False, fetched_ids, known_before, removed=bool(stale),
+                withheld=bool(apparent) and not stale,
+                content_changed=content_changed)), True)
         except Exception:
             logging.exception("[resync-conversation] %s: failed", remote_jid)
             wx.CallAfter(self.output, self.i18n.t("resync_conversation_failed"), True)
