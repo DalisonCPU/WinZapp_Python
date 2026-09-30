@@ -138,3 +138,33 @@ class TestWhereItIsRead:
                 "messages": {"messages": {"records": [msg]}}}
 
         assert "[view_once_message]" in _MWStub()._last_msg_preview(chat)
+
+    def test_a_reaction_to_it_names_it_in_the_preview(self):
+        """Not "unsupported message": the reaction preview names what was
+        reacted to, and a view once message is a message WinZapp knows."""
+        class _MWStub:
+            _counts_as_last_message = classmethod(MainWindow._counts_as_last_message.__func__)
+            _last_msg_preview = MainWindow._last_msg_preview
+            _PREVIEW_MESSAGE_TYPES = MainWindow._PREVIEW_MESSAGE_TYPES
+
+            def __init__(self):
+                self.i18n = _I18n()
+                self.settings = {"user_interface": {"show_delivery_status_in_chat_list": False}}
+                self.conversations_panel = _Panel()
+
+            def self_reference_label(self):
+                return "Eu"
+
+        msg = _Normalizer()._normalize_wpp_message(
+            _raw(id="false_5511900000000@c.us_3A00000000EB5BCF7D0D",
+                 **{"from": "5511900000000@c.us", "author": None}))
+        chat = {"remoteJid": "5511900000000@s.whatsapp.net",
+                "messages": {"messages": {"records": [msg]}},
+                "_last_reaction": {"emoji": "x", "from_me": True,
+                                   "target_id": msg["key"]["id"],
+                                   "timestamp": msg["messageTimestamp"] + 60}}
+
+        preview = _MWStub()._last_msg_preview(chat)
+
+        assert "[view_once_message]" in preview
+        assert "notif_unsupported" not in preview

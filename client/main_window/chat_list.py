@@ -1054,6 +1054,8 @@ class ChatListMixin:
                             orig_text = i18n.t("notif_contact")
                         elif orig_type == "locationMessage":
                             orig_text = i18n.t("notif_location")
+                        elif orig_type == VIEW_ONCE_UNAVAILABLE_TYPE:
+                            orig_text = i18n.t("view_once_message")
                         else:
                             orig_text = i18n.t("notif_unsupported")
                         break
