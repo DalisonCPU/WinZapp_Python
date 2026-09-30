@@ -21,6 +21,7 @@ import numpy as np
 
 from core.audio_devices import repair_device_name
 from core.echo_canceller import EchoCanceller
+from core.noise_suppressor import NoiseSuppressor
 
 try:
     import sounddevice as sd
@@ -91,6 +92,10 @@ class CallAudioConfig:
     # output callback actually played. Off by default: it costs CPU and can
     # slightly colour the voice, and a headset user has no echo to remove.
     echo_cancellation: bool = False
+    # Stationary-noise suppression (fans, hiss, hum) on the outgoing
+    # microphone, after the echo canceller. Off by default for the same reason:
+    # it colours the voice a little, and a quiet room has nothing to remove.
+    noise_suppression: bool = False
 
 
 class CallAudioUnavailable(RuntimeError):
@@ -371,6 +376,9 @@ class CallAudioSession:
         self._echo_canceller: Optional[EchoCanceller] = (
             EchoCanceller() if config.echo_cancellation else None
         )
+        self._noise_suppressor: Optional[NoiseSuppressor] = (
+            NoiseSuppressor() if config.noise_suppression else None
+        )
         # (samples, rate) chunks copied out of the output callback; the sender
         # thread resamples them into the canceller, so the realtime callback
         # only pays for a copy. Bounded: nobody drains it while ringing.
@@ -522,6 +530,8 @@ class CallAudioSession:
         self._echo_reference_tap.clear()
         if self._echo_canceller is not None:
             self._echo_canceller.reset()
+        if self._noise_suppressor is not None:
+            self._noise_suppressor.reset()
 
     def enqueue_remote_audio(self, pcm: bytes, sample_rate: int) -> None:
         if self._stop_event.is_set() or not pcm:
@@ -944,6 +954,10 @@ class CallAudioSession:
                 continue
 
             if dropped:
+                if self._echo_canceller is not None:
+                    # Those frames were real time that went by: the canceller
+                    # pairs microphone and reference by sample index.
+                    self._echo_canceller.skip_microphone(dropped * CALL_FRAME_SAMPLES)
                 previous_dropped = self._mic_frames_dropped_for_latency
                 self._mic_frames_dropped_for_latency += dropped
                 if previous_dropped == 0 or (
@@ -967,6 +981,13 @@ class CallAudioSession:
                     logging.exception("[call_audio] echo cancellation failed")
                 if not pcm:
                     continue
+            if self._noise_suppressor is not None:
+                try:
+                    pcm = _pcm16_bytes(self._noise_suppressor.process(_pcm16_float32(pcm)))
+                except Exception:
+                    logging.exception("[call_audio] noise suppression failed")
+                if not pcm:
+                    continue
 
             try:
                 if self._microphone_muted:
@@ -982,6 +1003,9 @@ class CallAudioSession:
                 )
                 self._mic_frames_sent += 1
                 self._mic_bytes_sent += len(pcm)
+                if self._echo_canceller is not None and self._mic_frames_sent % 250 == 0:
+                    logging.info("[call_audio] echo canceller: %s",
+                                 self._echo_canceller.diagnostics())
                 if self._mic_frames_sent == 1 or self._mic_frames_sent % 50 == 0:
                     logging.info(
                         "[call_audio] microphone sent session=%s frames=%s bytes=%s",

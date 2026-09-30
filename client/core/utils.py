@@ -1073,7 +1073,9 @@ DEFAULT_SETTINGS = {
         "exclusive_input": False,
         "exclusive_output": False,
         # Adaptive echo cancellation on the outgoing microphone; off by default.
-        "echo_cancellation": False
+        "echo_cancellation": False,
+        # Steady-noise suppression (fans, hiss, hum) on the outgoing microphone.
+        "noise_suppression": False
     },
     # Camera choice for video calls, deliberately its own section for the
     # same reason as call_audio_devices above: swap devices per-call without
