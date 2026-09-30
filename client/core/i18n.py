@@ -57,7 +57,18 @@ class I18n:
         return self.language
 
     def t(self, key: str) -> str:
-        """Translate *key* using the language currently stored in self.language."""
+        """Translate *key* into the user's current language.
+
+        The language is re-read from settings on every lookup: an I18n
+        starts at "pt-BR" and used to follow the user's choice only after
+        someone called get_language(), so text produced before that came out
+        in Portuguese on, say, an English install (seen with the pairing
+        error "no_pairing_code_received"). The read is a dict lookup.
+        """
+        try:
+            self.get_language()
+        except Exception:
+            pass  # no settings yet: keep the last known language
         lang = self.language
         translations = _TRANSLATIONS_CACHE.get(lang)
         if translations is None:
