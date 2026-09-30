@@ -303,6 +303,23 @@ which is what a keystroke in WinZapp is, and keeps `WPP.call.offer()` only as
 the fallback where the function is not exposed. If offers hang again, look
 for `[role="dialog"]` in the page over CDP before anything else.
 
+**Other notices can still stop an offer the same way.** Calling a WhatsApp
+Business account for the first time opens "About this call — This business
+uses a secure service from Meta to manage this call…" with *Learn more* and
+*Continue* (seen 2026-09-29): same symptom, the offer aborted at 75 s and the
+call never rang; the next call to that business goes through, which makes it
+look intermittent. `offerCall()` now runs `watchOutgoingCallNotices()` while
+the offer is pending: an informational dialog that appears during it (one
+with a "Learn more" link and at most three buttons) gets its last (primary)
+button pressed — the user asked for this call, and the position, not the
+wording, keeps it working in every UI language. A dialog with no link is a
+decision (e.g. "Unblock X to call?" with Cancel/Unblock, whose last button
+would unblock someone) and is left alone, as are dialogs already open before
+the call. The log line `[call-notice]` records only the button count, never the
+dialog text, which can hold a contact or business name. The watcher stops after
+60 s. If a new notice still stalls an offer, look at its DOM over CDP: the link
+test is a guess at how WhatsApp marks "informational", not a guarantee.
+
 **A call event names the peer in whichever address form its source happened to
 hold, and the two sources disagree.** The offer arrives through
 `call.incoming_call` carrying whatever WhatsApp signalled with; the page's own
