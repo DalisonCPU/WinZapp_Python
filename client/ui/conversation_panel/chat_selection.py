@@ -171,7 +171,7 @@ class ChatSelectionMixin(ChatListSelectionMixin):
         i18n = self.main_window.i18n
         if not self.selected_chats: return
         for jid in list(self.selected_chats):
-            self.main_window.archive_chat(jid, True)
+            self.main_window.archive_chat(jid)
         self.selected_chats.clear()
         self.main_window.add_chats_to_ui()
         self.main_window.output(i18n.t("success_archive"), interrupt=True)
