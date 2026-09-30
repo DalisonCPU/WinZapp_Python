@@ -73,9 +73,7 @@ def leave_dock():
 
 def install():
     from main_window import window_lifecycle as wl
-    cls = wl.WindowLifecycleMixin if hasattr(wl, "WindowLifecycleMixin") else None
-    if cls is None:
-        cls = next(v for k, v in vars(wl).items() if isinstance(v, type) and hasattr(v, "restore_window"))
+    cls = wl.WindowLifecycleMixin
     cls.restore_window = restore_window
     cls._on_close = on_close
     cls.hide_to_tray = hide_to_tray

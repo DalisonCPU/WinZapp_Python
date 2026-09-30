@@ -4,6 +4,9 @@ A native macOS build of WinZapp, made for VoiceOver users. Everything
 Mac-specific lives in this folder; WinZapp's Windows code is unchanged and
 the Windows build is unaffected.
 
+Maintained by Rocco Fiorentino (@rfiorentino1). Windows changes never need
+to be tested on a Mac; see "What Windows changes can break" below.
+
 ## How it works
 
 `winzapp_mac/` is a compatibility layer installed before WinZapp's
@@ -24,7 +27,9 @@ and adapts WinZapp's UI to how Mac apps and VoiceOver behave:
 | `paths_mac.py` | Data and the paired session live in `~/Library/Application Support/WinZapp`; the app installs its bundled server runtime there at launch. |
 | `sound_mac.py`, `audio_mac.py` | Universal BASS dylibs and the Opus plugin; bundled ffmpeg; the microphone recovers when CoreAudio restarts. |
 | `spell_mac.py`, `camera_mac.py`, `hotkey_mac.py`, `platform_mac.py` | Spell checking with the Mac's dictionaries, the camera through AVFoundation, the global hotkey through Carbon's RegisterEventHotKey (no Accessibility permission), Show in Finder, macOS region and language. |
-| `strings_mac.py`, `languages/` | Mac wording in all seven locales (overlay on `client/languages`). |
+| `strings_mac.py` | Mac wording: a string that describes Windows has a Mac variant beside it in `client/languages` (`<key>_macos`), used in its place on the Mac. |
+| `focus_mac.py` | WinZapp's quiet-hours gate follows macOS Focus (Developer ID builds with the Communication Notifications entitlement). |
+| `updater_mac.py` | Signed release builds update from the macOS release feed named in their Info.plist; without one the updater is off. |
 
 ## Building
 
@@ -37,12 +42,27 @@ Intel) and `WinZapp-macOS-<arch>.zip`. It installs the Python
 dependencies into `.pydeps/`, downloads the pinned Node.js and ffmpeg
 (SHA-256 checked), runs `setup_api.py`, and bundles the WPPConnect server
 and its headless Chrome inside the app. `.github/workflows/build-macos.yml`
-does this for both architectures on every pull request.
+does this for both architectures on pull requests that touch the Mac build.
 
 Development run without building: `python3 macos/launcher.py`.
 
 Tests: `PYTHONPATH=.pydeps python3 -m pytest macos/tests -c /dev/null --rootdir macos/tests`.
 They never show a window.
+
+## What Windows changes can break
+
+The layer never edits WinZapp's files; it replaces WinZapp functions and
+methods at startup. So on the Windows side:
+
+- **Renaming or removing** a function, class or method the layer patches or
+  reads fails `tests/test_macos_layer_contract.py` in the normal `pytest`
+  run, on any platform, naming the file and line in `macos/winzapp_mac` to
+  update. Nothing else in `client/` is constrained.
+- **A new string that mentions Windows** shows "macOS" in its place on the
+  Mac. For better wording, add `<key>_macos` next to it in every locale
+  (checked by the same tests as any other key).
+- Everything else, including behaviour changes inside a patched method, is
+  the Mac maintainer's to follow up; the Windows build never runs Mac code.
 
 ## Not yet on the Mac
 
@@ -50,15 +70,9 @@ They never show a window.
   needs a Core Audio process-tap recorder (macOS 14.2+), which would also
   allow a separate VoiceOver volume like the NVDA one. The button is shown
   dimmed and says so.
-- **Do Not Disturb for WinZapp's own sounds.** Mac notifications follow
-  Focus, but macOS offers no public way for an app to read Focus, so
-  WinZapp's sounds still play.
-- **Updates.** WinZapp's updater installs Windows releases and is off on the
-  Mac. Mac builds would need a macOS asset in the releases and the updater
-  taught to install it.
 
 ## Opening a downloaded build
 
-The app is ad-hoc signed, not notarized (that needs an Apple Developer ID).
-macOS blocks a downloaded copy the first time: open it once, then allow it
+A build without `WINZAPP_SIGN_IDENTITY` (such as the pull-request workflow's)
+is ad-hoc signed, not notarized. macOS blocks a downloaded copy the first time: open it once, then allow it
 in System Settings, Privacy & Security ("Open Anyway").

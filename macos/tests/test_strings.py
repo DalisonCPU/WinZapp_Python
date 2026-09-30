@@ -1,4 +1,6 @@
-"""Every WinZapp locale has every Mac string (WinZapp rule 2)."""
+"""Mac wording (strings_mac). The variants themselves live in
+client/languages and are checked on every platform by
+tests/test_language_files_in_sync.py and tests/test_macos_layer_contract.py."""
 
 import json
 import os
@@ -13,46 +15,36 @@ from winzapp_mac import strings_mac  # noqa: E402
 
 LOCALES = sorted(json.load(open(os.path.join(ROOT, "client", "languages", "language_map.json"),
                                 encoding="utf-8")))
-EN = strings_mac.load_overlay("en-US")
 
 
-@pytest.mark.parametrize("locale", LOCALES)
-def test_overlay_exists_with_every_key(locale):
-    overlay = strings_mac.load_overlay(locale)
-    assert set(overlay) == set(EN), f"{locale}: missing {set(EN) - set(overlay)}"
-
-
-@pytest.mark.parametrize("locale", LOCALES)
-def test_overlay_keeps_placeholders_and_names_no_windows(locale):
-    overlay = strings_mac.load_overlay(locale)
-    for key, text in overlay.items():
-        assert "Windows" not in text, (locale, key)
-        assert ("{device}" in text) == ("{device}" in EN[key]), (locale, key)
-
-
-@pytest.mark.parametrize("locale", LOCALES)
-def test_overridden_keys_exist_upstream(locale):
-    with open(os.path.join(ROOT, "client", "languages", f"{locale}.json"), encoding="utf-8") as fh:
-        upstream = json.load(fh)
-    own = {"mac_not_yet_available"}
-    stale = [k for k in strings_mac.load_overlay(locale) if k not in upstream and k not in own]
-    assert not stale, f"{locale}: overlay keys no longer in WinZapp: {stale}"
-
-
-def test_overlay_wins_and_other_windows_mentions_become_macos():
-    out = strings_mac.mac_wording("pt-BR", {"autostart_ask_title": "Iniciar o WinZapp com o Windows",
-                                             "x": "padrão do Windows"})
+def test_mac_variant_wins_and_other_windows_mentions_become_macos():
+    data = {"autostart_ask_title": "Iniciar o WinZapp com o Windows",
+            "autostart_ask_title_macos": "Iniciar o WinZapp ao iniciar sessão",
+            "x": "padrão do Windows", "WindowsLike": "Windowsfoo"}
+    out = strings_mac.mac_wording(data)
+    assert out is data                     # in place: core.i18n caches this dict
     assert out["autostart_ask_title"] == "Iniciar o WinZapp ao iniciar sessão"
     assert out["x"] == "padrão do macOS"
+    assert out["WindowsLike"] == "Windowsfoo"
 
 
-def test_text_follows_the_users_language_even_before_get_language():
+@pytest.mark.parametrize("locale", LOCALES)
+def test_no_locale_names_windows_on_the_mac(locale):
+    from core import i18n
+    data = strings_mac.mac_wording(i18n._load_translations(locale))
+    left = [k for k, v in data.items() if isinstance(v, str) and "Windows" in v
+            and not k.endswith(strings_mac.MAC_SUFFIX)]
+    assert not left, f"{locale}: {left}"
+
+
+def test_the_cached_translations_keep_the_mac_wording():
     from core import i18n
     strings_mac.install()
+    i18n._TRANSLATIONS_CACHE.clear()
 
     class MW:
         settings = {"general": {"language": "en-US"}}
 
-    tr = i18n.I18n(MW())                     # never told to get_language()
-    assert "Não" not in tr.t("no_pairing_code_received")
-    assert tr.t("no_pairing_code_received").startswith("Could not connect") or "pairing" in tr.t("no_pairing_code_received").lower()
+    tr = i18n.I18n(MW())
+    first = tr.t("autostart_ask_title")
+    assert first == tr.t("autostart_ask_title") == "Start WinZapp at login"

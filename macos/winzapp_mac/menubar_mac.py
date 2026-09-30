@@ -249,9 +249,9 @@ def install():
     # WPPConnect updater and the ZIP/WPP reinstalls are Windows-only here:
     # the server is part of each Mac release.
     from . import updater_mac
-    off = ["_on_force_reinstall_zip", "_start_wpp_update_checker", "_on_force_reinstall_wpp"]
+    updates.UpdatesMixin._on_force_reinstall_zip = no_updater
+    updates.UpdatesMixin._start_wpp_update_checker = no_updater
+    updates.UpdatesMixin._on_force_reinstall_wpp = no_updater
     if not updater_mac.enabled():
-        off += ["_start_update_checker", "_on_force_update"]
-    for name in off:
-        if hasattr(updates.UpdatesMixin, name):
-            setattr(updates.UpdatesMixin, name, no_updater)
+        updates.UpdatesMixin._start_update_checker = no_updater
+        updates.UpdatesMixin._on_force_update = no_updater

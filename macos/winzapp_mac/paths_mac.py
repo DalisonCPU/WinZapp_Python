@@ -56,18 +56,62 @@ def _clone_tree(src, dst):
         shutil.copytree(src, dst, symlinks=True)
 
 
-def _stop_stale_node():
-    """A Node left running from the runtime being replaced (only after a
-    crash — a normal quit stops it) would keep serving the old code."""
+def executable_of(pid):
+    """Full path of the executable process *pid* runs (libproc), or None."""
+    import ctypes
+    import ctypes.util
     try:
-        out = subprocess.run(["pgrep", "-f", os.path.join(RUNTIME, "node", "node")],
+        libproc = ctypes.CDLL(ctypes.util.find_library("proc") or "/usr/lib/libproc.dylib")
+        buf = ctypes.create_string_buffer(4096)         # PROC_PIDPATHINFO_MAXSIZE
+        n = libproc.proc_pidpath(int(pid), buf, ctypes.sizeof(buf))
+    except (OSError, AttributeError, ValueError):
+        return None
+    return os.fsdecode(buf.raw[:n]) if n > 0 else None
+
+
+def runtime_node_pids(node_path):
+    """This user's processes whose executable IS *node_path* — not every
+    process that merely mentions the path on its command line."""
+    try:
+        out = subprocess.run(["pgrep", "-U", str(os.getuid()), "-f", node_path],
                              capture_output=True, text=True).stdout.split()
     except Exception:
-        return
+        return []
+    want = os.path.realpath(node_path)
+    pids = []
     for pid in out:
         try:
-            os.kill(int(pid), signal.SIGKILL)
-        except (OSError, ValueError):
+            pid = int(pid)
+        except ValueError:
+            continue
+        exe = executable_of(pid)
+        if pid != os.getpid() and exe and os.path.realpath(exe) == want:
+            pids.append(pid)
+    return pids
+
+
+def _stop_stale_node(node_path=None, grace=3.0):
+    """A Node left running from the runtime being replaced (only after a
+    crash — a normal quit stops it) would keep serving the old code. Asked
+    to quit first; one still running after *grace* seconds (checked again,
+    so a reused pid is never hit) is killed."""
+    import time
+    node_path = node_path or os.path.join(RUNTIME, "node", "node")
+    pids = runtime_node_pids(node_path)
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.monotonic() + grace
+    while pids and time.monotonic() < deadline:
+        time.sleep(0.1)
+        pids = [pid for pid in pids if pid in runtime_node_pids(node_path)]
+    for pid in pids:
+        logging.warning("[paths_mac] stale Node %s ignored SIGTERM; killing it", pid)
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
             pass
 
 

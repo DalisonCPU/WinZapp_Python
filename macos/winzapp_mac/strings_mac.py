@@ -1,44 +1,30 @@
 """Mac wording for WinZapp's user-facing strings, in every locale.
 
-macos/languages/<locale>.json overlays WinZapp's client/languages files:
-Mac phrasing for strings that describe Windows ("Start WinZapp with
-Windows" -> "Start WinZapp at login"), plus the Mac layer's own strings.
-Kept beside the layer rather than edited into client/languages so upstream
-translation updates merge cleanly. macos/tests/test_strings.py checks every
-locale in client/languages/language_map.json has every overlay key.
+Strings that describe Windows ("Start WinZapp with Windows") have a Mac
+variant in WinZapp's own language files under the same key plus
+MAC_SUFFIX ("autostart_ask_title_macos": "Start WinZapp at login"), so
+translators see them beside the Windows text and
+tests/test_language_files_in_sync.py keeps them in every locale. On the Mac
+the variant is used in place of the Windows text.
 
 Any other string that still names Windows gets "macOS" as a fallback.
 """
 
-import json
-import os
 import re
-import sys
 
+MAC_SUFFIX = "_macos"
 _WINDOWS = re.compile(r"\bWindows\b")
 
 
-def overlay_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.join(sys._MEIPASS, "macos_languages")
-    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "languages")
-
-
-def load_overlay(lang_code):
-    path = os.path.join(overlay_dir(), f"{lang_code}.json")
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return json.load(fh)
-    except (OSError, ValueError):
-        return {}
-
-
-def mac_wording(lang_code, data):
-    overlay = load_overlay(lang_code)
+def mac_wording(data):
+    """Give one locale's translations their Mac wording, in place: the dict
+    is the one core.i18n caches, so every later lookup sees it too."""
+    variants = {k[:-len(MAC_SUFFIX)]: v for k, v in data.items() if k.endswith(MAC_SUFFIX)}
     for k, v in list(data.items()):
-        if isinstance(v, str) and k not in overlay and "Windows" in v:
+        if k in variants:
+            data[k] = variants[k]
+        elif isinstance(v, str) and "Windows" in v and not k.endswith(MAC_SUFFIX):
             data[k] = _WINDOWS.sub("macOS", v)
-    data.update(overlay)
     return data
 
 
@@ -47,21 +33,6 @@ def install():
     orig = i18n._load_translations
 
     def load(lang_code):
-        return mac_wording(lang_code, orig(lang_code))
+        return mac_wording(orig(lang_code))
 
     i18n._load_translations = load
-
-    # Each I18n starts at "pt-BR" and only follows the user's language once
-    # something calls get_language(); a message produced before that (seen
-    # live: a pairing error on an English install) came out in Portuguese.
-    # Read the setting on every lookup — it is a dict access.
-    orig_t = i18n.I18n.t
-
-    def t(self, key):
-        try:
-            self.get_language()
-        except Exception:
-            pass
-        return orig_t(self, key)
-
-    i18n.I18n.t = t

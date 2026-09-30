@@ -54,24 +54,40 @@ def _mac_pattern(date_style, time_style):
     return str(f.dateFormat() or "")
 
 
-@functools.lru_cache(maxsize=1)
+def _cached_success(fn):
+    """Cache a result, but not a failure: a formatter that raised (or found
+    no pattern) is tried again on the next call, and the error is logged."""
+    box = []
+
+    @functools.wraps(fn)
+    def wrapper():
+        if box:
+            return box[0]
+        try:
+            value = fn()
+        except Exception:
+            logging.exception("[platform_mac] %s failed; WinZapp's default is used", fn.__name__)
+            return None
+        if value:
+            box.append(value)
+        return value
+
+    wrapper.cache_clear = box.clear
+    return wrapper
+
+
+@_cached_success
 def mac_date_strftime():
     from core import locale_format as lf
-    try:
-        pattern = _mac_pattern(1, 0)   # NSDateFormatterShortStyle, NoStyle
-        return lf._translate_pattern(_icu_to_windows(pattern), lf._DATE_TOKENS) if pattern else None
-    except Exception:
-        return None
+    pattern = _mac_pattern(1, 0)   # NSDateFormatterShortStyle, NoStyle
+    return lf._translate_pattern(_icu_to_windows(pattern), lf._DATE_TOKENS) if pattern else None
 
 
-@functools.lru_cache(maxsize=1)
+@_cached_success
 def mac_time_strftime():
     from core import locale_format as lf
-    try:
-        pattern = _mac_pattern(0, 1)
-        return lf._translate_pattern(_icu_to_windows(pattern), lf._TIME_TOKENS) if pattern else None
-    except Exception:
-        return None
+    pattern = _mac_pattern(0, 1)
+    return lf._translate_pattern(_icu_to_windows(pattern), lf._TIME_TOKENS) if pattern else None
 
 
 @functools.lru_cache(maxsize=1)

@@ -3,22 +3,20 @@ name: macOS build
 # Builds the self-contained WinZapp.app (macos/build_app.py) for Apple
 # Silicon and Intel and runs the macOS layer's tests. The zips are uploaded
 # as workflow artifacts; nothing is published.
+#
+# Runs only for pull requests that touch the Mac build or what it packages
+# directly (two macOS runners, up to an hour each), and on demand. A rename
+# in client/ that the Mac layer depends on is caught on Windows CI by
+# tests/test_macos_layer_contract.py, without starting a Mac.
 on:
   pull_request:
     paths:
       - "macos/**"
-      - "client/**"
+      - ".github/workflows/build-macos.yml"
       - "setup_api.py"
       - "requirements.txt"
-      - ".github/workflows/build-macos.yml"
-  push:
-    branches: [main]
-    paths:
-      - "macos/**"
-      - "client/**"
-      - "setup_api.py"
-      - "requirements.txt"
-      - ".github/workflows/build-macos.yml"
+      - "client/api_patches/**"
+      - "client/node_download_config.py"
   workflow_dispatch:
 
 permissions:

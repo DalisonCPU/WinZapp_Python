@@ -15,14 +15,16 @@ the Mac differs is replaced:
 * Installing: a small helper waits for WinZapp to quit, swaps the app bundle
   in place and opens the new one.
 
-Only builds that set WinZappMacUpdates in Info.plist (the signed release
-builds) check for updates; a locally built app keeps the updater off.
+Only builds whose Info.plist names that repository (the signed release
+builds) check for updates. Without it the updater is off: there is no
+default repository to fall back to.
 """
 
 import logging
 import os
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -47,8 +49,18 @@ def _info():
         return {}
 
 
+_REPO = re.compile(r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$")
+
+
+def releases_repo(info):
+    """The owner/name the Mac releases come from, or "" when the build
+    names none (or something that is not a GitHub repository)."""
+    repo = info.get("WinZappMacReleasesRepo")
+    return repo if isinstance(repo, str) and _REPO.match(repo) else ""
+
+
 def enabled():
-    return bool(getattr(sys, "frozen", False) and _info().get("WinZappMacUpdates"))
+    return bool(getattr(sys, "frozen", False) and releases_repo(_info()))
 
 
 def asset_name():
@@ -207,8 +219,7 @@ def install():
     it on only when enabled() is true)."""
     if not enabled():
         return
-    info = _info()
-    repo = info.get("WinZappMacReleasesRepo") or "rocco-labs/WinZapp_Python"
+    repo = releases_repo(_info())
     import config
     import updater
     base = f"https://api.github.com/repos/{repo}/releases"

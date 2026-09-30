@@ -91,7 +91,9 @@ def activate_existing_window() -> None:
 
 def install():
     import autostart
-    for name in ("acquire_single_instance_mutex", "get_autostart_command",
-                 "is_autostart_enabled", "enable_autostart",
-                 "disable_autostart", "activate_existing_window"):
-        setattr(autostart, name, globals()[name])
+    autostart.acquire_single_instance_mutex = acquire_single_instance_mutex
+    autostart.get_autostart_command = get_autostart_command
+    autostart.is_autostart_enabled = is_autostart_enabled
+    autostart.enable_autostart = enable_autostart
+    autostart.disable_autostart = disable_autostart
+    autostart.activate_existing_window = activate_existing_window

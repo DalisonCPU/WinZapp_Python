@@ -67,3 +67,21 @@ def test_swap_script_replaces_the_app_after_winzapp_exits(tmp_path):
     assert swap.wait(timeout=10) == 0
     assert os.path.exists(os.path.join(current, "new"))
     assert not os.path.exists(staged) and not os.path.exists(current + ".old")
+
+
+def test_no_releases_repository_means_no_updates():
+    assert um.releases_repo({}) == ""
+    assert um.releases_repo({"WinZappMacReleasesRepo": ""}) == ""
+    assert um.releases_repo({"WinZappMacReleasesRepo": "not a repo"}) == ""
+    assert um.releases_repo({"WinZappMacReleasesRepo": "owner/name/extra"}) == ""
+    assert um.releases_repo({"WinZappMacReleasesRepo": "owner/WinZapp_Python"}) == "owner/WinZapp_Python"
+
+
+def test_updater_stays_off_without_a_releases_repository(monkeypatch):
+    import updater
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacUpdates": True})
+    before = (updater.GITHUB_API_LATEST_RELEASE, updater.UpdateChecker._do_install)
+    assert not um.enabled()
+    um.install()
+    assert (updater.GITHUB_API_LATEST_RELEASE, updater.UpdateChecker._do_install) == before

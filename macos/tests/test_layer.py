@@ -417,3 +417,59 @@ def test_every_usernotifications_call_in_notify_mac_exists():
             assert hasattr(objs[obj], name), f"{obj}.{name} does not exist"
             checked += 1
     assert checked >= 8
+
+
+def test_a_failed_regional_format_is_logged_and_tried_again(caplog):
+    from winzapp_mac import platform_mac as pm
+    answers = [RuntimeError("no formatter"), None, "%d/%m/%Y", "never asked"]
+
+    @pm._cached_success
+    def fmt():
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    assert fmt() is None and "no formatter" in caplog.text
+    assert fmt() is None            # no pattern: not cached either
+    assert fmt() == "%d/%m/%Y"
+    assert fmt() == "%d/%m/%Y"      # a success is cached
+    assert answers == ["never asked"]
+
+
+# ---------------------------------------------------------- stale node ---
+
+def test_only_the_runtimes_own_node_is_stopped(tmp_path):
+    import shutil
+    import subprocess
+    import time
+    from winzapp_mac import paths_mac
+    node = str(tmp_path / "node")
+    shutil.copy("/bin/sleep", node)
+    real = subprocess.Popen([node, "30"])
+    # Mentions the runtime path on its command line but runs something else.
+    decoy = subprocess.Popen(["/bin/sh", "-c", "sleep 30", node])
+    try:
+        time.sleep(0.3)
+        assert paths_mac.runtime_node_pids(node) == [real.pid]
+        paths_mac._stop_stale_node(node, grace=5)
+        assert real.wait(timeout=5) is not None
+        assert decoy.poll() is None
+    finally:
+        for proc in (real, decoy):
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+
+
+# ----------------------------------------------------- message-box log ---
+
+def test_the_message_box_log_masks_phone_numbers():
+    from core.pii_redaction import redact_phone
+    from winzapp_mac import diagnostics_mac
+    entry = diagnostics_mac.persistent_entry(
+        "WinZapp", "Could not send to 5511987654321@s.whatsapp.net (lid 123456789012345@lid)",
+        "  File connect.py, line 1\n", when="2026-09-30 15:00:00")
+    assert "5511987654321" not in entry and "123456789012345" not in entry
+    assert entry.startswith("2026-09-30 15:00:00 'WinZapp' | 'Could not send to ")
+    assert redact_phone("5511987654321") in entry

@@ -167,30 +167,6 @@ def fetch_ffmpeg():
         fh.write(want)
 
 
-def apply_upstream_fixes():
-    """macos/patches/*.patch: fixes to WinZapp's own code that affect every
-    platform and are proposed upstream separately. Each is applied unless the
-    tree already has it (then it's skipped); one that no longer applies is
-    reported and the build goes on without it."""
-    pdir = os.path.join(HERE, "patches")
-    if not os.path.isdir(pdir):
-        return
-    for name in sorted(os.listdir(pdir)):
-        if not name.endswith(".patch"):
-            continue
-        path = os.path.join(pdir, name)
-        rev = subprocess.run(["git", "-C", ROOT, "apply", "--reverse", "--check", path],
-                             capture_output=True)
-        if rev.returncode == 0:
-            print(f"   {name}: already in the tree", flush=True)
-            continue
-        fwd = subprocess.run(["git", "-C", ROOT, "apply", "--check", path], capture_output=True, text=True)
-        if fwd.returncode != 0:
-            print(f"   {name}: does NOT apply any more (upstream changed?) — skipped\n{fwd.stderr}", flush=True)
-            continue
-        run(["git", "-C", ROOT, "apply", path])
-
-
 # 3 ------------------------------------------------------------------------
 def build_api(node_dir):
     step("WPPConnect server (setup_api.py)")
@@ -290,7 +266,6 @@ def pyinstaller():
     datas += [(f, ".") for f in os.listdir(CLIENT) if f.startswith("changelog_")]
     for src, dst in datas:
         cmd += ["--add-data", f"{os.path.join(CLIENT, src)}:{dst}"]
-    cmd += ["--add-data", f"{os.path.join(HERE, 'languages')}:macos_languages"]
     for f in os.listdir(libdir):
         cmd += ["--add-binary", f"{os.path.join(libdir, f)}:lib"]
         if f.endswith(".dylib"):
@@ -327,7 +302,6 @@ def bundle_runtime(node_dir):
             run(["ditto", src, dst])
         else:
             shutil.copy2(src, dst, follow_symlinks=False)
-    _ensure_mac_user_agent(os.path.join(rt, "api", "start.js"))
     # Identifies this runtime: the app reinstalls it into Application Support
     # whenever the stamp differs (winzapp_mac/paths_mac.py).
     h = hashlib.sha256()
@@ -341,26 +315,6 @@ def bundle_runtime(node_dir):
     h.update(head.encode())
     with open(os.path.join(rt, "STAMP"), "w") as fh:
         fh.write(f"{head[:12]}-{h.hexdigest()[:16]}\n")
-
-
-_WIN_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-_MAC_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-
-
-def _ensure_mac_user_agent(start_js):
-    """Upstream start.js before the platform-aware user agent: without it
-    WhatsApp lists the Mac as "Chrome (Windows)". Newer start.js already
-    chooses by process.platform and is left alone."""
-    try:
-        with open(start_js, encoding="utf-8") as fh:
-            src = fh.read()
-    except OSError:
-        return
-    if "process.platform === 'darwin'" in src or _WIN_UA not in src:
-        return
-    with open(start_js, "w", encoding="utf-8") as fh:
-        fh.write(src.replace(_WIN_UA, _MAC_UA))
-    print("   start.js: Mac user agent", flush=True)
 
 
 # 6 ------------------------------------------------------------------------
@@ -387,7 +341,6 @@ def finish_bundle():
     # Release builds (the macOS release workflow) turn the Mac updater on and
     # say where their updates are published (winzapp_mac/updater_mac.py).
     if os.environ.get("WINZAPP_MAC_RELEASES_REPO"):
-        plist["WinZappMacUpdates"] = True
         plist["WinZappMacReleasesRepo"] = os.environ["WINZAPP_MAC_RELEASES_REPO"]
     with open(plist_path, "wb") as fh:
         plistlib.dump(plist, fh)
@@ -537,8 +490,6 @@ def main():
         python_deps()
     node_dir = node_runtime()
     fetch_ffmpeg()
-    step("Upstream fixes (macos/patches)")
-    apply_upstream_fixes()
     if not a.no_api:
         build_api(node_dir)
     pyinstaller()

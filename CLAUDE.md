@@ -204,6 +204,16 @@ above; `docs/reference/status-tab.md`);
 also compiles the C installer stubs); `client/changelog_*.txt`
 (`docs/reference/writing-changelogs.md`).
 
+### macOS build (`macos/`)
+
+A separate, Mac-only layer (`macos/winzapp_mac`) replaces Windows-only
+pieces at startup; the Windows build never runs it. In `client/` the Mac
+has only `<key>_macos` strings and `start.js`'s user agent. Its maintainer is listed in `macos/README.md`. What it asks of a
+Windows change: a rename or removal of something it patches fails
+`tests/test_macos_layer_contract.py` (fix the name in `macos/winzapp_mac`
+or tell its maintainer), and a string that names Windows may get a
+`<key>_macos` variant beside it, kept in every locale like any key.
+
 ## Before touching an area, read its trap file
 
 | Area / files | Read first |
