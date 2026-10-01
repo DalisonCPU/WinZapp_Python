@@ -231,6 +231,10 @@ class ConversationNavigationMixin:
         count = self.messages_list.GetItemCount()
         if count > 0:
             sep = self._unread_sep_idx
+            # A separator the user already moved past stays on screen but no
+            # longer anchors anything: a fresh open would find nothing unread.
+            if getattr(self, "_sep_anchors_read_position", False):
+                sep = -1
             target = sep if 0 <= sep < count else count - 1
             self.messages_list.Focus(target)
             self.messages_list.Select(target)

@@ -126,6 +126,12 @@ class TestAnAlreadyOpenConversation:
         _open_again(stub, monkeypatch)
         assert (stub.messages_list.focused_row, stub.messages_list.selected_row) == (3, 3)
 
+    def test_a_separator_already_read_past_does_not_attract_focus(self, monkeypatch):
+        stub = _Stub(setting="unread_or_last", rows=8, sep_idx=3)
+        stub._sep_anchors_read_position = True
+        _open_again(stub, monkeypatch)
+        assert stub.messages_list.focused_row == 7
+
     def test_a_stale_separator_index_falls_back_to_the_last_message(self, monkeypatch):
         stub = _Stub(setting="unread_or_last", rows=3, sep_idx=9)
         _open_again(stub, monkeypatch)
