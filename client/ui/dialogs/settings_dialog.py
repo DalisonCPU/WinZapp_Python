@@ -999,6 +999,9 @@ class SettingsDialog(wx.Dialog):
             self._storage_page, label=i18n.t("auto_download_media_label")
         )
         storage_sizer.Add(self._auto_download_media_check, 0, wx.ALL, 8)
+        self._auto_download_media_check.Bind(
+            wx.EVT_CHECKBOX, self._on_auto_download_toggle
+        )
 
         self._auto_download_types_label = wx.StaticText(
             self._storage_page,
@@ -1812,6 +1815,7 @@ class SettingsDialog(wx.Dialog):
             storage.get("probe_video_duration_on_download", False)
         )
         self._load_auto_download_types(storage.get("auto_download_media_types"))
+        self._update_auto_download_types_state()
 
         audio_playback = self.main_window.settings.get("audio_playback", {})
         self._mark_audio_played_check.SetValue(
@@ -2825,6 +2829,18 @@ class SettingsDialog(wx.Dialog):
                 idx, not self._group_media_types_list.IsItemChecked(idx)
             )
 
+    def _on_auto_download_toggle(self, event):
+        self._update_auto_download_types_state()
+        event.Skip()
+
+    def _update_auto_download_types_state(self):
+        """The category list only means something while the auto-download is
+        on. Disabled rather than unchecked: the ticks are the user's choice,
+        and they have to still be there when the box is ticked again."""
+        enabled = self._auto_download_media_check.GetValue()
+        self._auto_download_types_label.Enable(enabled)
+        self._auto_download_types_list.Enable(enabled)
+
     def _on_auto_download_type_activated(self, event):
         """Enter on a row toggles its checkbox, matching Space."""
         idx = event.GetIndex()
@@ -3275,6 +3291,7 @@ class SettingsDialog(wx.Dialog):
             cache.clear()
 
         # Storage
+        old_storage = dict(self.main_window.settings.get("storage") or {})
         self.main_window.settings.setdefault("storage", {}).update({
             "auto_download_media": self._auto_download_media_check.GetValue(),
             "media_max_days": int(self._media_max_days_field.GetValue().strip()),
@@ -3298,6 +3315,11 @@ class SettingsDialog(wx.Dialog):
         # Reload sound objects so per-event enabled/path changes (and the new
         # alert-tone defaults) take effect immediately, without a restart.
         self.main_window.load_sounds()
+        # Turning the auto-download on, or ticking another category, fetches
+        # that media now rather than at the next sync. Turning it off needs
+        # nothing from here: the running sweep reads the setting itself.
+        self.main_window._on_auto_download_settings_changed(
+            old_storage, self.main_window.settings["storage"])
 
         # Reload translations and repaint the already-created UI only when the
         # language actually changed. This includes dynamic rows and modeless

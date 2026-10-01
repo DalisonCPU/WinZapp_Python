@@ -64,6 +64,8 @@ NOUTĂȚI
 
 - Conversațiile arhivate și blocate pot fi acum selectate la fel ca cele principale: Ctrl+Spațiu, Shift+săgeți, Shift+Home/End, Ctrl+Shift+Spațiu și Spațiu în modul de selecție, cu același sunet și aceleași anunțuri. Meniul „Acțiuni în bloc” (cu scurtături proprii) permite dezarhivarea, golirea, ștergerea și marcarea ca citite sau necitite a celor arhivate, respectiv deblocarea sau marcarea ca citite sau necitite a celor blocate.
 
+- Descărcarea automată a fișierelor media respectă acum imediat opțiunea „Descărcați automat media” din fila Stocare din Setări: debifarea ei oprește descărcarea în curs, iar bifarea ei (sau bifarea încă unui tip de media) pornește descărcarea fără a aștepta următoarea sincronizare. Debifată, se aplică acum și fișierelor media din mesajele care sosesc cât timp WinZapp este deschis, iar lista de tipuri este dezactivată, păstrând ce era bifat.
+
 CORECTĂRI
 
 - Când porneați un mesaj vocal cu anunțurile înregistrării dezactivate, cititorul de ecran nu mai începe să spună „Trimiteți” înainte de a fi întrerupt. WinZapp evită acum mutarea automată a focalizării care provoca acest fragment, păstrând disponibile Ctrl+R, Ctrl+Shift+P și Ctrl+Shift+D.

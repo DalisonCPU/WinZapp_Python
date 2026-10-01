@@ -64,6 +64,8 @@ MELHORIAS
 
 - As conversas arquivadas e trancadas podem agora ser selecionadas como as conversas principais: Ctrl+Espaço, Shift+setas, Shift+Home/End, Ctrl+Shift+Espaço e o Espaço do modo de seleção, com o mesmo som e os mesmos anúncios. O menu "Ações em massa" (e atalhos próprios) permite desarquivar, limpar, apagar e marcar como lidas ou não lidas as arquivadas, e destrancar ou marcar como lidas ou não lidas as trancadas.
 
+- O descarregamento automático de ficheiros multimédia passa a obedecer de imediato à opção "Descarregar ficheiros multimédia automaticamente" do separador Armazenamento das Definições: desmarcá-la interrompe o descarregamento em curso, e marcá-la (ou marcar mais um tipo de ficheiro multimédia) começa a descarregar sem esperar pela próxima sincronização. Desmarcada, passa a valer também para os ficheiros multimédia das mensagens que chegam enquanto o WinZapp está aberto, e a lista de tipos fica desativada, mantendo o que estava marcado.
+
 CORREÇÕES
 
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de ecrã já não começa a dizer “Enviar” antes de ser interrompido. O WinZapp evita agora a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.

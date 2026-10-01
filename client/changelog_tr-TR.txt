@@ -64,6 +64,8 @@ YENİLİKLER
 
 - Arşivlenmiş ve kilitli sohbetler artık ana sohbetler gibi seçilebiliyor: Ctrl+Boşluk, Shift+ok tuşları, Shift+Home/End, Ctrl+Shift+Boşluk ve seçim modundaki Boşluk; aynı ses ve aynı duyurularla. "Toplu işlemler" menüsü (kendi kısayollarıyla) arşivlenmişlerde arşivden çıkarma, temizleme, silme ve okundu/okunmadı işaretleme; kilitlilerde kilit kaldırma ve okundu/okunmadı işaretleme sağlar.
 
+- Otomatik medya indirme artık Ayarlar'ın Depolama sekmesindeki "Medyayı otomatik olarak indir" seçeneğine anında uyuyor: işareti kaldırmak süren indirmeyi durdurur, işaretlemek (ya da bir medya türü daha işaretlemek) bir sonraki eşitlemeyi beklemeden indirmeyi başlatır. İşaretsizken artık WinZapp açıkken gelen mesajlardaki medya için de geçerlidir ve tür listesi, işaretli olanları koruyarak devre dışı kalır.
+
 DÜZELTMELER
 
 - Sesli mesaj kayıt anonsları susturulduğunda, kayıt başlatılırken ekran okuyucunun sözü kesilmeden önce "Gönder" düğmesini seslendirmesi sorunu giderildi. WinZapp artık anonsun yarıda kesilmesine (kırpılmasına) yol açan otomatik odak hareketini önlerken Ctrl+R, Ctrl+Shift+P ve Ctrl+Shift+D kısayollarını kullanılabilir durumda tutar.

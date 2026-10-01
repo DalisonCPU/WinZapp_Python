@@ -16,6 +16,8 @@ import wx
 from core.utils import (
     MEASURED_SECONDS_KEY,
     auto_download_allows,
+    auto_download_enabled,
+    auto_download_newly_wanted,
     encrypt,
     video_seconds,
 )
@@ -141,6 +143,37 @@ class MediaMixin:
             logging.warning(
                 "[media_failures] failed to remove media_failed.json: %s", exc)
 
+    def _on_auto_download_settings_changed(self, old_storage, new_storage) -> bool:
+        """Start a sweep when Settings just asked for media nothing has
+        fetched yet. Returns whether one was started or queued.
+
+        Called by the settings dialog after it saved. Without this, turning
+        the auto-download on (or ticking another category) did nothing until
+        the next sync happened to run its media phase — on a synced account,
+        possibly not before the next launch.
+
+        It goes through the deferred-phase mechanism rather than a new thread
+        of its own: that is the sweep that announces its start and end, stops
+        when the setting is switched off again, and waits for RECENT history
+        to finish landing (the backfill loop starts it then).
+        """
+        if not auto_download_newly_wanted(old_storage, new_storage):
+            return False
+        if getattr(self, "_media_sync_running", False):
+            # The running sweep reads the category list per message, so what
+            # it has not reached yet already follows the new choice.
+            return False
+        if (not getattr(self, "_sync_completed", False)
+                or not getattr(self, "_wa_connected", False)
+                or getattr(self, "offline_mode", False)):
+            # The sync still to come runs its own media phase with the
+            # setting as it is now; queueing a second sweep would repeat it.
+            return False
+        self._media_sync_deferred = True
+        if not getattr(self, "_history_still_landing", False):
+            self._start_deferred_media_sync()
+        return True
+
     def _is_conversation_open_for(self, msg) -> bool:
         """True if msg belongs to the conversation currently shown on screen."""
         cp = getattr(self, "conversations_panel", None)
@@ -153,16 +186,26 @@ class MediaMixin:
         msg_jid = self._normalize_jid(key.get("remoteJid", ""))
         return msg_jid == self._normalize_jid(open_jid)
 
-    def sync_if_media(self, msg, timeout=60):
+    def sync_if_media(self, msg, timeout=60, explicit=False):
         """Download media for a single message during the background sync phase.
 
         Returns True only when a file was actually downloaded. Every skip
-        below — offline, not a media message, past the CDN TTL, past the
-        user's day/size caps, a known-expired id, already on disk — returns
-        False, so sync_media_for_all_chats() can count real work rather than
-        candidates.
+        below — offline, auto-download switched off, not a media message, past
+        the CDN TTL, past the user's day/size caps, a known-expired id, already
+        on disk — returns False, so sync_media_for_all_chats() can count real
+        work rather than candidates.
+
+        ``explicit`` is the menu's "Baixar mídias": the user asked, so the
+        auto-download switch is not consulted. The category list and the caps
+        still are.
         """
         if not getattr(self, "_wa_connected", False) or getattr(self, "offline_mode", False):
+            return False
+        # Configuracoes > Armazenamento > "Baixar midias automaticamente": the
+        # master switch for everything fetched without being asked. Here, in
+        # the funnel, so a message arriving live obeys it exactly as the
+        # sweeps do.
+        if not explicit and not auto_download_enabled(self.settings):
             return False
         message_type = msg.get("messageType", "")
         if not message_type and msg.get("type"):
