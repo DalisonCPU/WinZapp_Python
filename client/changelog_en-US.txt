@@ -234,7 +234,7 @@ WHAT'S NEW
 
 - Search in the contact lists ("Attach contact" and "Add member"): the field is focused as soon as the list opens, filters by name (including surname) and by number as you type, and clearing it shows every contact again.
 
-- Received contact card: a context menu with view name and number, copy the number with Ctrl+C, and converse. When the card carries more than one number, WinZapp asks which one to use.
+- Received contact card: a context menu with view name and number, copy the number with Ctrl+C, and start a chat. When the card carries more than one number, WinZapp asks which one to use.
 
 IMPROVEMENTS
 
