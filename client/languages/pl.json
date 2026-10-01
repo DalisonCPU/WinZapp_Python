@@ -1084,7 +1084,7 @@
     "voice_call_ended": "Połączenie zakończone.",
     "voice_call_error_unknown": "nieznany błąd",
     "voice_call_error_no_connection": "brak połączenia z serwerem WhatsApp",
-    "voice_call_voip_unavailable": "Połączenia nie są dostępne w wersji WhatsApp Web, której używa WinZapp. WinZapp pobiera nowszy katalog wersji podczas uruchamiania i stosuje go przy następnym uruchomieniu, więc ponowne uruchomienie WinZappa może rozwiązać problem. Jeśli problem się powtarza, wybierz \"Wymuś ponowną instalację WPPConnect\" w menu Pomoc.",
+    "voice_call_voip_unavailable": "Połączenia mogą być niedostępne w wersji WhatsApp Web, której używa WinZapp. WinZapp pobiera nowszy katalog wersji podczas uruchamiania i stosuje go przy następnym uruchomieniu, więc ponowne uruchomienie WinZappa może rozwiązać problem. Jeśli problem się powtarza, wybierz \"{option}\" w menu {menu}.",
     "voice_call_device_switch_failed": "Nie udało się otworzyć nowego urządzenia audio dla połączenia.",
     "incoming_call_close_button": "&Zamknij okno",
     "emoji_button": "Emoji",

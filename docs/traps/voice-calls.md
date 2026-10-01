@@ -309,9 +309,15 @@ launch a daemon thread asks the registry for `@wppconnect/wa-version/latest`
 **stages** a newer same-major, in-range, non-prerelease package in
 `wa-version.staged-<version>` beside the live one: the tarball is 42.6 MB (about
 35 s on a 10 Mbit link), so Node must not wait for it. The swap, with rollback,
-happens in `_start_wpp_background()` right before Node is spawned, under an OS
-lock, and a Node already running is never swapped under. Consequences to
-remember: the first update lands one launch after it was downloaded (unless the
+happens right before this process spawns Node, on a worker (never the UI
+thread: `_start_wpp_background_after_catalogue()`), under an OS lock separate
+from the download's, with the 161 MB old copy only renamed aside and deleted on
+a background thread. It is skipped ("busy", package left staged) while another
+account holds a live node-lease, because `start.js` re-reads
+`html/<build>.html` from this package every time a session's page is created,
+not once per Node, so a rename under a live Node can fail a session start. A
+staged package must also carry the html of the newest build in its own
+`versions.json`, or it is never promoted. Consequences to remember: the first update lands one launch after it was downloaded (unless the
 download beat the 3 s wait), a launch that is closed mid-download wastes the
 download, and a package whose declared dependencies the install lacks is skipped
 (the in-app reinstall remains the fallback). The failure the user sees when it

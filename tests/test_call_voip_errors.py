@@ -54,11 +54,26 @@ def test_success_is_returned_untouched():
     assert MainWindow._raise_for_call_response(object(), ok, "offer") is ok
 
 
-def test_the_error_text_is_the_localized_instruction_not_an_http_code():
+def test_the_error_text_is_the_localized_instruction_with_the_menu_names_filled_in():
+    strings = {
+        "voice_call_voip_unavailable": 'Try "{option}" in the {menu} menu.',
+        "menu_help": "&Help",
+        "menu_force_reinstall_wpp": "Force reinstall &WPPConnect",
+    }
     stub = types.SimpleNamespace(
-        i18n=types.SimpleNamespace(t=lambda key: f"<{key}>"),
+        i18n=types.SimpleNamespace(t=lambda key: strings.get(key, key)),
         _CALL_ERROR_MAX_SPOKEN=5,
     )
     assert MainWindow._call_error_text(stub, VoipUnavailableError("HTTP 500")) == \
-        "<voice_call_voip_unavailable>"
+        'Try "Force reinstall WPPConnect" in the Help menu.'
     assert MainWindow._call_error_text(stub, RuntimeError("HTTP 500")) == "HTTP..."
+
+
+def test_every_locale_keeps_the_same_placeholders():
+    import json
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[1] / "client" / "languages"
+    for loc in json.loads((root / "language_map.json").read_text(encoding="utf-8")):
+        text = json.loads((root / f"{loc}.json").read_text(encoding="utf-8"))["voice_call_voip_unavailable"]
+        assert "{menu}" in text and "{option}" in text, loc
+        text.format(menu="m", option="o")  # no stray placeholder

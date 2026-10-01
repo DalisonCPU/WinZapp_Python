@@ -306,7 +306,11 @@ class CallsMixin:
         logging.info("[call] failure detail: %r", error)
         if isinstance(error, VoipUnavailableError):
             # Not shortened: the whole sentence is the instruction.
-            return self.i18n.t("voice_call_voip_unavailable")
+            t = self.i18n.t
+            return t("voice_call_voip_unavailable").format(
+                menu=t("menu_help").replace("&", ""),
+                option=t("menu_force_reinstall_wpp").replace("&", ""),
+            )
         text = " ".join(str(error or "").split())
         if not text:
             return self.i18n.t("voice_call_error_unknown")

@@ -39,9 +39,23 @@ install depends on:
 * The result is sanity-checked before it is staged and again before it is
   applied, and the swap is rename-old-aside / rename-new-in with a rollback, so
   the install is never left without a working package.
-* Several WinZapp processes (one Node each) share one node_modules: staging
-  runs under one OS-level lock and applying under another, and each gives way
-  silently when its lock is held.
+* Several WinZapp processes share one node_modules: staging runs under one
+  OS-level lock and applying under another, and each gives way silently when
+  its lock is held. A stalled download holds only the stage lock, never the
+  apply lock.
+
+What is and is not guaranteed about swapping under a running Node: start.js
+reads html/<build>.html from this package every time a session's page is
+created (getPageContent, before the first navigation), not only once per
+Node. So a swap that lands while a Node of ANY account is up can make a
+session start in that Node find the directory missing or half renamed. The
+apply therefore (a) runs only right before this process spawns Node, (b) is
+skipped, leaving the package staged ("busy"), while another account holds a
+live node-lease, and (c) never promotes a package whose html/ lacks the file
+for the newest build in its own versions.json. What is NOT guaranteed: an
+account started by hand between the busy check and the rename, or a Node from
+a WinZapp that predates the lease; on Windows such a Node usually makes the
+rename itself fail, which is also a skip.
 """
 
 from __future__ import annotations
@@ -77,6 +91,11 @@ CHECK_INTERVAL_SECONDS = 6 * 3600
 #: (the thread is a daemon and keeps going; the next launch applies its result).
 JOIN_SECONDS = 3
 
+#: Absolute budgets for one response, whatever the link does in between.
+LATEST_DEADLINE_SECONDS = 15
+TARBALL_DEADLINE_SECONDS = 180
+_CHUNK = 64 * 1024
+
 MAX_VERSION_DOC_BYTES = 64 * 1024
 #: The package measured 42.6 MB packed and 161 MB on disk (2026-10); the caps
 #: leave room for the catalogue to keep growing without trusting a runaway.
@@ -93,7 +112,9 @@ _APPLY_LOCK_FILE = "wa_version_apply.lock"
 # download cut short) say nothing and are retried on the next launch.
 _DEFINITIVE = {"staged", "current", "skipped-deps", "rejected"}
 
-_PLAIN_VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+# ASCII digits, no leading zeros, fullmatch: no whitespace or newline slips
+# through, and the string we pick is the canonical one.
+_PLAIN_VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
 
 # ---------------------------------------------------------------- versions ---
@@ -104,7 +125,9 @@ def parse_version(version) -> tuple | None:
     A prerelease ("1.6.0-beta.1") or build-metadata version answers None: the
     refresh never installs one.
     """
-    m = _PLAIN_VERSION.match(str(version or "").strip())
+    if not isinstance(version, str):
+        return None
+    m = _PLAIN_VERSION.fullmatch(version)
     return tuple(int(x) for x in m.groups()) if m else None
 
 
@@ -231,6 +254,7 @@ def safe_extract(tar_bytes: bytes, dest: str) -> None:
     root = os.path.realpath(dest)
     total = 0
     count = 0
+    seen = set()
     with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r:gz") as tf:
         for member in tf:
             count += 1
@@ -247,6 +271,12 @@ def safe_extract(tar_bytes: bytes, dest: str) -> None:
             if member.isdir():
                 os.makedirs(target, exist_ok=True)
                 continue
+            # A duplicate, or a name differing only by case (the same file on
+            # Windows), would let a later member overwrite a validated one.
+            folded = tuple(part.lower() for part in rest)
+            if folded in seen:
+                raise UnsafeArchive("duplicate member")
+            seen.add(folded)
             total += max(member.size, 0)
             if total > MAX_EXTRACTED_BYTES:
                 raise UnsafeArchive("archive too large")
@@ -297,11 +327,19 @@ def sanity_check(new_dir: str, expected_version: str) -> bool:
     if newest_build(_read_json(os.path.join(new_dir, "versions.json"))) is None:
         return False
     main = pkg.get("main")
-    return isinstance(main, str) and os.path.isfile(os.path.join(new_dir, *main.split("/")))
+    if not (isinstance(main, str) and os.path.isfile(os.path.join(new_dir, *main.split("/")))):
+        return False
+    # start.js serves html/<newest build>.html; a package without it would pin
+    # a build it cannot assemble.
+    newest = newest_build(_read_json(os.path.join(new_dir, "versions.json")))
+    html = os.path.join(new_dir, "html", f"{newest}.html")
+    return os.path.isfile(html) and os.path.getsize(html) > 0
 
 
-def swap_directories(target: str, new_dir: str, stamp, *, rename=None) -> None:
+def swap_directories(target: str, new_dir: str, stamp, *, rename=None) -> str:
     """Replace ``target`` with ``new_dir``; on any failure put the old one back.
+    Returns the path the old copy was renamed to; deleting it (161 MB) is the
+    caller's business, off the critical path.
 
     Raises when the swap did not happen (a Windows rename of a directory some
     Node has open fails here, and that is the expected way to give up).
@@ -317,7 +355,7 @@ def swap_directories(target: str, new_dir: str, stamp, *, rename=None) -> None:
         except OSError:
             logging.error("[wa-version] could not restore the previous catalogue")
         raise
-    shutil.rmtree(old, ignore_errors=True)
+    return old
 
 
 @contextlib.contextmanager
@@ -354,27 +392,49 @@ def exclusive_lock(path: str):
         fh.close()
 
 
-def default_fetch(url: str, max_bytes: int, timeout: float = TIMEOUT_SECONDS) -> bytes:
-    """GET over HTTPS with a timeout and a hard size cap; no redirects."""
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse every redirect: the registry answers directly, and following one
+    would leave the host the URL checks were made against."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def default_fetch(url: str, max_bytes: int, deadline: float = LATEST_DEADLINE_SECONDS, *,
+                  timeout: float = TIMEOUT_SECONDS, opener=None,
+                  clock=time.monotonic) -> bytes:
+    """GET over HTTPS with a hard size cap and an ABSOLUTE deadline.
+
+    ``timeout`` bounds each socket operation only, so a server trickling bytes
+    would never trip it; the deadline is checked after every chunk, and the
+    size cap is enforced while streaming. ``opener`` is a test seam; the
+    https-only rule is not.
+    """
     if urlparse(url).scheme != "https":
         raise ValueError("https only")
-
-    class _NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, *args, **kwargs):
-            return None
-
-    opener = urllib.request.build_opener(_NoRedirect)
+    opener = opener or urllib.request.build_opener(_NoRedirect)
     req = urllib.request.Request(url, headers={
         "Accept": "application/json, application/octet-stream",
         "User-Agent": "WinZapp",
     })
+    started = clock()
+    chunks = []
+    total = 0
     with opener.open(req, timeout=timeout) as resp:
-        data = resp.read(max_bytes + 1)
-    if len(data) > max_bytes:
-        raise ValueError("response too large")
-    return data
-
-
+        declared = resp.headers.get("Content-Length") if getattr(resp, "headers", None) else None
+        if declared and declared.isdigit() and int(declared) > max_bytes:
+            raise ValueError("response too large")
+        while True:
+            if clock() - started > deadline:
+                raise TimeoutError("deadline exceeded")
+            chunk = resp.read(_CHUNK)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError("response too large")
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 # ------------------------------------------------------------------ stage ---
@@ -463,7 +523,8 @@ def check_and_stage(node_modules: str, state_dir: str, *, fetch=default_fetch,
 
 def _stage(node_modules, target, old_version, fetch, now) -> str:
     try:
-        doc = json.loads(fetch(f"{_REGISTRY_URL}/latest", MAX_VERSION_DOC_BYTES))
+        doc = json.loads(fetch(f"{_REGISTRY_URL}/latest", MAX_VERSION_DOC_BYTES,
+                               LATEST_DEADLINE_SECONDS))
     except (OSError, ValueError):
         # urllib's URLError/timeouts are OSError; bad JSON is ValueError.
         return "offline"
@@ -471,7 +532,7 @@ def _stage(node_modules, target, old_version, fetch, now) -> str:
     # Only /latest is read, never the packument (7.6 MB abbreviated). When the
     # newest release is a major bump or outside wppconnect's range, nothing is
     # staged and the in-app reinstall remains the way forward.
-    if not pick_version(old_version, [version], _wanted_range(node_modules)):
+    if pick_version(old_version, [version], _wanted_range(node_modules)) is None:
         return "current"
     if os.path.isdir(_staged_path(target, version)):
         return "staged"
@@ -483,7 +544,7 @@ def _stage(node_modules, target, old_version, fetch, now) -> str:
     if not dependencies_satisfied(doc, target, node_modules):
         return "skipped-deps"
     try:
-        data = fetch(dist["tarball"], MAX_TARBALL_BYTES)
+        data = fetch(dist["tarball"], MAX_TARBALL_BYTES, TARBALL_DEADLINE_SECONDS)
     except (OSError, ValueError):
         return "offline"
     if not verify_integrity(data, dist.get("integrity"), dist.get("shasum")):
@@ -511,12 +572,37 @@ def _stage(node_modules, target, old_version, fetch, now) -> str:
 
 # ------------------------------------------------------------------ apply ---
 
-def apply_staged(node_modules: str, state_dir: str, *, clock=time.time) -> str:
+_discards: list = []
+
+
+def _discard(path: str) -> None:
+    """Delete a directory tree off the caller's thread, best effort.
+
+    The old package is 161 MB of small files; removing it must not sit between
+    the swap and the Node spawn. A process that exits first leaves it behind,
+    and the next apply sweeps it.
+    """
+    thread = threading.Thread(target=shutil.rmtree, args=(path, True),
+                              name="wa-version-discard", daemon=True)
+    _discards.append(thread)
+    thread.start()
+
+
+def join_discards(timeout: float = 30) -> None:
+    """Wait for pending background deletions (tests; never called at startup)."""
+    while _discards:
+        _discards.pop().join(timeout)
+
+
+def apply_staged(node_modules: str, state_dir: str, *, clock=time.time, busy=None) -> str:
     """The local half: swap the newest complete staged package in; never raises.
 
     Called right before Node is spawned, so it must be quick and must never
-    touch the network. Outcomes: "updated", "nothing-staged", "locked",
-    "missing", "skipped-deps", "rejected", "error".
+    touch the network. ``busy`` answers "is another account's Node alive?"; if
+    so the package stays staged (see the module docstring for why).
+
+    Outcomes: "updated", "nothing-staged", "busy", "locked", "missing",
+    "skipped-deps", "rejected", "error".
     """
     outcome = "error"
     try:
@@ -532,16 +618,22 @@ def apply_staged(node_modules: str, state_dir: str, *, clock=time.time) -> str:
                 return outcome
             staged = {}
             for path in _siblings(target, "staged"):
-                staged[path.rsplit(".staged-", 1)[1]] = path
+                name = path.rsplit(".staged-", 1)[1]
+                if parse_version(name) is None:
+                    _discard(path)
+                else:
+                    staged[name] = path
             best = pick_version(old_version, staged.keys(), _wanted_range(node_modules))
             for version, path in staged.items():
                 # Not newer than what is installed any more (another process
                 # applied it, or a reinstall passed it): nothing will use it.
-                if version != best and (parse_version(version) is None
-                                        or parse_version(version) <= parse_version(old_version)):
-                    shutil.rmtree(path, ignore_errors=True)
+                if version != best and parse_version(version) <= parse_version(old_version):
+                    _discard(path)
             if best is None:
                 outcome = "nothing-staged"
+                return outcome
+            if busy is not None and busy():
+                outcome = "busy"
                 return outcome
             outcome = _apply_one(node_modules, target, staged[best], best, old_version, clock())
             return outcome
@@ -558,7 +650,7 @@ def _restore_if_interrupted(target: str) -> None:
     the old one beside it: put it back before anything else."""
     if os.path.isdir(target):
         for leftover in _siblings(target, "old"):
-            shutil.rmtree(leftover, ignore_errors=True)
+            _discard(leftover)
         return
     leftovers = sorted(_siblings(target, "old"))
     if leftovers:
@@ -571,7 +663,7 @@ def _restore_if_interrupted(target: str) -> None:
 
 def _apply_one(node_modules, target, staged_dir, version, old_version, now) -> str:
     if not sanity_check(staged_dir, version):
-        shutil.rmtree(staged_dir, ignore_errors=True)
+        _discard(staged_dir)
         return "rejected"
     # The old copy's own node_modules (semver) rides along; the registry
     # tarball never ships one. Redone on every attempt, since a failed swap
@@ -583,14 +675,15 @@ def _apply_one(node_modules, target, staged_dir, version, old_version, now) -> s
         shutil.copytree(old_nested, new_nested)
     new_pkg = _read_json(os.path.join(staged_dir, "package.json"))
     if not dependencies_satisfied(new_pkg, staged_dir, node_modules):
-        shutil.rmtree(staged_dir, ignore_errors=True)
+        _discard(staged_dir)
         return "skipped-deps"
     try:
-        swap_directories(target, staged_dir, int(now))
+        old = swap_directories(target, staged_dir, int(now))
     except OSError:
         # A Windows directory some Node has open cannot be renamed: the staged
         # package stays for the next launch.
         return "error"
+    _discard(old)
     logging.info("[wa-version] catalogue %s -> %s", old_version, version)
     return "updated"
 
@@ -599,19 +692,40 @@ def _apply_one(node_modules, target, staged_dir, version, old_version, now) -> s
 
 _thread: threading.Thread | None = None
 _paths: tuple | None = None
+_busy = None
 _hook_lock = threading.Lock()
 
 
-def start_in_background(node_modules: str, state_dir: str, *, check: bool = True, **kwargs) -> bool:
+def other_accounts_node_alive(global_dir, account_id) -> bool:
+    """True when another account of this install holds a live node-lease.
+
+    Fails closed: a lease that cannot be read, or a lookup that raises, counts
+    as alive. Without a global dir or account id there is nobody to ask.
+    """
+    if not global_dir or not account_id:
+        return False
+    try:
+        import node_coord
+        import update_coord
+        leases = node_coord.live_node_leases(global_dir, is_alive=update_coord.lease_alive)
+    except Exception:
+        return True
+    return any(lease.get("_corrupt") or lease.get("account_id") != account_id
+               for lease in leases)
+
+
+def start_in_background(node_modules: str, state_dir: str, *, check: bool = True,
+                        busy=None, **kwargs) -> bool:
     """Remember where the catalogue lives and, when ``check`` is set, start the
     stage thread (daemon, once per process). True when this call started it.
 
     ``check`` is False while a Node is already running: staging is harmless
     then, but a launch that will not spawn gains nothing from it.
     """
-    global _thread, _paths
+    global _thread, _paths, _busy
     with _hook_lock:
         _paths = (node_modules, state_dir)
+        _busy = busy
         if not check or _thread is not None:
             return False
         _thread = threading.Thread(
@@ -622,13 +736,25 @@ def start_in_background(node_modules: str, state_dir: str, *, check: bool = True
         return True
 
 
-def wait_for_refresh(timeout: float = JOIN_SECONDS, **kwargs) -> None:
-    """Call right before spawning Node: give the stage thread ``timeout``
-    seconds (never longer; it is abandoned, not stopped, and the next launch
-    applies what it finishes), then apply whatever complete package is staged.
+def start_at_launch(window, node_modules: str, state_dir: str) -> bool:
+    """The startup hook (MainWindow.__init__): wire the refresh to a window's
+    own Node and account."""
+    gd = getattr(window, "global_dir", None)
+    acc = getattr(window, "account_id", None)
+    return start_in_background(
+        node_modules, state_dir, check=not window._is_wpp_running(),
+        busy=lambda: other_accounts_node_alive(gd, acc),
+    )
 
-    Applying is local and instant, so it runs on every call, including later
-    respawns of Node. A no-op when startup never registered the paths.
+
+def wait_for_refresh(timeout: float = JOIN_SECONDS, **kwargs) -> None:
+    """Call right before spawning Node, from a worker, never the UI thread:
+    give the stage thread ``timeout`` seconds (never longer; it is abandoned,
+    not stopped, and the next launch applies what it finishes), then apply
+    whatever complete package is staged.
+
+    Applying runs on every call, including later respawns of Node. A no-op
+    when startup never registered the paths.
     """
     thread, paths = _thread, _paths
     if paths is None:
@@ -637,4 +763,5 @@ def wait_for_refresh(timeout: float = JOIN_SECONDS, **kwargs) -> None:
         thread.join(timeout)
         if thread.is_alive():
             logging.info("[wa-version] download still running; not waiting for it")
+    kwargs.setdefault("busy", _busy)
     apply_staged(*paths, **kwargs)

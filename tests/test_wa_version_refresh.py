@@ -38,6 +38,9 @@ def _write_package(root, version, build="2.3000.1048298845-alpha", deps=None):
         json.dump({"versions": [{"version": build}]}, fh)
     with open(os.path.join(root, "dist", "index.js"), "w") as fh:
         fh.write("module.exports = {};")
+    os.makedirs(os.path.join(root, "html"), exist_ok=True)
+    with open(os.path.join(root, "html", f"{build}.html"), "w") as fh:
+        fh.write("<html></html>")
 
 
 def _tgz(members):
@@ -64,11 +67,19 @@ def _good_tarball(version="1.5.4964", build="2.3000.1048960956-alpha", deps=None
         ("package/package.json", json.dumps(_package_json(version, deps)).encode()),
         ("package/versions.json", json.dumps({"versions": [{"version": build}]}).encode()),
         ("package/dist/index.js", b"module.exports = {};"),
+        (f"package/html/{build}.html", b"<html>pinned</html>"),
     ])
 
 
 def _sri(data):
     return "sha512-" + base64.b64encode(hashlib.sha512(data).digest()).decode()
+
+
+@pytest.fixture(autouse=True)
+def _settle_discards():
+    """Old copies are deleted on background threads; never leak one."""
+    yield
+    wr.join_discards()
 
 
 @pytest.fixture
@@ -135,6 +146,16 @@ class TestVersionSelection:
     @pytest.mark.parametrize("candidate", ["1.5.4490", "1.5.4000"])
     def test_same_or_older_is_not(self, candidate):
         assert wr.pick_version("1.5.4490", [candidate]) is None
+
+    @pytest.mark.parametrize("text", [
+        "1.5.4964\n", " 1.5.4964", "1.5.4964 ", "1.5.04964", "\u0661.5.1", "1.5", None, 15,
+    ])
+    def test_parse_is_strict(self, text):
+        assert wr.parse_version(text) is None
+
+    def test_pick_returns_the_canonical_string(self):
+        assert wr.pick_version("1.5.4490", ["1.5.4964"]) == "1.5.4964"
+        assert wr.pick_version("1.5.4490", ["1.5.4964\n"]) is None
 
     def test_prerelease_is_not(self):
         assert wr.pick_version("1.5.4490", ["1.5.5000-beta.1"]) is None
@@ -234,11 +255,21 @@ class TestSafeExtract:
         with pytest.raises(wr.UnsafeArchive):
             wr.safe_extract(data, str(tmp_path / "out"))
 
-    def test_the_caps_fit_the_measured_package(self):
-        # 42.6 MB packed / 161 MB on disk measured 2026-10.
-        assert wr.MAX_TARBALL_BYTES >= 100 * 1024 * 1024
-        assert wr.MAX_EXTRACTED_BYTES >= 300 * 1024 * 1024
+    def test_the_caps_leave_room_over_the_measured_package(self):
+        measured_packed, measured_on_disk = 42.6e6, 161e6  # 2026-10
+        assert wr.MAX_TARBALL_BYTES >= 2 * measured_packed
+        assert wr.MAX_EXTRACTED_BYTES >= 2 * measured_on_disk
         assert wr.MAX_VERSION_DOC_BYTES <= 64 * 1024
+
+    def test_duplicate_members_are_rejected(self, tmp_path):
+        data = _tgz([("package/a", b"1"), ("package/a", b"2")])
+        with pytest.raises(wr.UnsafeArchive):
+            wr.safe_extract(data, str(tmp_path / "out"))
+
+    def test_case_colliding_members_are_rejected(self, tmp_path):
+        data = _tgz([("package/File.js", b"1"), ("package/file.JS", b"2")])
+        with pytest.raises(wr.UnsafeArchive):
+            wr.safe_extract(data, str(tmp_path / "out"))
 
 
 # -------------------------------------------------------------- the stage ---
@@ -310,6 +341,35 @@ class TestStage:
             ("package/dist/index.js", b""),
         ])
         assert _stage(tree, fetch=_fetcher(bad, None)) == "rejected"
+
+    def test_a_package_without_the_html_of_its_newest_build_is_rejected(self, tree):
+        no_html = _tgz([
+            ("package/package.json", json.dumps(_package_json("1.5.4964")).encode()),
+            ("package/versions.json", json.dumps({"versions": [{"version": "2.3000.1-alpha"}]}).encode()),
+            ("package/dist/index.js", b""),
+            ("package/html/some-other-build.html", b"<html></html>"),
+        ])
+        assert _stage(tree, fetch=_fetcher(no_html, None)) == "rejected"
+        assert not os.path.isdir(_staged(tree))
+
+    def test_an_empty_html_file_is_rejected(self, tree):
+        empty = _tgz([
+            ("package/package.json", json.dumps(_package_json("1.5.4964")).encode()),
+            ("package/versions.json", json.dumps({"versions": [{"version": "2.3000.1-alpha"}]}).encode()),
+            ("package/dist/index.js", b""),
+            ("package/html/2.3000.1-alpha.html", b""),
+        ])
+        assert _stage(tree, fetch=_fetcher(empty, None)) == "rejected"
+
+    def test_the_download_budgets_are_passed_to_the_fetcher(self, tree):
+        seen = []
+
+        def fetch(url, max_bytes, deadline=None):
+            seen.append(deadline)
+            return _fetcher()(url, max_bytes, deadline)
+        _stage(tree, fetch=fetch)
+        assert seen == [wr.LATEST_DEADLINE_SECONDS, wr.TARBALL_DEADLINE_SECONDS]
+        assert wr.LATEST_DEADLINE_SECONDS <= 15 and wr.TARBALL_DEADLINE_SECONDS <= 180
 
     def test_a_missing_dependency_is_skipped_before_the_download(self, tree):
         calls = []
@@ -400,6 +460,12 @@ class TestLocks:
         assert _installed(tree) == "1.5.4490"
         assert wr.apply_staged(tree.nm, tree.state) == "updated"
 
+    def test_a_stalled_stage_never_makes_apply_report_locked(self, tree):
+        _stage(tree, fetch=_fetcher())
+        with wr.exclusive_lock(os.path.join(tree.state, "wa_version_refresh.lock")) as held:
+            assert held  # a download that never ends holds only this lock
+            assert wr.apply_staged(tree.nm, tree.state) == "updated"
+
     def test_the_lock_is_released_afterwards(self, tree):
         path = os.path.join(tree.state, "x.lock")
         with wr.exclusive_lock(path) as first:
@@ -416,12 +482,36 @@ class TestApply:
         assert wr.apply_staged(tree.nm, tree.state) == "updated"
         assert _installed(tree) == "1.5.4964"
         assert os.path.isfile(os.path.join(tree.target, "node_modules", "semver", "package.json"))
+        wr.join_discards()
         assert not os.path.exists(_staged(tree))
         assert not wr._siblings(tree.target, "old")
 
     def test_nothing_staged_is_a_quiet_no_op(self, tree):
         assert wr.apply_staged(tree.nm, tree.state) == "nothing-staged"
         assert _installed(tree) == "1.5.4490"
+
+    def test_another_accounts_live_node_leaves_the_package_staged(self, tree):
+        _stage(tree, fetch=_fetcher())
+        assert wr.apply_staged(tree.nm, tree.state, busy=lambda: True) == "busy"
+        assert _installed(tree) == "1.5.4490"
+        assert os.path.isdir(_staged(tree))
+        assert wr.apply_staged(tree.nm, tree.state, busy=lambda: False) == "updated"
+
+    def test_the_old_copy_is_renamed_aside_not_deleted_inline(self, tree, monkeypatch):
+        _stage(tree, fetch=_fetcher())
+        deleted_inline = []
+        real = wr.shutil.rmtree
+        main = threading.current_thread()
+
+        def spy(path, *a, **kw):
+            if ".old-" in str(path) and threading.current_thread() is main:
+                deleted_inline.append(path)
+            return real(path, *a, **kw)
+        monkeypatch.setattr(wr.shutil, "rmtree", spy)
+        assert wr.apply_staged(tree.nm, tree.state) == "updated"
+        wr.join_discards()
+        assert deleted_inline == []
+        assert not wr._siblings(tree.target, "old")
 
     def test_apply_is_not_throttled_and_never_fetches(self, tree):
         _stage(tree, fetch=_fetcher())
@@ -433,6 +523,7 @@ class TestApply:
         import shutil
         shutil.rmtree(os.path.join(tree.nm, "node-fetch"))
         assert wr.apply_staged(tree.nm, tree.state) == "skipped-deps"
+        wr.join_discards()
         assert _installed(tree) == "1.5.4490"
         assert not os.path.exists(_staged(tree))
 
@@ -441,6 +532,7 @@ class TestApply:
         # a reinstall brought the install past the staged version meanwhile
         _write_package(tree.target, "1.5.5000")
         assert wr.apply_staged(tree.nm, tree.state) == "nothing-staged"
+        wr.join_discards()
         assert not os.path.exists(_staged(tree))
 
     def test_a_corrupted_staged_package_is_rejected(self, tree):
@@ -503,6 +595,7 @@ class TestApply:
         leftover = f"{tree.target}.old-5"
         os.makedirs(leftover)
         wr.apply_staged(tree.nm, tree.state)
+        wr.join_discards()
         assert not os.path.exists(leftover)
 
     def test_the_declared_range_gates_the_staged_package_too(self, tree):
@@ -571,3 +664,193 @@ class TestStartupHooks:
 
     def test_without_registered_paths_the_wait_does_nothing(self):
         wr.wait_for_refresh(timeout=0.1)
+
+
+# ------------------------------------------------------------ default_fetch ---
+
+class _Resp:
+    def __init__(self, chunks, length=None):
+        self._chunks = list(chunks)
+        self.headers = {"Content-Length": str(length)} if length is not None else {}
+
+    def read(self, n=-1):
+        return self._chunks.pop(0) if self._chunks else b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class _Opener:
+    def __init__(self, resp):
+        self.resp = resp
+        self.timeout = None
+
+    def open(self, req, timeout=None):
+        self.timeout = timeout
+        return self.resp
+
+
+class TestDefaultFetch:
+    def test_it_streams_and_joins_the_chunks(self):
+        opener = _Opener(_Resp([b"ab", b"cd"]))
+        assert wr.default_fetch("https://registry.npmjs.org/x", 100, opener=opener) == b"abcd"
+        assert opener.timeout == wr.TIMEOUT_SECONDS
+
+    def test_the_size_cap_is_enforced_while_streaming(self):
+        opener = _Opener(_Resp([b"x" * 6, b"x" * 6]))
+        with pytest.raises(ValueError):
+            wr.default_fetch("https://registry.npmjs.org/x", 10, opener=opener)
+
+    def test_a_declared_length_over_the_cap_is_refused_before_reading(self):
+        resp = _Resp([b"x"], length=999)
+        with pytest.raises(ValueError):
+            wr.default_fetch("https://registry.npmjs.org/x", 10, opener=_Opener(resp))
+        assert resp._chunks == [b"x"]
+
+    def test_an_absolute_deadline_stops_a_trickling_server(self):
+        now = [0.0]
+
+        def clock():
+            now[0] += 6.0
+            return now[0]
+        opener = _Opener(_Resp([b"a"] * 50))
+        with pytest.raises(TimeoutError):
+            wr.default_fetch("https://registry.npmjs.org/x", 1000, deadline=15, opener=opener,
+                             clock=clock)
+
+    def test_plain_http_is_refused_even_with_an_opener(self):
+        with pytest.raises(ValueError):
+            wr.default_fetch("http://registry.npmjs.org/x", 10, opener=_Opener(_Resp([])))
+
+    def test_redirects_are_refused(self):
+        import urllib.request
+        handler = wr._NoRedirect()
+        req = urllib.request.Request("https://registry.npmjs.org/x")
+        assert handler.redirect_request(req, None, 302, "Found", {}, "https://evil.example/") is None
+
+
+# ------------------------------------------------------- busy: leases ---
+
+class TestOtherAccountsNode:
+    def _patch(self, monkeypatch, leases=None, boom=False):
+        import node_coord
+        import update_coord
+
+        def live(gd, is_alive):
+            if boom:
+                raise OSError("x")
+            return leases
+        monkeypatch.setattr(node_coord, "live_node_leases", live)
+        monkeypatch.setattr(update_coord, "lease_alive", lambda *a: True)
+
+    def test_only_my_own_lease_is_not_busy(self, monkeypatch):
+        self._patch(monkeypatch, [{"account_id": "me"}])
+        assert wr.other_accounts_node_alive("gd", "me") is False
+
+    def test_another_live_lease_is_busy(self, monkeypatch):
+        self._patch(monkeypatch, [{"account_id": "me"}, {"account_id": "other"}])
+        assert wr.other_accounts_node_alive("gd", "me") is True
+
+    def test_a_corrupt_lease_or_a_failed_lookup_fails_closed(self, monkeypatch):
+        self._patch(monkeypatch, [{"account_id": "me", "_corrupt": True}])
+        assert wr.other_accounts_node_alive("gd", "me") is True
+        self._patch(monkeypatch, boom=True)
+        assert wr.other_accounts_node_alive("gd", "me") is True
+
+    def test_nobody_to_ask_is_not_busy(self):
+        assert wr.other_accounts_node_alive(None, None) is False
+
+
+# ------------------------------------------------------------- the glue ---
+
+class TestGlue:
+    @pytest.fixture(autouse=True)
+    def _reset(self, monkeypatch):
+        monkeypatch.setattr(wr, "_thread", None)
+        monkeypatch.setattr(wr, "_paths", None)
+        monkeypatch.setattr(wr, "_busy", None)
+
+    def test_start_at_launch_registers_and_checks_when_no_node_is_up(self, tree, monkeypatch):
+        started = []
+        monkeypatch.setattr(wr, "check_and_stage", lambda *a, **k: started.append(a))
+        window = type("W", (), {"global_dir": "gd", "account_id": "me",
+                                "_is_wpp_running": lambda self: False})()
+        assert wr.start_at_launch(window, tree.nm, tree.state) is True
+        wr._thread.join(5)
+        assert started == [(tree.nm, tree.state)]
+        assert wr._paths == (tree.nm, tree.state) and callable(wr._busy)
+
+    def test_start_at_launch_does_not_download_for_an_adopted_node(self, tree):
+        window = type("W", (), {"global_dir": "gd", "account_id": "me",
+                                "_is_wpp_running": lambda self: True})()
+        assert wr.start_at_launch(window, tree.nm, tree.state) is False
+        assert wr._thread is None and wr._paths is not None
+
+    def test_the_wait_passes_the_busy_check_to_apply(self, tree, monkeypatch):
+        _stage(tree, fetch=_fetcher())
+        wr.start_in_background(tree.nm, tree.state, check=False, busy=lambda: True)
+        wr.wait_for_refresh(timeout=0.1)
+        assert _installed(tree) == "1.5.4490"
+
+    def test_main_starts_the_refresh_between_the_version_check_and_node(self):
+        import inspect
+        import main
+        src = inspect.getsource(main.MainWindow.__init__)
+        a = src.index("self.ensure_wpp_version()")
+        b = src.index("start_at_launch(")
+        c = src.index("self.ensure_wpp_running()")
+        assert a < b < c
+
+    def test_the_spawn_itself_no_longer_waits_on_the_ui_thread(self):
+        import inspect
+        from main import MainWindow
+        assert "wait_for_refresh" not in inspect.getsource(MainWindow._start_wpp_background)
+
+    def test_foreground_spawn_waits_on_a_worker_then_spawns_on_the_ui_thread(self, monkeypatch):
+        import main_window.wpp_server as ws
+        from main import MainWindow
+        events = []
+        main_thread = threading.current_thread()
+        done = threading.Event()
+
+        def fake_wait(*a, **k):
+            events.append(("wait", threading.current_thread() is main_thread))
+
+        def call_after(fn, *a):
+            events.append(("call_after", fn.__name__))
+            fn()
+            done.set()
+        monkeypatch.setattr(wr, "wait_for_refresh", fake_wait)
+        monkeypatch.setattr(ws.wx, "CallAfter", call_after)
+        stub = type("S", (), {})()
+        stub._start_wpp_background = lambda: events.append(("spawn", None))
+        MainWindow._start_wpp_background_after_catalogue(stub)
+        assert done.wait(5)
+        assert events[0] == ("wait", False)  # a worker, not the UI thread
+        assert [e[0] for e in events] == ["wait", "call_after", "spawn"]
+
+    def test_the_spawn_still_happens_when_the_refresh_blows_up(self, monkeypatch):
+        import main_window.wpp_server as ws
+        from main import MainWindow
+        done = threading.Event()
+        spawned = []
+
+        def boom(*a, **k):
+            raise RuntimeError("x")
+        monkeypatch.setattr(wr, "wait_for_refresh", boom)
+        monkeypatch.setattr(ws.wx, "CallAfter", lambda fn, *a: fn())
+        stub = type("S", (), {})()
+        stub._start_wpp_background = lambda: (spawned.append(1), done.set())
+        MainWindow._start_wpp_background_after_catalogue(stub)
+        assert done.wait(5) and spawned == [1]
+
+    def test_the_other_spawn_paths_wait_first(self):
+        import inspect
+        from main import MainWindow
+        bg = inspect.getsource(MainWindow.ensure_wpp_running)
+        assert bg.index("wait_for_refresh()") < bg.index("self._start_wpp_background()\n            deadline")
+        cancelled = inspect.getsource(MainWindow._restart_wpp_after_cancelled_shutdown)
+        assert cancelled.index("wait_for_refresh()") < cancelled.index("self._start_wpp_background()")
