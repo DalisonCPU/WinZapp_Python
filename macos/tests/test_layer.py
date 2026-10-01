@@ -249,13 +249,29 @@ def test_a_forced_close_still_exits():
 
 # ------------------------------------------------------------ spelling --
 
-def test_mac_spell_checker_finds_misspellings(app):
+@pytest.fixture(scope="module")
+def warm_spell_server(app):
+    """NSSpellServer starts cold on a fresh CI VM: its first answers time out
+    ("findMisspelledWordInString timed out", measured on the macos-15-intel
+    runner in three of four runs) and the checker, by design, then reports no
+    errors. Give it time to come up. Nothing is skipped: if it never answers,
+    the tests below still fail on their own assertions."""
+    import time
+    from core import spell_checker as sc
+    c = sc.WindowsSpellChecker(language="en-US")
+    for _ in range(10):
+        if c.errors_for_text("this is a mispeled word"):
+            break
+        time.sleep(2)
+
+
+def test_mac_spell_checker_finds_misspellings(app, warm_spell_server):
     from core import spell_checker as sc
     c = sc.WindowsSpellChecker(language="en-US")
     assert c.errors_for_text("this is a mispeled word") == [(10, 18)]
 
 
-def test_finishing_a_misspelled_word_plays_the_cue_once(app):
+def test_finishing_a_misspelled_word_plays_the_cue_once(app, warm_spell_server):
     from core import spell_checker as sc
     cues = []
     c = sc.WindowsSpellChecker(language="en-US", on_error=lambda: cues.append(1))
