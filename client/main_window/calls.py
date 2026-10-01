@@ -20,6 +20,7 @@ from core.api_client import (
     api_post,
 )
 from core.call_matching import call_event_matches_active
+from core.call_voip_errors import VoipUnavailableError, is_voip_init_failure
 from core.call_log import (
     call_log_candidate_ids,
     call_log_refresh_delays,
@@ -275,6 +276,10 @@ class CallsMixin:
             return response
         logging.warning("[call] %s failed: HTTP %s %s", action,
                         response.status_code, response.text[:500])
+        # The cause is in the body, and the user can act on it (restart,
+        # reinstall), unlike on a bare status code.
+        if is_voip_init_failure(response.text):
+            raise VoipUnavailableError(f"HTTP {response.status_code}")
         raise RuntimeError(f"HTTP {response.status_code}")
 
     @staticmethod
@@ -299,6 +304,9 @@ class CallsMixin:
     def _call_error_text(self, error) -> str:
         """Collapse any call failure into one short line fit for speech."""
         logging.info("[call] failure detail: %r", error)
+        if isinstance(error, VoipUnavailableError):
+            # Not shortened: the whole sentence is the instruction.
+            return self.i18n.t("voice_call_voip_unavailable")
         text = " ".join(str(error or "").split())
         if not text:
             return self.i18n.t("voice_call_error_unknown")

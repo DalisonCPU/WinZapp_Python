@@ -66,6 +66,10 @@ NOUTĂȚI
 
 - Descărcarea automată a fișierelor media respectă acum imediat opțiunea „Descărcați automat media” din fila Stocare din Setări: debifarea ei oprește descărcarea în curs, iar bifarea ei (sau bifarea încă unui tip de media) pornește descărcarea fără a aștepta următoarea sincronizare. Debifată, se aplică acum și fișierelor media din mesajele care sosesc cât timp WinZapp este deschis, iar lista de tipuri este dezactivată, păstrând ce era bifat.
 
+- WinZapp păstrează acum la zi lista de versiuni WhatsApp Web. La pornire, descarcă în fundal una mai nouă, dacă există, și o aplică la următoarea pornire, ceea ce repară apelurile care eșuau pe instalările cu lista rămasă în urmă.
+
+- Când un apel nu poate începe pentru că versiunea WhatsApp Web folosită nu acceptă apeluri, WinZapp spune acum acest lucru și ce se poate încerca (repornirea WinZapp sau alegerea opțiunii „Forțați reinstalarea WPPConnect” din meniul Ajutor), în loc să citească un cod de eroare.
+
 CORECTĂRI
 
 - Când porneați un mesaj vocal cu anunțurile înregistrării dezactivate, cititorul de ecran nu mai începe să spună „Trimiteți” înainte de a fi întrerupt. WinZapp evită acum mutarea automată a focalizării care provoca acest fragment, păstrând disponibile Ctrl+R, Ctrl+Shift+P și Ctrl+Shift+D.

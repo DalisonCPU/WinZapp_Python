@@ -972,6 +972,11 @@ class WppServerMixin:
         so that PostgreSQL's initdb can start (it refuses to run as root/admin).
         """
         self._ensure_wpp_port_still_free()
+        # start.js reads the WhatsApp Web catalogue once, at its own start, so
+        # a refresh begun at launch must be over before this spawn (bounded;
+        # a no-op when none was started, or on every later respawn).
+        from core.wa_version_refresh import wait_for_refresh
+        wait_for_refresh()
         import sys
         import shutil
 

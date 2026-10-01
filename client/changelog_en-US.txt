@@ -66,6 +66,10 @@ IMPROVEMENTS
 
 - Automatic media download now follows the "Automatically download media" option in the Storage tab of Settings right away: unchecking it stops the download in progress, and checking it (or checking another media type) starts downloading without waiting for the next sync. When unchecked, it now also applies to media in messages that arrive while WinZapp is open, and the list of types is disabled, keeping what was checked.
 
+- WinZapp now keeps its list of WhatsApp Web versions up to date. When it starts, it downloads a newer one in the background if there is one and applies it the next time WinZapp starts, which fixes calls failing on installs where that list had fallen behind.
+
+- When a call cannot start because the WhatsApp Web version in use does not support calls, WinZapp now says so and what to try (restart WinZapp, or choose "Force reinstall WPPConnect" in the Help menu) instead of reading out an error code.
+
 FIXES
 
 - Starting a voice message with recording announcements silenced no longer lets the screen reader begin saying “Send” before being cut off. WinZapp now avoids the automatic focus move that caused the clipped announcement while keeping Ctrl+R, Ctrl+Shift+P and Ctrl+Shift+D available.

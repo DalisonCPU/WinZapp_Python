@@ -66,6 +66,10 @@ MELHORIAS
 
 - O descarregamento automático de ficheiros multimédia passa a obedecer de imediato à opção "Descarregar ficheiros multimédia automaticamente" do separador Armazenamento das Definições: desmarcá-la interrompe o descarregamento em curso, e marcá-la (ou marcar mais um tipo de ficheiro multimédia) começa a descarregar sem esperar pela próxima sincronização. Desmarcada, passa a valer também para os ficheiros multimédia das mensagens que chegam enquanto o WinZapp está aberto, e a lista de tipos fica desativada, mantendo o que estava marcado.
 
+- O WinZapp passa a manter atualizada a sua lista de versões do WhatsApp Web. Ao iniciar, descarrega uma mais recente em segundo plano, se existir, e aplica-a na próxima vez que for iniciado, o que corrige chamadas que falhavam em instalações cuja lista tinha ficado para trás.
+
+- Quando uma chamada não pode ser iniciada porque a versão do WhatsApp Web em uso não suporta chamadas, o WinZapp passa a dizê-lo e o que tentar (reiniciar o WinZapp ou escolher "Forçar reinstalação da WPPConnect" no menu Ajuda), em vez de ler um código de erro.
+
 CORREÇÕES
 
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de ecrã já não começa a dizer “Enviar” antes de ser interrompido. O WinZapp evita agora a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.

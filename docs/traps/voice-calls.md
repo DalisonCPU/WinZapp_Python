@@ -287,6 +287,37 @@ until someone opens WinZapp in the foreground. When a tester reports calls not
 working, the `Pinning WhatsApp Web to ...` line at the top of `wppconnect.log`
 is the first thing to compare against a working install.
 
+**A catalogue that is old by a few weeks fails the same way, and the cause is
+skew between the pinned page and Meta's live workers (measured 2026-10-01,
+over CDP on a live session).** The symptom is the one above, but this time the
+newest entry was 2.3000.1048298845 (23 Sep) and the page's pthread VoIP workers
+died with `Aborted(No EM_ASM constant found at address 1367423)`, so
+`WAWebVoipInit` never became ready. start.js pins only the main document;
+WhatsApp serves the workers and the glue they load live, and Meta had changed
+the worker bundle since that build. The pinned main glue's `EM_ASM` table ended
+at 1367423, the worker asked for an address beyond it, and the abort is the
+mismatch, not a wa-js or WinZapp defect. After `npm install
+@wppconnect/wa-version@1.5.4964` (newest build 2.3000.1048960956) VoIP
+initialised and calls worked. So "the catalogue's newest entry reaches
+`CALLS_MINIMUM_BUILD`" is necessary and **not sufficient**: the newest entry
+has to keep up with what Meta serves.
+
+That is why `core/wa_version_refresh.py` exists. The catalogue used to move only
+when `node_modules` was rebuilt, so testers kept an old one silently. At every
+launch a daemon thread asks the registry for `@wppconnect/wa-version/latest`
+(3 KB; never the packument, 7.6 MB abbreviated) at most every 6 hours, and
+**stages** a newer same-major, in-range, non-prerelease package in
+`wa-version.staged-<version>` beside the live one: the tarball is 42.6 MB (about
+35 s on a 10 Mbit link), so Node must not wait for it. The swap, with rollback,
+happens in `_start_wpp_background()` right before Node is spawned, under an OS
+lock, and a Node already running is never swapped under. Consequences to
+remember: the first update lands one launch after it was downloaded (unless the
+download beat the 3 s wait), a launch that is closed mid-download wastes the
+download, and a package whose declared dependencies the install lacks is skipped
+(the in-app reinstall remains the fallback). The failure the user sees when it
+has not caught up is classified by `core/call_voip_errors.py` and spoken as
+`voice_call_voip_unavailable` instead of an HTTP code.
+
 **A call placed without an entry trust waits for a popup nobody can answer.**
 From WhatsApp Web 2.3000.1048x, `startWAWebVoipCall(peer, isVideo, fromUi,
 ?, callId, options)` first awaits

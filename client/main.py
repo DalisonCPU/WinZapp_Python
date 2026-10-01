@@ -148,7 +148,7 @@ from core.chat_lock_vault import (
     validate_reveal_code,
 )
 from core import token_vault
-from app_paths import resource_path, data_path, accounts_root
+from app_paths import resource_path, data_path, accounts_root, global_dir as _global_dir
 from core.message_queue import MessageQueue, PendingMessage, MessageCancelled
 import wx
 import wx.adv
@@ -748,6 +748,13 @@ class MainWindow(
                 self.ensure_api_modules_installed()
                 logging.info("[STARTUP_TIMING] T+%.3fs — Checking WPPConnect Server version...", _time.perf_counter() - _t_start)
                 self.ensure_wpp_version()
+                # Stage a newer WhatsApp Web catalogue in the background;
+                # _start_wpp_background() gives it a few seconds and applies
+                # whatever is staged right before it spawns Node. No download
+                # for a launch that adopts a Node that is already running.
+                from core.wa_version_refresh import start_in_background
+                start_in_background(resource_path("api", "node_modules"),
+                                    _global_dir(), check=not self._is_wpp_running())
                 logging.info("[STARTUP_TIMING] T+%.3fs — Ensuring WPPConnect Server process is running...", _time.perf_counter() - _t_start)
                 self.ensure_wpp_running()
                 logging.info("[STARTUP_TIMING] T+%.3fs — WPPConnect Server process ready!", _time.perf_counter() - _t_start)

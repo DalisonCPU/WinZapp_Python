@@ -1028,6 +1028,7 @@
     "voice_call_ended": "Apel încheiat.",
     "voice_call_error_unknown": "eroare necunoscută",
     "voice_call_error_no_connection": "nu există conexiune la serverul WhatsApp",
+    "voice_call_voip_unavailable": "Apelurile nu sunt disponibile cu versiunea WhatsApp Web pe care o folosește WinZapp. WinZapp descarcă la pornire un catalog de versiuni mai nou și îl aplică la următoarea pornire, așa că repornirea WinZapp poate rezolva problema. Dacă problema persistă, alegeți „Forțați reinstalarea WPPConnect” din meniul Ajutor.",
     "voice_call_device_switch_failed": "Nu s-a putut deschide noul dispozitiv audio pentru apeluri.",
     "incoming_call_close_button": "&Închide fereastra",
     "emoji_button": "Emoji",
