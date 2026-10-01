@@ -506,6 +506,10 @@ class ChatEventsMixin:
                     else speech.get("announce_recording", True)
                 )
                 active_match = is_active_chat(chat_jid_norm, conv_jid)
+                # The open conversation only counts while it is on screen: one
+                # left open behind another panel (Alt+4, Status, Calls, ...) is
+                # not being read, same gate as mark-as-read and the sounds.
+                in_view = conversation_in_view(panel)
                 # Typing/recording indicators are only meaningful while the user
                 # is actually looking at WinZapp — a conversation left open when
                 # the window was minimized to the tray must not keep announcing.
@@ -515,9 +519,9 @@ class ChatEventsMixin:
                     and not self.IsIconized()
                     and self.IsActive()
                 )
-                logging.info("[on_presence_update] announce_enabled=%s, is_active_chat=%s, window_active=%s (chat_jid_norm=%s, conv_jid=%s)",
-                             announce_enabled, active_match, window_active, chat_jid_norm, conv_jid)
-                if announce_enabled and active_match and window_active:
+                logging.info("[on_presence_update] announce_enabled=%s, is_active_chat=%s, window_active=%s, in_view=%s (chat_jid_norm=%s, conv_jid=%s)",
+                             announce_enabled, active_match, window_active, in_view, chat_jid_norm, conv_jid)
+                if announce_enabled and active_match and window_active and in_view:
                     # Mute/archive suppress background notifications, not the
                     # live state of a conversation the user deliberately has
                     # open. The active-chat and active-window gates above are

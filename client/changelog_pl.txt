@@ -128,6 +128,8 @@ POPRAWKI
 
 - To samo dotyczy każdego innego panelu, takiego jak Status czy Połączenia: gdy za nim zostaje otwarty czat, jego nowe wiadomości są zapowiadane jak wiadomości z innych czatów i nie są oznaczane jako przeczytane. Wiadomości z zarchiwizowanych czatów są zapowiadane tylko wtedy, gdy lista zarchiwizowanych jest na ekranie.
 
+- Zapowiedzi „pisze” i „nagrywa wiadomość głosową” były nadal odczytywane dla czatu pozostawionego otwartego za innym panelem (Alt+4, Status, Połączenia...). Teraz są zapowiadane tylko wtedy, gdy ten czat jest widoczny na ekranie, tak jak wcześniej oznaczanie jako przeczytane i dźwięki.
+
 - W czacie, który kiedykolwiek został wyczyszczony, licznik nieprzeczytanych znikał sam mniej więcej minutę po nadejściu wiadomości, a otwarcie czatu nie oznaczało go jako przeczytanego na telefonie. Zdarzało się to głównie w ruchliwych, wyciszonych grupach. Teraz licznik zostaje, dopóki nie przeczytasz czatu, a przeczytanie go w WinZapp oznacza go jako przeczytany także na telefonie.
 
 - Wiadomości do jednorazowego wyświetlenia przychodziły bez licznika, dźwięku i powiadomienia, a po synchronizacji na zawsze zostawały jako wiadomość wciąż czekająca na wczytanie. Teraz pojawia się „Wiadomość do jednorazowego wyświetlenia. Otwórz ją na telefonie, aby ją zobaczyć.”, z dźwiękiem i powiadomieniem nowej wiadomości. Sama treść nadal zostaje tylko na telefonie, tak jak w WhatsApp Web.

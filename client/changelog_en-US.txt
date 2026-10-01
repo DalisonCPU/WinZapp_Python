@@ -128,6 +128,8 @@ FIXES
 
 - The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
 
+- The “is typing” and “is recording audio” announcements kept being spoken for a chat left open behind another panel (Alt+4, Status, Calls...). They are now announced only while that chat is on screen, as marking as read and the sounds already were.
+
 - In a chat that had ever been cleared, the unread counter disappeared on its own about a minute after a message arrived, and opening the chat didn't mark it as read on your phone. It happened mostly in busy, muted groups. Now the counter stays until you read the chat, and reading it in WinZapp marks it as read on your phone too.
 
 - View once messages arrived with no counter, sound or notification, and after a sync they stayed forever as a message still waiting to load. Now it shows "View once message. Open it on your phone to see it.", with the sound and notification of a new message. The content itself still stays on the phone, as in WhatsApp Web.

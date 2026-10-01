@@ -128,6 +128,8 @@ CORREÇÕES
 
 - O mesmo vale para qualquer outro painel, como Estado ou Chamadas: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. As mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está no ecrã.
 
+- Os avisos de “está a escrever” e “está a gravar áudio” continuavam a ser anunciados para uma conversa deixada aberta atrás de outro painel (Alt+4, Estado, Chamadas...). Agora só são anunciados enquanto essa conversa está no ecrã, como já acontecia com marcar como lida e com os sons.
+
 - Numa conversa que já tinha sido limpa alguma vez, o contador de não lidas desaparecia sozinho cerca de um minuto depois de chegar uma mensagem, e abrir a conversa não a marcava como lida no telemóvel. Acontecia sobretudo em grupos movimentados e silenciados. Agora o contador mantém-se até ler a conversa, e ler no WinZapp marca-a como lida também no telemóvel.
 
 - As mensagens de visualização única chegavam sem contador, som nem notificação, e depois de uma sincronização ficavam para sempre como uma mensagem ainda à espera de ser carregada. Agora aparece "Mensagem de visualização única. Abra-a no telemóvel para a ver.", com o som e a notificação de uma mensagem nova. O conteúdo em si continua apenas no telemóvel, como no WhatsApp Web.

@@ -128,6 +128,8 @@ DÜZELTMELER
 
 - Aynısı Durumlar veya Aramalar gibi diğer tüm paneller için de geçerli: arkasında açık bir sohbet varken o sohbetin yeni mesajları diğer sohbetlerinki gibi duyurulur ve okundu olarak işaretlenmez. Arşivlenmiş sohbetlerin mesajları yalnızca arşivlenmiş listesi ekrandayken duyurulur.
 
+- Bir sohbet başka bir panelin arkasında açık kaldığında (Alt+4, Durumlar, Aramalar...) “yazıyor” ve “ses kaydediyor” duyuruları yapılmaya devam ediyordu. Artık bu duyurular yalnızca ilgili sohbet ekrandayken yapılıyor; okundu olarak işaretleme ve sesler zaten böyle çalışıyordu.
+
 - Daha önce en az bir kez temizlenmiş bir sohbette, bir mesaj geldikten yaklaşık bir dakika sonra okunmamış sayacı kendiliğinden kayboluyordu ve sohbeti açmak onu telefonda okundu olarak işaretlemiyordu. Bu çoğunlukla yoğun ve sessize alınmış gruplarda oluyordu. Artık sayaç siz sohbeti okuyana kadar kalıyor ve WinZapp'te okumak sohbeti telefonda da okundu olarak işaretliyor.
 
 - Bir kez görüntülenebilen mesajlar sayaç, ses ve bildirim olmadan geliyor, bir eşitlemeden sonra da hâlâ yüklenmeyi bekleyen bir mesaj olarak kalıyordu. Artık yeni bir mesajın sesi ve bildirimiyle birlikte "Bir kez görüntülenebilen mesaj. Görmek için telefonunuzda açın." görünüyor. İçeriğin kendisi, WhatsApp Web'de olduğu gibi yalnızca telefonda kalıyor.

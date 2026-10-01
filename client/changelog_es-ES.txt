@@ -128,6 +128,8 @@ CORRECCIONES
 
 - Lo mismo ocurre con cualquier otro panel, como Estado o Llamadas: con una conversación abierta detrás, sus mensajes nuevos se anuncian como los de cualquier otra conversación y no se marcan como leídos. Los mensajes de conversaciones archivadas solo se anuncian mientras la lista de archivadas está en pantalla.
 
+- Los avisos de «está escribiendo» y «está grabando audio» se seguían anunciando para una conversación que quedaba abierta detrás de otro panel (Alt+4, Estado, Llamadas...). Ahora solo se anuncian mientras esa conversación está en pantalla, como ya ocurría con marcar como leída y con los sonidos.
+
 - En una conversación que se había vaciado alguna vez, el contador de no leídos desaparecía solo alrededor de un minuto después de llegar un mensaje, y abrir la conversación no la marcaba como leída en el teléfono. Pasaba sobre todo en grupos con mucha actividad y silenciados. Ahora el contador se mantiene hasta que lees la conversación, y leerla en WinZapp la marca como leída también en el teléfono.
 
 - Los mensajes de visualización única llegaban sin contador, sonido ni notificación, y después de una sincronización se quedaban para siempre como un mensaje que seguía esperando a cargarse. Ahora aparece "Mensaje de visualización única. Ábrelo en el teléfono para verlo.", con el sonido y la notificación de un mensaje nuevo. El contenido en sí sigue solo en el teléfono, como en WhatsApp Web.
