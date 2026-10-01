@@ -64,7 +64,7 @@ ULEPSZENIA
 
 - Zarchiwizowane i zablokowane czaty można teraz zaznaczać tak samo jak główne rozmowy: Ctrl+Spacja, Shift+strzałki, Shift+Home/End, Ctrl+Shift+Spacja oraz Spacja w trybie zaznaczania, z tym samym dźwiękiem i komunikatami. Menu „Akcje masowe” (z własnymi skrótami) pozwala przywracać z archiwum, czyścić, usuwać oraz oznaczać jako przeczytane lub nieprzeczytane zarchiwizowane czaty, a w zablokowanych — odblokowywać lub oznaczać jako przeczytane albo nieprzeczytane.
 
-- Automatyczne pobieranie multimediów od razu stosuje się teraz do opcji „Automatycznie pobieraj multimedia” na karcie Pamięć w Ustawieniach: odznaczenie jej przerywa trwające pobieranie, a zaznaczenie (lub zaznaczenie kolejnego typu multimediów) rozpoczyna pobieranie bez czekania na następną synchronizację. W nowych instalacjach opcja jest odznaczona, aby można było najpierw wybrać, co ma być pobierane; w istniejących instalacjach pozostaje bez zmian. Odznaczona, dotyczy teraz także multimediów w wiadomościach przychodzących, gdy WinZapp jest otwarty, a lista typów jest wyłączona i zachowuje to, co było zaznaczone.
+- Automatyczne pobieranie multimediów od razu stosuje się teraz do opcji „Automatycznie pobieraj multimedia” na karcie Pamięć w Ustawieniach: odznaczenie jej przerywa trwające pobieranie, a zaznaczenie (lub zaznaczenie kolejnego typu multimediów) rozpoczyna pobieranie bez czekania na następną synchronizację. Odznaczona, dotyczy teraz także multimediów w wiadomościach przychodzących, gdy WinZapp jest otwarty, a lista typów jest wyłączona i zachowuje to, co było zaznaczone.
 
 POPRAWKI
 

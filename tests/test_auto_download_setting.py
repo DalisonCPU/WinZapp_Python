@@ -6,9 +6,11 @@ Three things were wrong at once:
 * unticking it left the sweep already running to finish its whole queue —
   the setting was read once, before the phase started;
 * ticking it (or ticking another category) fetched nothing until some later
-  sync happened to run its media phase;
-* it shipped ticked, so a fresh install downloaded everything before the user
-  had chosen which categories they wanted.
+  sync happened to run its media phase.
+
+It stays ON by default on purpose (a design decision): with it off, a recent
+audio or document is not on the computer when opened, so playing says
+"baixando" and, offline, cannot play at all.
 
 ``MainWindow`` cannot be instantiated without a wx.App, so the methods are
 bound onto plain stubs — same approach as tests/test_media_sync_count.py.
@@ -34,14 +36,14 @@ def _storage(enabled, types=None):
 
 
 class TestDefault:
-    def test_a_fresh_install_starts_with_it_off(self):
-        assert DEFAULT_SETTINGS["storage"]["auto_download_media"] is False
+    def test_a_fresh_install_starts_with_it_on(self):
+        assert DEFAULT_SETTINGS["storage"]["auto_download_media"] is True
 
     def test_the_seed_file_agrees(self):
         path = os.path.join(os.path.dirname(__file__), "..", "client", "data",
                             "settings_default.json")
         with open(path, encoding="utf-8") as f:
-            assert json.load(f)["storage"]["auto_download_media"] is False
+            assert json.load(f)["storage"]["auto_download_media"] is True
 
     def test_the_categories_stay_all_ticked(self):
         """Off, but ready: turning it on without touching the list downloads
@@ -51,14 +53,16 @@ class TestDefault:
 
 
 class TestAutoDownloadEnabled:
-    def test_on_only_when_explicitly_on(self):
+    def test_off_only_when_explicitly_off(self):
         assert auto_download_enabled({"storage": _storage(True)}) is True
         assert auto_download_enabled({"storage": _storage(False)}) is False
 
-    def test_missing_or_corrupt_reads_as_off(self):
+    def test_missing_or_corrupt_reads_as_the_default_on(self):
+        """On by default is a design decision: a settings file that lost the
+        key must not leave recent audios/documents undownloaded."""
         for settings in ({}, {"storage": {}}, {"storage": None}, None,
                          {"storage": {"auto_download_media": "yes"}}):
-            assert auto_download_enabled(settings) is False
+            assert auto_download_enabled(settings) is True
 
 
 class TestAutoDownloadNewlyWanted:
@@ -137,7 +141,7 @@ class TestUntickingStopsTheRunningSweep:
     def test_the_menu_sweep_ignores_the_setting(self):
         """"Baixar midias" is an explicit request: no should_stop, and every
         download is marked explicit so sync_if_media() does not ask the
-        switch — with the setting off by default it is the main way to fetch."""
+        switch, so it works with the option unchecked."""
         stub = _SweepStub(count=4, disable_after=1)
         assert stub.sync_media_for_all_chats(explicit=True) == 4
         assert stub.explicit is True

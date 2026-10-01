@@ -2008,7 +2008,7 @@ class SyncMixin:
 
         # ── Phase 2: download media ──────────────────────────────────────────
         # Opt-in via Settings > Armazenamento > "Baixar mídias automaticamente
-        # ao sincronizar" (off by default). Runs on this same background sync
+        # ao sincronizar" (on by default). Runs on this same background sync
         # thread — the window is already open and responsive by this point
         # (UI init finished long before _run_sync), so this only delays when
         # "sync complete" fires, not startup itself. sync_if_media() still

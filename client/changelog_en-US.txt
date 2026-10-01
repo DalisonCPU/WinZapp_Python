@@ -64,7 +64,7 @@ IMPROVEMENTS
 
 - Archived and locked chats can now be selected just like the main conversations: Ctrl+Space, Shift+arrows, Shift+Home/End, Ctrl+Shift+Space and selection-mode Space, with the same sound and announcements. The "Bulk actions" menu (with its own shortcuts) can unarchive, clear, delete and mark archived chats as read or unread, and unlock or mark locked chats as read or unread.
 
-- Automatic media download now follows the "Automatically download media" option in the Storage tab of Settings right away: unchecking it stops the download in progress, and checking it (or checking another media type) starts downloading without waiting for the next sync. On new installations it comes unchecked, so you can choose what to download first; existing installations keep the option as it was. When unchecked, it now also applies to media in messages that arrive while WinZapp is open, and the list of types is disabled, keeping what was checked.
+- Automatic media download now follows the "Automatically download media" option in the Storage tab of Settings right away: unchecking it stops the download in progress, and checking it (or checking another media type) starts downloading without waiting for the next sync. When unchecked, it now also applies to media in messages that arrive while WinZapp is open, and the list of types is disabled, keeping what was checked.
 
 FIXES
 

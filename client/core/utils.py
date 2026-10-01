@@ -754,8 +754,9 @@ def auto_download_enabled(settings) -> bool:
     """Whether media may be fetched without being asked (Configuracoes >
     Armazenamento > "Baixar midias automaticamente").
 
-    Off unless explicitly on: that is the default, so a missing or corrupt
-    value must not read as consent to download everything. Read live, from the
+    On unless explicitly turned off: that is the default, so a missing or
+    corrupt value keeps the behaviour everyone has always had instead of
+    silently leaving recent audios and documents undownloaded. Read live, from the
     settings dict the dialog updates in place, by every automatic sweep's
     ``should_stop`` — that is what lets unticking the box end a sweep that is
     already running instead of only preventing the next one.
@@ -766,7 +767,7 @@ def auto_download_enabled(settings) -> bool:
     is the one path that does not ask.
     """
     section = settings.get("storage") if isinstance(settings, dict) else None
-    return isinstance(section, dict) and section.get("auto_download_media") is True
+    return not (isinstance(section, dict) and section.get("auto_download_media") is False)
 
 
 def _auto_download_categories(storage) -> set:
@@ -1168,10 +1169,11 @@ DEFAULT_SETTINGS = {
     "cleared_chats": {},
     "cleared_starred_chats": {},
     "storage": {
-        # Off by default: the user picks the categories below first and then
-        # turns it on, instead of a fresh install fetching everything before
-        # they had a say. Existing installs keep the value they already saved.
-        "auto_download_media": False,
+        # On by default, deliberately — a design decision, not an oversight.
+        # Off, a recent voice message or document is not on the computer when
+        # the person opens it, so playing it first says "baixando" and, offline,
+        # cannot play at all. Existing installs keep what they saved.
+        "auto_download_media": True,
         # Which categories the auto-download covers. All of them by default —
         # see auto_download_allows(). Links are not a category here.
         "auto_download_media_types": list(AUTO_DOWNLOAD_MEDIA_TYPES),
