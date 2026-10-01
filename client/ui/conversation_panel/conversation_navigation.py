@@ -208,6 +208,39 @@ class ConversationNavigationMixin:
             self.close_conversation_for_panel_switch()
         self.navigate_to_conversation(chat, take_focus=False, mark_read=False)
 
+    def _open_focus_target(self) -> str:
+        """Where opening a conversation puts keyboard focus: "messages_list" or
+        "message_field". Settings > User Interface > "focus_on_open" — the
+        messages list when it is "unread_or_last", and also whenever the
+        message field cannot take input (a read-only group, say). One rule for
+        a conversation being opened and for one that was already open."""
+        setting = self.main_window.settings.get("user_interface", {}).get(
+            "focus_on_open", "message_field")
+        if setting == "unread_or_last" or not self.message_field.IsEnabled():
+            return "messages_list"
+        return "message_field"
+
+    def _focus_already_open_conversation(self):
+        """Apply "focus_on_open" to a conversation that is already on screen:
+        the message field, or the messages list on the unread separator when
+        there is one and on the last message otherwise — the row a fresh open
+        would have selected."""
+        if self._open_focus_target() == "message_field":
+            self.message_field.SetFocus()
+            return
+        count = self.messages_list.GetItemCount()
+        if count > 0:
+            sep = self._unread_sep_idx
+            # A separator the user already moved past stays on screen but no
+            # longer anchors anything: a fresh open would find nothing unread.
+            if getattr(self, "_sep_anchors_read_position", False):
+                sep = -1
+            target = sep if 0 <= sep < count else count - 1
+            self.messages_list.Focus(target)
+            self.messages_list.Select(target)
+            self.messages_list.EnsureVisible(target)
+        self.messages_list.SetFocus()
+
     def navigate_to_conversation(self, conversation, *, from_archived=False,
                                  take_focus=True, mark_read=True):
         detour = self._archived_detour_state()
@@ -223,8 +256,12 @@ class ConversationNavigationMixin:
             self._sync_voice_call_button(conversation.get("remoteJid", ""))
             self.conversation_panel.Layout()
             self.Layout()
-            # Conversation already open — just focus the message input field.
-            wx.CallAfter(self.message_field.SetFocus)
+            # Conversation already open: nothing to reload, but choosing it in
+            # the list is still "opening" it, so the same "focar ao abrir"
+            # setting decides where focus goes (it used to be the message
+            # field unconditionally, and ignored take_focus).
+            if take_focus:
+                wx.CallAfter(self._focus_already_open_conversation)
             return
         # Record that the user actually looked at this conversation. It is the
         # gate on asking the *phone* for its older history: every such request
@@ -424,7 +461,7 @@ class ConversationNavigationMixin:
 
         if not take_focus:
             pass
-        elif focus_setting == "unread_or_last" or not self.message_field.IsEnabled():
+        elif self._open_focus_target() == "messages_list":
             wx.CallAfter(_do_focus_messages_list)
         else:
             wx.CallAfter(_do_focus_message_field)
