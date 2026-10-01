@@ -24,6 +24,7 @@ Every step fails loudly; nothing is installed unless all of them passed.
 
 import argparse
 import hashlib
+import json
 import os
 import platform
 import plistlib
@@ -32,6 +33,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +68,54 @@ def step(msg):
 def run(cmd, **kw):
     print("   $", " ".join(str(c) for c in cmd), flush=True)
     subprocess.run(cmd, check=True, **kw)
+
+
+APPLE_ATTEMPTS = 3
+APPLE_RETRY_WAIT = 30
+
+
+def run_apple(cmd, quiet=False, attempts=APPLE_ATTEMPTS, wait=APPLE_RETRY_WAIT):
+    """Run a command that talks to Apple's servers (codesign --timestamp,
+    notarytool) and return its CompletedProcess.
+
+    Those servers time out now and then, so a failed attempt is retried after
+    `wait` seconds. Every failed attempt prints the command's own output, so a
+    failure in CI says what Apple answered instead of only an exit status.
+    quiet=True keeps a successful attempt's output out of the log (codesign
+    runs once per binary)."""
+    for attempt in range(1, attempts + 1):
+        if not quiet:
+            print("   $", " ".join(str(c) for c in cmd), flush=True)
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode == 0:
+            if not quiet:
+                _print_output(r)
+            return r
+        print(f"   ! attempt {attempt}/{attempts} failed (exit {r.returncode}):",
+              " ".join(str(c) for c in cmd), flush=True)
+        _print_output(r)
+        if attempt < attempts:
+            time.sleep(wait)
+    raise subprocess.CalledProcessError(r.returncode, cmd, r.stdout, r.stderr)
+
+
+def _print_output(r):
+    for text in (r.stdout, r.stderr):
+        if text and text.strip():
+            print(text.rstrip(), flush=True)
+
+
+def notary_status(stdout):
+    """(id, status) from `notarytool submit --output-format json`, or
+    (None, None) when Apple never answered (the submission did not happen)."""
+    for line in reversed((stdout or "").strip().splitlines()):
+        try:
+            info = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(info, dict) and info.get("id"):
+            return info["id"], info.get("status")
+    return None, None
 
 
 def download(url, dest=None):
@@ -395,7 +445,7 @@ def sign_developer_id(identity, profile=None):
         cmd = list(base)
         if os.path.basename(p) in runtime_exes and os.access(p, os.X_OK):
             cmd += ["--entitlements", os.path.join(ent, "runtime.plist")]
-        subprocess.run(cmd + [p], check=True, capture_output=True)
+        run_apple(cmd + [p], quiet=True)
     app_ent = os.path.join(BUILD, "app-entitlements.plist")
     with open(os.path.join(ent, "app.plist"), "rb") as fh:
         ents = plistlib.load(fh)
@@ -424,9 +474,32 @@ def notarize():
     if os.path.exists(sub):
         os.remove(sub)
     run(["ditto", "-c", "-k", "--keepParent", APP, sub])
-    run(["xcrun", "notarytool", "submit", sub, "--wait", "--timeout", "45m",
-         "--key", key, "--key-id", os.environ["WINZAPP_NOTARY_KEY_ID"],
-         "--issuer", os.environ["WINZAPP_NOTARY_ISSUER"]])
+    auth = ["--key", key, "--key-id", os.environ["WINZAPP_NOTARY_KEY_ID"],
+            "--issuer", os.environ["WINZAPP_NOTARY_ISSUER"]]
+    submit = ["xcrun", "notarytool", "submit", sub, "--wait", "--timeout", "45m",
+              "--output-format", "json"] + auth
+    sub_id = status = None
+    for attempt in range(1, APPLE_ATTEMPTS + 1):
+        print("   $", " ".join(submit), flush=True)
+        r = subprocess.run(submit, capture_output=True, text=True)
+        _print_output(r)
+        sub_id, status = notary_status(r.stdout)
+        if sub_id:
+            break
+        # No submission id: Apple was never reached (a timeout), so the
+        # same archive can simply be sent again.
+        print(f"   ! notarytool attempt {attempt}/{APPLE_ATTEMPTS} got no answer "
+              f"(exit {r.returncode})", flush=True)
+        if attempt < APPLE_ATTEMPTS:
+            time.sleep(APPLE_RETRY_WAIT)
+    if not sub_id:
+        sys.exit("Notarization: Apple's notary service could not be reached")
+    if status != "Accepted":
+        # Apple's reasons (an unsigned binary, a missing hardened runtime...)
+        # are only in the submission log; print it before failing.
+        print(f"   notarization {sub_id} ended as {status}; Apple's log:", flush=True)
+        run_apple(["xcrun", "notarytool", "log", sub_id] + auth)
+        sys.exit(f"Notarization {status or 'failed'} ({sub_id})")
     run(["xcrun", "stapler", "staple", APP])
     run(["spctl", "--assess", "--type", "execute", "--verbose=2", APP])
     os.remove(sub)
