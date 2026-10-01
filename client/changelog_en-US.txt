@@ -134,6 +134,8 @@ FIXES
 
 - Answering the update prompt while WinZapp was still starting could leave it without a window, running in the background, and it only opened again after the process was ended or the computer restarted. The prompt now waits for the main window to open, and if a shutdown gets stuck WinZapp ends itself instead of staying stuck.
 
+- The screen reader no longer re-reads the focused message in the open conversation for no reason. When a new message arrived together with a reaction (or after a message you sent), the automatic refresh rewrote the whole message list and NVDA repeated the item you were on; now the list is updated row by row, and only the rows that really changed are touched.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.
