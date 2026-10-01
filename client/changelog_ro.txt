@@ -138,6 +138,8 @@ CORECTĂRI
 
 - Anunțurile „scrie” și „înregistrează un mesaj audio” sunt din nou rostite în grupuri. WhatsApp a început să indice cine scrie într-un mod pe care WinZapp nu îl citea, așa că doar conversațiile individuale le anunțau.
 
+- Alegerea din listă a unei conversații deja deschise respectă acum setarea „Când deschideți o conversație, concentrați-vă” (câmpul de mesaj sau separatorul de necitite / ultimul mesaj); înainte focusul mergea întotdeauna la câmpul de mesaj.
+
 V1.1.1.0
 
 Această versiune se concentrează pe menținerea contului conectat. WinZapp păstrează acum o copie de siguranță a profilului browserului — locul în care se află de fapt conexiunea cu WhatsApp — și o restaurează singur atunci când nu mai este acceptată, spunându-vă ce s-a întâmplat. Împreună cu aceasta vin corecții pentru situațiile care stricau sesiunea și lăsau aplicația să ceară o nouă asociere: închiderea computerului, suspendarea și reluarea și repornirea conexiunii de către aplicație. Au sosit și verificarea ortografică în câmpul de mesaj și acțiunile pentru linkuri.
