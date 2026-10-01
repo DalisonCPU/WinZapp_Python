@@ -120,11 +120,9 @@ CORREÇÕES
 
 - Nas conversas arquivadas, Alt+M não levava para a lista de mensagens da conversa aberta, como faz nas conversas principais. Agora funciona a partir de qualquer ponto do painel.
 
-- Abrir uma conversa arquivada com uma conversa principal aberta e depois voltar às conversas principais continuava a mostrar a conversa arquivada, que já tinha deixado para trás. Agora o WinZapp volta à última conversa principal que tinha aberto. Se não havia nenhuma conversa principal aberta, a conversa arquivada continua no ecrã ao lado da lista de conversas, e só é marcada como lida ou anunciada quando o foco está nela.
+- Uma conversa aberta passa a aparecer no ecrã apenas enquanto está na lista de onde foi aberta: as conversas principais (Alt+1), as conversas arquivadas (Alt+4) ou as conversas trancadas. Ao mudar para outra delas, a conversa desaparece do ecrã, e ao voltar reaparece com a lista de mensagens exatamente onde estava a ler. Isto também corrige uma conversa arquivada que continuava no ecrã nas conversas principais. Uma conversa aberta pelas conversas principais pertence-lhes, mesmo uma arquivada encontrada no campo de pesquisa, e abrir uma conversa noutra lista já não faz perder a que tinha aberta ali: ela volta quando regressa.
 
 - O mesmo vale para qualquer outro painel, como Estado ou Chamadas: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. As mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está no ecrã.
-
-- Ao ir para as conversas arquivadas (Alt+4) com uma conversa principal aberta, essa conversa desaparecia do ecrã até voltar às principais. Agora continua a aparecer abaixo da lista de arquivadas, tal como uma conversa arquivada já continuava a aparecer ao mudar para as principais. Esc fecha a conversa e devolve o foco à lista de arquivadas.
 
 - Numa conversa que já tinha sido limpa alguma vez, o contador de não lidas desaparecia sozinho cerca de um minuto depois de chegar uma mensagem, e abrir a conversa não a marcava como lida no telemóvel. Acontecia sobretudo em grupos movimentados e silenciados. Agora o contador mantém-se até ler a conversa, e ler no WinZapp marca-a como lida também no telemóvel.
 

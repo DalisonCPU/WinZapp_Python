@@ -12,6 +12,7 @@ from ui.accessible import (
     AccessibleSearchConversations,
 )
 from ui.dialogs.clear_chat_confirm import confirm_clear_chat
+from core.conversation_view import ARCHIVED
 from core.utils import format_number
 from ui.conversation_panel.chat_menu import ChatMenuMixin
 from ui.conversation_panel.chat_list_selection import ChatListSelectionMixin
@@ -414,7 +415,7 @@ class ArchivedConversationsPanel(ChatListSelectionMixin, wx.Panel):
         mw.conversations_panel.conversations_label.Hide()
         mw.conversations_panel.conversations_list.Hide()
         mw.content_panel.Layout()
-        mw.conversations_panel.navigate_to_conversation(chat, from_archived=True)
+        mw.conversations_panel.navigate_to_conversation(chat, origin=ARCHIVED)
 
     def on_context_menu(self, event):
         """Same menu, in the same order, as ConversationsPanel.on_conversations_context_menu() —

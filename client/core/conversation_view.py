@@ -1,73 +1,70 @@
-"""Whether the open conversation's panel is the one being shown.
+"""Whether the open conversation is the one being shown.
 
 ConversationsPanel keeps its conversation open while the user is on another
-panel (Alt+4 archived, Alt+5 status, ...): coming back must not mean finding
-the chat again. But an open conversation whose panel is hidden is not being
-read, so it must not be marked read, notified as "the current chat" or kept
-out of the unread counts.
+panel (Alt+4 archived, ...): coming back must not mean finding the chat
+again. But an open conversation that is hidden is not being read, so it must
+not be marked read, notified as "the current chat" or kept out of the unread
+counts.
 """
+
+MAIN, ARCHIVED, LOCKED = "main", "archived", "locked"
 
 
 def conversation_in_view(panel) -> bool:
-    """True when `panel` has a conversation open and is itself shown.
+    """True when `panel` has a conversation open and it is on screen.
 
     IsShown() of the panel, not IsShownOnScreen(): the panel is a direct child
-    of the content area and the panel switches (Alt+4/5/6) Hide() it, while a
-    window hidden to the tray or minimized must keep counting as "open" (the
-    unread bookkeeping for a hidden window relies on that). A stand-in
-    without the method counts as shown, so callers keep their old behaviour.
+    of the content area and the panel switches Hide() it, while a window
+    hidden to the tray or minimized must keep counting as "open" (the unread
+    bookkeeping for a hidden window relies on that). The detail pane counts
+    too: a conversation is shown only while the panel it was opened from is
+    the visible one (see conversation_visible_in()), and the others hide just
+    that pane, leaving the panel itself shown. A stand-in without either
+    method counts as shown, so callers keep their old behaviour.
     """
     if panel is None or getattr(panel, "conversation", None) is None:
         return False
-    shown = getattr(panel, "IsShown", None)
-    if shown is None:
-        return True
-    try:
-        if not shown():
+    for widget in (panel, getattr(panel, "conversation_panel", None)):
+        shown = getattr(widget, "IsShown", None)
+        if shown is None:
+            continue
+        try:
+            if not shown():
+                return False
+        except RuntimeError:  # wx object already destroyed
             return False
-    except RuntimeError:  # wx object already destroyed
-        return False
-    # A conversation can sit next to a list it does not belong to: a main chat
-    # under the archived list (Alt+4 keeps it visible), or an archived chat
-    # beside the main list (Alt+1 keeps it visible). It is being read only
-    # while focus is inside it (Tab, Alt+2, Alt+M all move it there); on the
-    # list it is visible but not read.
-    main_window = getattr(panel, "main_window", None)
-    if archived_panel_is_shown(main_window) or _archived_beside_main_list(panel, main_window):
-        return _focus_is_inside(getattr(panel, "conversation_panel", panel))
     return True
 
 
-def _archived_beside_main_list(panel, main_window) -> bool:
-    is_archived = getattr(main_window, "is_chat_archived", None)
-    main_list = getattr(panel, "conversations_list", None)
-    if is_archived is None or main_list is None:
-        return False
-    try:
-        jid = panel.conversation.get("remoteJid", "")
-        return bool(jid) and bool(is_archived(jid)) and bool(main_list.IsShown())
-    except RuntimeError:  # wx object already destroyed
-        return False
+def conversation_visible_in(origin, shown_panel) -> bool:
+    """The one rule: an open conversation is on screen only while the panel it
+    was opened from (main, archived or locked) is the panel being shown."""
+    return origin is not None and origin == shown_panel
 
 
-def _focused_window():
-    try:
-        import wx
-        return wx.Window.FindFocus()
-    except Exception:
-        return None
+def resolve_origin(requested, current_origin, list_shown, detail_shown) -> str:
+    """The panel a conversation being opened belongs to.
+
+    An explicit request wins. Otherwise a chat opened from inside a
+    conversation that sits alone in the panel (the chat list hidden, as it is
+    for an archived or locked one: a bookmark, a mention) stays with that
+    panel; anything else is the main panel's, an archived chat found through
+    the main search box included.
+    """
+    if requested:
+        return requested
+    if current_origin in (ARCHIVED, LOCKED) and detail_shown and not list_shown:
+        return current_origin
+    return MAIN
 
 
-def _focus_is_inside(pane) -> bool:
-    window = _focused_window()
-    while window is not None:
-        if window is pane:
-            return True
-        try:
-            window = window.GetParent()
-        except RuntimeError:  # wx object already destroyed
-            return False
-    return False
+def parked_chat_reopenable(origin, chat_locked, vault_unlocked) -> bool:
+    """A conversation set aside while another took the shared panel comes back
+    only if it may still be shown: a locked chat needs the vault open and any
+    other must not have been locked since."""
+    if origin == LOCKED:
+        return bool(chat_locked and vault_unlocked)
+    return not chat_locked
 
 
 def archived_chat_stays_silent(is_current_conv: bool, archived_panel_shown: bool) -> bool:

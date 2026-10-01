@@ -56,12 +56,7 @@ class _Layout:
     def Layout(self):
         pass
 
-
-class _Detour:
-    def enter(self, current):
-        pass
-
-    def clear(self):
+    def Show(self, show=True):
         pass
 
 
@@ -83,8 +78,8 @@ class _Stub:
     def Layout(self):
         pass
 
-    def _archived_detour_state(self):
-        return _Detour()
+    def _begin_conversation_visit(self, conversation, origin=None):
+        pass
 
     def _sync_voice_call_button(self, jid):
         pass

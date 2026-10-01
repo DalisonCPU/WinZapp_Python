@@ -39,8 +39,18 @@ class _FakeConversationsPanel(_FakeWidget):
     def __init__(self, conversation=None, shown=False):
         super().__init__(shown=shown)
         self.conversation = conversation
+        # Detail pane: shown together with the panel in these scenarios; the
+        # conversation belongs to the main panel.
+        self.conversation_panel = _FakeWidget(shown=shown)
+        self._conversation_origin = "main"
         self.jump_last_calls   = 0
         self.jump_unread_calls = 0
+
+    def reveal_conversation_for_panel(self, shown):
+        assert shown == self._conversation_origin
+        self.Show()
+        self.conversation_panel.Show()
+        return False
 
     def _on_accel_jump_last(self, event):
         self.jump_last_calls += 1

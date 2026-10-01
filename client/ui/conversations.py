@@ -158,11 +158,13 @@ from ui.conversation_panel.reactions import ReactionsMixin
 from ui.conversation_panel.attachments import AttachmentsMixin
 from ui.conversation_panel.contact_messages import ContactMessagesMixin
 from ui.conversation_panel.bulk_messages import BulkMessagesMixin
+from ui.conversation_panel.panel_visibility import ConversationPanelVisibilityMixin
 
 
 class ConversationsPanel(
     AcceleratorsMixin,
     ConversationNavigationMixin,
+    ConversationPanelVisibilityMixin,
     ComposerMixin,
     VoiceRecordingMixin,
     SystemAudioRecordingMixin,

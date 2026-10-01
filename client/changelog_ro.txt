@@ -120,11 +120,9 @@ CORECTĂRI
 
 - În conversațiile arhivate, Alt+M nu ducea la lista de mesaje a conversației deschise, așa cum face în conversațiile principale. Acum funcționează de oriunde din panou.
 
-- Deschiderea unei conversații arhivate cu o conversație principală deschisă, apoi întoarcerea la conversațiile principale, continua să arate conversația arhivată, pe care o lăsaseți deja în urmă. Acum WinZapp revine la ultima conversație principală pe care o aveați deschisă. Dacă nu era deschisă nicio conversație principală, conversația arhivată rămâne pe ecran lângă lista de conversații și este marcată ca citită sau anunțată doar cât timp focalizarea este în ea.
+- O conversație deschisă apare acum pe ecran doar cât timp te afli în lista din care a fost deschisă: conversațiile principale (Alt+1), conversațiile arhivate (Alt+4) sau conversațiile blocate. La trecerea la alta dintre ele, conversația dispare de pe ecran, iar la întoarcere reapare cu lista de mesaje exact unde citeai. Aceasta corectează și o conversație arhivată care rămânea pe ecran în conversațiile principale. O conversație deschisă din cele principale le aparține, chiar și una arhivată găsită cu câmpul de căutare, iar deschiderea unei conversații în altă listă nu mai duce la pierderea celei deschise acolo: revine când te întorci.
 
 - Același lucru este valabil pentru orice alt panou, precum Stare sau Apeluri: cu o conversație lăsată deschisă în spatele lui, mesajele ei noi sunt anunțate ca ale oricărei alte conversații și nu sunt marcate ca citite. Mesajele conversațiilor arhivate sunt anunțate doar cât timp lista celor arhivate este pe ecran.
-
-- Trecerea la conversațiile arhivate (Alt+4) cu o conversație principală deschisă făcea ca acea conversație să dispară de pe ecran până la întoarcerea la cele principale. Acum rămâne pe ecran sub lista celor arhivate, la fel cum o conversație arhivată rămânea deja pe ecran la trecerea la cele principale. Esc închide conversația și readuce focalizarea în lista celor arhivate.
 
 - Într-o conversație care fusese golită vreodată, contorul de mesaje necitite dispărea singur la aproximativ un minut după sosirea unui mesaj, iar deschiderea conversației nu o marca drept citită pe telefon. Se întâmpla mai ales în grupurile aglomerate și dezactivate. Acum contorul rămâne până când citiți conversația, iar citirea ei în WinZapp o marchează drept citită și pe telefon.
 

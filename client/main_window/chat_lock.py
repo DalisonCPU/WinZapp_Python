@@ -7,6 +7,7 @@ available here.
 
 import logging
 import wx
+from core.conversation_view import LOCKED
 from ui.chat_lock import (
     ChatLockChangePinDialog,
     ChatLockRecoveryDialog,
@@ -522,9 +523,9 @@ class ChatLockMixin:
         panel = self.locked_conversations_panel
         chats, names = getattr(self, "_locked_chat_rows", ([], []))
         panel.set_all_chats(chats, names)
-        panel.Show()
-        self.content_panel.Layout()
-        panel.restore_selection()
+        # Shows the list, or the locked conversation that was left open in
+        # its place.
+        self.conversations_panel.switch_to_chat_panel(LOCKED, panel)
         self.touch_chat_lock_timeout()
 
     def lock_chat_vault(self, *, silent=False, show_conversations=True):
@@ -534,6 +535,9 @@ class ChatLockMixin:
         if cp is not None and cp.conversation is not None:
             if self.is_chat_locked(cp.conversation.get("remoteJid", "")):
                 cp.close_conversation_for_panel_switch()
+        if cp is not None:
+            # A locked chat set aside must not come back after the vault shut.
+            cp.forget_parked_conversation(LOCKED)
         panel = getattr(self, "locked_conversations_panel", None)
         if panel is not None:
             panel.set_all_chats([], [])
@@ -565,4 +569,4 @@ class ChatLockMixin:
         self.conversations_panel.conversations_list.Hide()
         self.conversations_panel.Show()
         self.content_panel.Layout()
-        self.conversations_panel.navigate_to_conversation(chat)
+        self.conversations_panel.navigate_to_conversation(chat, origin=LOCKED)

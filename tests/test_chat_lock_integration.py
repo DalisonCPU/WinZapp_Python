@@ -134,6 +134,16 @@ class _Shown:
         self.shown = False
 
 
+class _ConversationsPanelStub(_Shown):
+    """The part of ConversationsPanel show_locked_chats_panel() delegates to:
+    no conversation belongs to the locked panel here, so its list shows."""
+
+    def switch_to_chat_panel(self, shown, list_panel=None):
+        list_panel.Show()
+        list_panel.restore_selection()
+        return False
+
+
 class _LockedPanel(_Shown):
     def __init__(self):
         super().__init__()
@@ -157,7 +167,7 @@ class _PanelStub(_MainWindowStub):
         super().__init__(key, vault)
         self._chat_lock_unlocked = True
         self._locked_chat_rows = ([], [])
-        self.conversations_panel = _Shown()
+        self.conversations_panel = _ConversationsPanelStub()
         self.archived_conversations_panel = _Shown()
         self.status_panel = _Shown()
         self.calls_panel = _Shown()
