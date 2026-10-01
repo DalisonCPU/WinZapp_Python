@@ -120,11 +120,9 @@ DÜZELTMELER
 
 - Arşivlenmiş sohbetlerde Alt+M, ana sohbetlerde olduğu gibi açık sohbetin mesaj listesine götürmüyordu. Artık panelin her yerinden çalışıyor.
 
-- Ana sohbetlerden biri açıkken arşivlenmiş bir sohbeti açıp sonra ana sohbetlere dönmek, geride bıraktığınız arşivlenmiş sohbeti göstermeye devam ediyordu. Artık WinZapp, en son açık olan ana sohbete geri dönüyor. Açık bir ana sohbet yoksa arşivlenmiş sohbet, sohbet listesinin yanında ekranda kalır ve yalnızca odak içindeyken okundu olarak işaretlenir veya duyurulur.
+- Açık bir sohbet artık yalnızca açıldığı listedeyken ekranda görünür: ana sohbetler (Alt+1), arşivlenmiş sohbetler (Alt+4) veya kilitli sohbetler. Bunlardan birine geçmek sohbeti gizler, geri dönünce mesaj listesi tam okuduğunuz yerde olacak şekilde yeniden görünür. Bu, arşivlenmiş bir sohbetin ana sohbetlerde ekranda kalması sorununu da düzeltir. Ana sohbetlerden açılan bir sohbet onlara aittir, arama alanıyla bulunan arşivlenmiş bir sohbet bile; ayrıca başka bir listede sohbet açmak artık orada açık olan sohbeti kaybettirmez: geri döndüğünüzde yeniden gelir.
 
 - Aynısı Durumlar veya Aramalar gibi diğer tüm paneller için de geçerli: arkasında açık bir sohbet varken o sohbetin yeni mesajları diğer sohbetlerinki gibi duyurulur ve okundu olarak işaretlenmez. Arşivlenmiş sohbetlerin mesajları yalnızca arşivlenmiş listesi ekrandayken duyurulur.
-
-- Ana sohbetlerden biri açıkken arşivlenmiş sohbetlere geçmek (Alt+4), o sohbetin ana sohbetlere dönene kadar ekrandan kaybolmasına yol açıyordu. Artık arşivlenmiş sohbetin ana sohbetlere geçilince ekranda kalması gibi, o sohbet de arşivlenmiş listesinin altında görünmeye devam ediyor. Esc sohbeti kapatır ve odağı arşivlenmiş listesine geri verir.
 
 - Daha önce en az bir kez temizlenmiş bir sohbette, bir mesaj geldikten yaklaşık bir dakika sonra okunmamış sayacı kendiliğinden kayboluyordu ve sohbeti açmak onu telefonda okundu olarak işaretlemiyordu. Bu çoğunlukla yoğun ve sessize alınmış gruplarda oluyordu. Artık sayaç siz sohbeti okuyana kadar kalıyor ve WinZapp'te okumak sohbeti telefonda da okundu olarak işaretliyor.
 

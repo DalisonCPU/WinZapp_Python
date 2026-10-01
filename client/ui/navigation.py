@@ -1,6 +1,7 @@
 import os
 import sys
 import wx
+from core.conversation_view import ARCHIVED, MAIN
 from traceback import format_exc
 from core.sound_system import SoundSystem
 from ui.conversations import ConversationsPanel
@@ -143,13 +144,9 @@ class NavigationPanel(wx.Panel):
 
         if key == "conversations":
             mw.conversations_panel.Show()
-            # Safety net: if an archived chat's detail pane is still open,
-            # its conversations_list/label were hidden by
-            # ArchivedConversationsPanel.on_conversation_selected() and never
-            # restored (the user got here via this nav item instead of Esc).
-            mw.conversations_panel.conversations_label.Show()
-            mw.conversations_panel.conversations_list.Show()
-            mw.conversations_panel.resume_main_after_archived()
+            # Brings the chat list back (an archived chat's detail pane hid
+            # it) and hides any conversation that belongs to another panel.
+            mw.conversations_panel.reveal_conversation_for_panel(MAIN)
             mw.content_panel.Layout()
             mw.conversations_panel.conversations_list.SetFocus()
             if (mw.conversations_panel.conversations_list.GetFocusedItem() != -1
@@ -161,10 +158,8 @@ class NavigationPanel(wx.Panel):
                     interrupt=True,
                 )
         elif key == "archived" and hasattr(mw, "archived_conversations_panel"):
-            mw.archived_conversations_panel.Show()
-            mw._keep_open_conversation_beside_archived()
-            mw.content_panel.Layout()
-            mw.archived_conversations_panel.restore_selection()
+            mw.conversations_panel.switch_to_chat_panel(
+                ARCHIVED, mw.archived_conversations_panel)
         elif key == "status" and hasattr(mw, "status_panel"):
             mw.status_panel.Show()
             mw.content_panel.Layout()

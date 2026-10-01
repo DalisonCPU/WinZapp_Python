@@ -120,11 +120,9 @@ POPRAWKI
 
 - W zarchiwizowanych czatach Alt+M nie przenosił do listy wiadomości otwartego czatu, tak jak w głównych czatach. Teraz działa z dowolnego miejsca w panelu.
 
-- Otwarcie zarchiwizowanego czatu przy otwartym czacie głównym, a potem powrót do czatów głównych, nadal pokazywało zarchiwizowany czat, który był już za tobą. Teraz WinZapp wraca do ostatniego głównego czatu, który miałeś otwarty. Jeśli żaden główny czat nie był otwarty, zarchiwizowany czat pozostaje na ekranie obok listy czatów i jest oznaczany jako przeczytany lub zapowiadany tylko wtedy, gdy jest w nim fokus.
+- Otwarty czat jest teraz widoczny na ekranie tylko wtedy, gdy jesteś na liście, z której został otwarty: czaty główne (Alt+1), zarchiwizowane czaty (Alt+4) lub zablokowane czaty. Przejście na inną z nich ukrywa czat, a po powrocie pojawia się on ponownie z listą wiadomości dokładnie w miejscu, w którym czytałeś. Naprawia to także zarchiwizowany czat, który pozostawał na ekranie w czatach głównych. Czat otwarty z czatów głównych należy do nich, nawet zarchiwizowany znaleziony w polu wyszukiwania, a otwarcie czatu na innej liście nie powoduje już utraty czatu otwartego tam wcześniej: wraca, gdy wrócisz.
 
 - To samo dotyczy każdego innego panelu, takiego jak Status czy Połączenia: gdy za nim zostaje otwarty czat, jego nowe wiadomości są zapowiadane jak wiadomości z innych czatów i nie są oznaczane jako przeczytane. Wiadomości z zarchiwizowanych czatów są zapowiadane tylko wtedy, gdy lista zarchiwizowanych jest na ekranie.
-
-- Przejście do zarchiwizowanych czatów (Alt+4) przy otwartym czacie głównym powodowało, że ten czat znikał z ekranu do czasu powrotu do czatów głównych. Teraz pozostaje na ekranie pod listą zarchiwizowanych, tak jak zarchiwizowany czat już pozostawał na ekranie po przełączeniu na czaty główne. Esc zamyka czat i przywraca fokus na listę zarchiwizowanych.
 
 - W czacie, który kiedykolwiek został wyczyszczony, licznik nieprzeczytanych znikał sam mniej więcej minutę po nadejściu wiadomości, a otwarcie czatu nie oznaczało go jako przeczytanego na telefonie. Zdarzało się to głównie w ruchliwych, wyciszonych grupach. Teraz licznik zostaje, dopóki nie przeczytasz czatu, a przeczytanie go w WinZapp oznacza go jako przeczytany także na telefonie.
 

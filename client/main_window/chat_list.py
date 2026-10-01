@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core.conversation_view import ARCHIVED
 from core.view_once import VIEW_ONCE_UNAVAILABLE_TYPE
 from core.call_log import (
     CALL_LOG_MESSAGE_TYPE,
@@ -138,7 +139,7 @@ class ChatListMixin:
                 self.conversations_panel.Show()
                 self.content_panel.Layout()
                 self.conversations_panel.navigate_to_conversation(
-                    chat, from_archived=True)
+                    chat, origin=ARCHIVED)
                 return
             # Stale archived state (or panel missing) — fall through to the
             # non-archived path below as a defensive fallback.

@@ -120,11 +120,9 @@ FIXES
 
 - In archived chats, Alt+M did not move to the messages list of the open chat, as it does in the main chats. It now works from anywhere in the panel.
 
-- Opening an archived chat while a main chat was open, then going back to the main chats, kept showing the archived chat you had already left behind. WinZapp now goes back to the last main chat you had open. If no main chat was open, the archived chat stays on screen beside the chat list, and is only marked as read or announced while focus is in it.
+- An open chat is now on screen only while you are in the list it was opened from: the main chats (Alt+1), the archived chats (Alt+4) or the locked chats. Switching to another of those hides it, and coming back shows it again with the message list exactly where you were reading. This also fixes an archived chat staying on screen in the main chats. A chat opened from the main chats belongs to them, even an archived one found with the search field, and opening a chat in another list no longer loses the one you had open there: it is back when you return.
 
 - The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
-
-- Going to archived chats (Alt+4) with a main chat open made that chat disappear until you went back to the main chats. It now stays on screen below the archived list, just as an archived chat already stayed on screen when switching to the main chats. Esc closes the chat and returns focus to the archived list.
 
 - In a chat that had ever been cleared, the unread counter disappeared on its own about a minute after a message arrived, and opening the chat didn't mark it as read on your phone. It happened mostly in busy, muted groups. Now the counter stays until you read the chat, and reading it in WinZapp marks it as read on your phone too.
 
