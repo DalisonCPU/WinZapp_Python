@@ -66,6 +66,10 @@ ULEPSZENIA
 
 - Automatyczne pobieranie multimediów od razu stosuje się teraz do opcji „Automatycznie pobieraj multimedia” na karcie Pamięć w Ustawieniach: odznaczenie jej przerywa trwające pobieranie, a zaznaczenie (lub zaznaczenie kolejnego typu multimediów) rozpoczyna pobieranie bez czekania na następną synchronizację. Odznaczona, dotyczy teraz także multimediów w wiadomościach przychodzących, gdy WinZapp jest otwarty, a lista typów jest wyłączona i zachowuje to, co było zaznaczone.
 
+- WinZapp utrzymuje teraz aktualną listę wersji WhatsApp Web. Przy uruchomieniu pobiera w tle nowszą, jeśli jest dostępna, i stosuje ją przy następnym uruchomieniu, co naprawia połączenia, które nie działały w instalacjach z nieaktualną listą.
+
+- Gdy nie można rozpocząć połączenia, bo używana wersja WhatsApp Web nie obsługuje połączeń, WinZapp teraz o tym informuje i podpowiada, co zrobić (uruchomić WinZappa ponownie albo wybrać "Wymuś ponowną instalację WPPConnect" w menu Pomoc), zamiast odczytywać kod błędu.
+
 POPRAWKI
 
 - Po rozpoczęciu nagrywania wiadomości głosowej przy wyciszonych komunikatach czytnik ekranu nie zaczyna już wypowiadać „Wyślij”, zanim zostanie przerwany. WinZapp nie wykonuje teraz automatycznego przeniesienia fokusu, które powodowało ten urwany komunikat, a skróty Ctrl+R, Ctrl+Shift+P i Ctrl+Shift+D nadal działają.

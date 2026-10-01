@@ -560,6 +560,8 @@ class SessionLifecycleMixin:
             return          # not ours to start
         if self._is_wpp_running():
             return
+        from core.wa_version_refresh import wait_for_refresh
+        wait_for_refresh()
         self._start_wpp_background()
         deadline = time.time() + 120
         while time.time() < deadline:

@@ -1084,6 +1084,7 @@
     "voice_call_ended": "Llamada finalizada.",
     "voice_call_error_unknown": "error desconocido",
     "voice_call_error_no_connection": "sin conexión con el servidor de WhatsApp",
+    "voice_call_voip_unavailable": "Puede que las llamadas no estén disponibles con la versión de WhatsApp Web que WinZapp está usando. WinZapp descarga un catálogo de versiones más reciente al iniciarse y lo aplica la próxima vez que se inicie, así que reiniciar WinZapp puede solucionarlo. Si sigue ocurriendo, elija \"{option}\" en el menú {menu}.",
     "voice_call_device_switch_failed": "No se pudo abrir el nuevo dispositivo de audio de la llamada.",
     "incoming_call_close_button": "C&errar ventana",
     "emoji_button": "Emoji",

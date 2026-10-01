@@ -1084,6 +1084,7 @@
   "voice_call_ended": "Arama sona erdi.",
   "voice_call_error_unknown": "Bilinmeyen hata.",
   "voice_call_error_no_connection": "WhatsApp sunucusuna bağlantı yok.",
+  "voice_call_voip_unavailable": "Arama, WinZapp'ın kullandığı WhatsApp Web sürümüyle kullanılamıyor olabilir. WinZapp başlarken daha yeni bir sürüm kataloğu indirir ve bir sonraki başlatılışında uygular; bu yüzden WinZapp'ı yeniden başlatmak sorunu çözebilir. Sorun sürerse {menu} menüsünden \"{option}\" seçeneğini seçin.",
   "voice_call_device_switch_failed": "Yeni arama ses cihazı açılamadı.",
   "incoming_call_close_button": "Pencereyi &kapat",
   "emoji_button": "Emoji",

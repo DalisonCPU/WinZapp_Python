@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import subprocess
+import threading
 import sys
 import time
 import uuid
@@ -1164,6 +1165,24 @@ class WppServerMixin:
         except Exception:
             pass
 
+    def _start_wpp_background_after_catalogue(self):
+        """Spawn Node once the WhatsApp Web catalogue refresh has had its say.
+
+        The wait (up to a few seconds) and the swap of a staged catalogue
+        package are file work, so they run on a worker; only the spawn itself
+        goes back to the UI thread, where it always ran. Any failure still
+        ends in the spawn: the refresh must never keep Node from starting.
+        """
+        def _worker():
+            try:
+                from core.wa_version_refresh import wait_for_refresh
+                wait_for_refresh()
+            except Exception:
+                logging.exception("[wa-version] pre-spawn refresh failed (non-fatal)")
+            finally:
+                wx.CallAfter(self._start_wpp_background)
+        threading.Thread(target=_worker, name="wa-version-prespawn", daemon=True).start()
+
     def _register_node_lease(self):
         """Register this account's node-lease on the shared WPPConnect Node.
 
@@ -1640,6 +1659,8 @@ class WppServerMixin:
             # point: __init__ blocks here until Node answers, which is what
             # keeps the tray icon and the connect sequence from starting
             # against a dead port.
+            from core.wa_version_refresh import wait_for_refresh
+            wait_for_refresh()
             self._start_wpp_background()
             deadline = time.time() + 300
             while time.time() < deadline:
@@ -1678,7 +1699,7 @@ class WppServerMixin:
             dlg = ApiStartupDialog(self, self.wpp_port)
             # Queued rather than called inline so the dialog is painted (and
             # announced by the screen reader) before the launch work begins.
-            wx.CallAfter(self._start_wpp_background)
+            self._start_wpp_background_after_catalogue()
             res = dlg.ShowModal()
             dlg.Destroy()
             return res
