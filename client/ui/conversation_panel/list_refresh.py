@@ -981,10 +981,10 @@ class ListRefreshMixin:
         """Repopulate the messages list only when its content actually changed.
 
         Every unattended refresh must come through here rather than calling
-        ``populate_messages(preserve_focus=True)`` directly. That rebuild does a
-        full ``DeleteAllItems()`` + re-``Append()`` of the native ListView, and
-        even with preserve_focus it can only put focus back on the *message* it
-        saved — the moment that message is no longer in the paginated window (or
+        ``populate_messages(preserve_focus=True)`` directly. That rebuild
+        re-derives every row and re-writes the native list (per row, through
+        _sync_message_rows() — never cleared), and even with preserve_focus it
+        can only put focus back on the *message* it saved — the moment that message is no longer in the paginated window (or
         the list was showing the unread separator, or the saved id came back
         empty) focus lands somewhere else entirely. With a 60s poll calling it
         unconditionally, the user was thrown to a random message in the middle
@@ -1056,9 +1056,9 @@ class ListRefreshMixin:
         # method's own Focus(0) calls below (a short conversation whose last
         # message or unread separator sits at index 0) fire EVT_LIST_ITEM_FOCUSED
         # synchronously, and re-entering _load_older_messages()/
-        # _load_more_messages() — which themselves call DeleteAllItems()/Append()
-        # on this same list — while this rebuild is still in progress would
-        # corrupt the list. Cleared via CallAfter so it stays set for every
+        # _load_more_messages() — which themselves insert rows into this same
+        # list — while this rebuild is still in progress would corrupt the
+        # list. Cleared via CallAfter so it stays set for every
         # nested/synchronous focus event this call produces, and only turns
         # off once control actually returns to the event loop.
         self._populating_messages = True
@@ -1116,10 +1116,11 @@ class ListRefreshMixin:
         # correct Focus()/Select() call (or lack thereof) is ever observed.
         #
         # Medido, não estimado, pelo mesmo motivo do repaint de nomes em
-        # main.py: este rebuild é DeleteAllItems() + um Append() por linha, ele
-        # roda a cada mensagem nova, e a janela deixou de ser limitada ao
-        # messages_page_size. Uma linha por rebuild diz quanto custa a janela
-        # no tamanho a que ela chegou.
+        # main.py: este rebuild percorre a janela inteira (renderiza cada linha
+        # e compara com a tela), roda a cada mensagem nova, e a janela deixou de
+        # ser limitada ao messages_page_size. Uma linha por rebuild diz quanto
+        # custa a janela no tamanho a que ela chegou. A lista em si não é
+        # esvaziada: ver _sync_message_rows().
         _rebuild_started = time.monotonic()
         # Antes de DeleteAllItems(): é _sorted_messages de agora, o que o leitor
         # de tela está lendo, que vira o piso deste rebuild.

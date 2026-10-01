@@ -242,3 +242,124 @@ class TestARealListControlKeepsTheFocusedRow:
             assert focus_events == []                 # nothing re-announced
         finally:
             frame.Destroy()
+
+
+class TestRowTextUnchanged:
+    """GetItemText() truncates at 511 UTF-16 units, so a long row must be
+    compared on the part the control can report — or it is rewritten (and
+    re-read by the screen reader) on every refresh."""
+
+    def test_equal_and_different_short_texts(self):
+        from ui.conversation_panel.message_rows import row_text_unchanged
+        assert row_text_unchanged("oi", "oi")
+        assert not row_text_unchanged("oi", "oi!")
+
+    def test_a_long_row_reported_truncated_is_unchanged(self):
+        from ui.conversation_panel.message_rows import row_text_unchanged
+        wanted = "x" * 900
+        assert row_text_unchanged(wanted[:511], wanted)
+
+    def test_a_long_row_whose_visible_part_changed_is_changed(self):
+        from ui.conversation_panel.message_rows import row_text_unchanged
+        wanted = "y" + "x" * 899
+        assert not row_text_unchanged(("x" * 900)[:511], wanted)
+
+    def test_emoji_outside_the_bmp_count_as_two_units(self):
+        from ui.conversation_panel.message_rows import row_text_unchanged
+        wanted = "\U0001F44D" * 300                       # 600 UTF-16 units
+        shown = "\U0001F44D" * 255 + "\ud83d"              # 511 units, a half pair last
+        assert row_text_unchanged(shown, wanted)
+
+
+class TestPlanRowDiffWithRepeatedKeys:
+    def test_fuzz_with_duplicates_still_reaches_the_target(self):
+        rng = random.Random(11)
+        for _ in range(400):
+            old = [rng.randint(0, 6) for _ in range(rng.randint(0, 18))]
+            new = [rng.randint(0, 6) for _ in range(rng.randint(0, 18))]
+            assert _apply(old, new)[0] == new
+
+    def test_a_few_thousand_rows_plan_quickly(self):
+        import time
+        old = list(range(4000))
+        new = old[:2000] + [9001, 9002] + old[2003:] + [9003]
+        started = time.monotonic()
+        work = _apply(old, new)[0]
+        assert work == new
+        assert time.monotonic() - started < 2.0
+
+
+class TestPendingRowsStayPut:
+    def test_a_pending_send_without_an_id_is_untouched_across_two_syncs(self):
+        pending = {"key": {"id": ""}, "_text": "oi, pendente"}
+        rows = [_msg("a"), pending]
+        stub = _Stub(rows)
+        stub._sync_message_rows(rows, list(rows))
+        stub._sync_message_rows(rows, list(rows))
+        assert stub.messages_list.log == []
+
+
+class TestARealListControlWithLongRows:
+    def test_a_long_row_is_not_rewritten_and_fires_no_focus_event(self, wx_app):
+        import wx
+        from tests.conftest import hidden_frame
+
+        frame = hidden_frame()
+        try:
+            long_text = "mensagem longa " * 60                 # 900 characters
+            old = [_msg("a"), _msg("long", long_text), _msg("b")]
+            lst = wx.ListCtrl(frame, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
+            lst.InsertColumn(0, "m", width=200)
+            for m in old:
+                lst.Append((m["_text"],))
+            lst.Focus(1)
+            lst.Select(1)
+            events = []
+            lst.Bind(wx.EVT_LIST_ITEM_FOCUSED, lambda e: events.append(e.GetIndex()))
+
+            stub = _Stub(old)
+            stub.messages_list = lst
+            new = old + [_msg("c")]                              # a new tail message
+            stub._sync_message_rows(old, new)
+
+            assert lst.GetItemCount() == 4
+            assert lst.GetFocusedItem() == 1
+            assert events == []
+            # And a second pass over the same rows writes nothing at all.
+            writes = []
+            real_set = lst.SetItemText
+            lst.SetItemText = lambda i, t: (writes.append(i), real_set(i, t))[1]
+            stub._sync_message_rows(new, [dict(m) for m in new])
+            assert writes == []
+        finally:
+            frame.Destroy()
+
+
+class TestARealListBoxKeepsTheSelectedRow:
+    """Listbox message-list mode (CompatListBoxMessagesCtrl) takes the same
+    calls; its selection is tracked by hand, so check it end to end."""
+
+    def test_selection_follows_the_row_through_inserts_and_deletes(self, wx_app):
+        from tests.conftest import hidden_frame
+        from ui.accessible import CompatListBoxMessagesCtrl
+
+        frame = hidden_frame()
+        try:
+            old = [_msg(f"r{i}") for i in range(6)]
+            box = CompatListBoxMessagesCtrl(frame)
+            for m in old:
+                box.Append((m["_text"],))
+            box.Select(3)
+
+            new = [_msg("r1", "r1 reagido"), _msg("r2"), _msg("r3"), _msg("r4"),
+                   _msg("r5"), _msg("r6")]
+            stub = _Stub(old)
+            stub.messages_list = box
+            stub._sync_message_rows(old, new)
+
+            assert [box.GetItemText(i) for i in range(box.GetItemCount())] == [
+                "r1 reagido", "r2", "r3", "r4", "r5", "r6"]
+            assert box.GetFirstSelected() == 2
+            assert box.GetItemText(box.GetFirstSelected()) == "r3"
+        finally:
+            frame.Destroy()

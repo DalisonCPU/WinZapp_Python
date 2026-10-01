@@ -18,6 +18,32 @@ import logging
 
 from core.list_row_diff import plan_row_diff
 
+# SysListView32 hands back at most this many UTF-16 units from GetItemText(),
+# whatever was stored (measured on a real ListCtrl: 511; an emoji outside the
+# BMP counts as two). See ConversationsPanel._LIST_CTRL_TEXT_LIMIT.
+_LIST_CTRL_TEXT_UNITS = 511
+
+
+def row_text_unchanged(shown: str, wanted: str, limit: int = _LIST_CTRL_TEXT_UNITS) -> bool:
+    """Whether a row already shows *wanted*, given that *shown* is what
+    GetItemText() returned for it.
+
+    Plain equality is wrong for a long row: the control truncates what it
+    reports, so a message of a few hundred characters never equals its own
+    rendered line, and every refresh would rewrite it — a name change on the
+    focused row, which NVDA reads, the very thing this module exists to avoid.
+    A row longer than the limit is therefore compared on the part the control
+    can report (minus its last unit, which may be half of a surrogate pair).
+    """
+    if shown == wanted:
+        return True
+    wanted_units = wanted.encode("utf-16-le", "surrogatepass")
+    if len(wanted_units) // 2 <= limit:
+        return False                    # fully reportable, and it differs
+    shown_units = shown.encode("utf-16-le", "surrogatepass")
+    keep = min(len(shown_units), len(wanted_units)) - 2
+    return keep > 0 and wanted_units[:keep] == shown_units[:keep]
+
 
 class MessageRowsMixin:
     """Per-row writes to the messages list."""
@@ -74,7 +100,7 @@ class MessageRowsMixin:
         for index, text in enumerate(texts):
             if index in inserted:
                 continue
-            if lst.GetItemText(index) != text:
+            if not row_text_unchanged(lst.GetItemText(index), text):
                 lst.SetItemText(index, text)
                 rewritten += 1
         if deletes or inserts or rewritten:
