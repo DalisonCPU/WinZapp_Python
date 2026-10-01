@@ -142,7 +142,7 @@ POPRAWKI
 
 - Wybranie z listy rozmowy, która była już otwarta, uwzględnia teraz ustawienie „Przy otwieraniu czatu ustaw fokus na” (pole wiadomości albo separator nieprzeczytanych / ostatnia wiadomość); wcześniej fokus zawsze trafiał do pola wiadomości.
 
-- Odpowiedź na wiadomość ze wspomnieniem kogoś w odpowiedzi docierała do odbiorców jako nowa wiadomość, bez cytatu, chociaż WinZapp pokazywał ją jako odpowiedź. Teraz cytat jest wysyłany razem ze wspomnieniem.
+- Odpowiedź na wiadomość ze wzmianką o kimś docierała do odbiorców jako nowa wiadomość, bez cytatu, chociaż WinZapp pokazywał ją jako odpowiedź. Teraz cytat jest wysyłany razem ze wzmianką.
 
 V1.1.1.0
 
