@@ -1536,6 +1536,43 @@ export async function replyMessage(req: Request, res: Response) {
   }
 }
 
+/**
+ * WinZapp patch: an @mention reply keeps its quote.
+ *
+ * wppconnect's client.sendMentioned() passes only
+ * { detectMentioned, mentionedList } to WPP.chat.sendTextMessage, so a reply
+ * that also mentioned someone reached the recipients as an ORIGINAL message
+ * while WinZapp's own list showed it as a reply. wa-js's prepareRawMessage
+ * handles `mentionedList` and `quotedMsg` independently and merges both, so
+ * this makes the same call the library makes plus `quotedMsg`, and returns
+ * the sendTextMessage result as-is: the response shape (and what
+ * auditSendResult() reads from it) is exactly that of sendMentioned().
+ *
+ * A status quote is refused rather than degraded: replyToStatusMessage()
+ * has its own model lookup and ignores mentions, so combining them here
+ * would send a plain message.
+ */
+async function sendMentionedWithQuote(
+  req: Request,
+  contato: string,
+  message: string,
+  mentioned: string[],
+  messageId: string
+): Promise<any> {
+  if (messageId.includes('status@broadcast')) {
+    throw new Error('send-mentioned cannot quote a status; use send-reply');
+  }
+  return await req.client.page.evaluate(
+    ({ to, content, mentioned, quotedMsg }: any) =>
+      (window as any).WPP.chat.sendTextMessage(to, content, {
+        detectMentioned: true,
+        mentionedList: mentioned,
+        quotedMsg,
+      }),
+    { to: contato, content: message, mentioned, quotedMsg: messageId }
+  );
+}
+
 export async function sendMentioned(req: Request, res: Response) {
   /**
    * #swagger.tags = ["Messages"]
@@ -1556,7 +1593,8 @@ export async function sendMentioned(req: Request, res: Response) {
           "phone": { type: "string" },
           "isGroup": { type: "boolean" },
           "message": { type: "string" },
-          "mentioned": { type: "array", items: { type: "string" } }
+          "mentioned": { type: "array", items: { type: "string" } },
+          "messageId": { type: "string" }
         },
         required: ["phone", "message", "mentioned"]
       },
@@ -1574,14 +1612,26 @@ export async function sendMentioned(req: Request, res: Response) {
   }
 }
    */
-  const { phone, message, mentioned } = req.body;
+  const { phone, message, mentioned, messageId } = req.body;
 
   try {
     let response;
     for (const contato of phone) {
       response = auditSendResult(
         req,
-        await req.client.sendMentioned(`${contato}`, message, mentioned),
+        // Without a quote this is byte-for-byte the library call it always
+        // was. With one, the library's sendMentioned() has no quote
+        // parameter, so the same WPP.chat.sendTextMessage call is made here
+        // with both options.
+        typeof messageId === 'string' && messageId
+          ? await sendMentionedWithQuote(
+              req,
+              `${contato}`,
+              message,
+              mentioned,
+              messageId
+            )
+          : await req.client.sendMentioned(`${contato}`, message, mentioned),
         'send-mentioned'
       );
     }

@@ -142,6 +142,8 @@ POPRAWKI
 
 - Wybranie z listy rozmowy, która była już otwarta, uwzględnia teraz ustawienie „Przy otwieraniu czatu ustaw fokus na” (pole wiadomości albo separator nieprzeczytanych / ostatnia wiadomość); wcześniej fokus zawsze trafiał do pola wiadomości.
 
+- Odpowiedź na wiadomość ze wzmianką o kimś docierała do odbiorców jako nowa wiadomość, bez cytatu, chociaż WinZapp pokazywał ją jako odpowiedź. Teraz cytat jest wysyłany razem ze wzmianką.
+
 V1.1.1.0
 
 Ta wersja dotyczy utrzymania połączenia z Twoim kontem. WinZapp zapisuje teraz kopię zapasową profilu przeglądarki — to w nim faktycznie przechowywane jest Twoje połączenie z WhatsApp — i sam ją przywraca, gdy przestaje być akceptowana, informując o tym, co się stało. Razem z nią pojawiają się poprawki sytuacji, które przerywały sesję i zmuszały do ponownego parowania: wyłączenie komputera, wstrzymanie i wznowienie oraz samo ponowne uruchamianie połączenia przez program. Doszły również sprawdzanie pisowni w polu wiadomości i akcje na odnośnikach.

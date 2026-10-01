@@ -26,6 +26,7 @@ from core.meta_ai import (
 )
 from core.send_contract import (
     accepted_message_id,
+    quote_is_status,
     send_failure_is_ambiguous,
 )
 from core.api_client import (
@@ -462,7 +463,14 @@ class SendingMixin:
         is_status_reply = False
         link_preview_options = self._build_link_preview_options(link_preview)
 
-        if mentioned_jids:
+        quoted_id = self._serialize_quoted_id(quoted, fallback_jid=remote_jid) if quoted else None
+        # A status quote never takes the mentions route: /send-reply is the
+        # only one that can quote a status, and mentions are meaningless in
+        # the DM a status reply opens (they are dropped).
+        quoted_is_status = quote_is_status(quoted, quoted_id)
+        mentions_sent = bool(mentioned_jids) and not quoted_is_status
+
+        if mentions_sent:
             url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/send-mentioned"
             phone_net = remote_jid
             if phone_net.endswith("@s.whatsapp.net"):
@@ -479,17 +487,23 @@ class SendingMixin:
                 "isLid": is_lid_target,
                 "options": link_preview_options
             }
+            # The mentions route used to drop the quote here: the reply
+            # showed as a reply in our own list and reached the recipients
+            # as an original message (docs/traps/send-contract.md). Without
+            # an id (the quote could not be serialized) this is the same
+            # plain send the non-mention path makes for an ordinary chat quote.
+            if quoted_id:
+                payload["messageId"] = quoted_id
+                logging.info(
+                    "[send_text_message] sending quoted mention via send-mentioned to %s, "
+                    "quoted id=%s", phone_net, quoted_id,
+                )
         else:
-            quoted_id = self._serialize_quoted_id(quoted, fallback_jid=remote_jid) if quoted else None
             # A status quote that failed to serialize (e.g. incomplete status
             # metadata missing key.id) must never silently fall through to a
             # plain DM below — that's the exact "reply degrades to a normal
             # message" bug this is meant to fix, just triggered by malformed
             # data instead of a WPPConnect failure.
-            quoted_is_status = (
-                bool(quoted) and isinstance(quoted, dict)
-                and (quoted.get("key") or {}).get("remoteJid") == "status@broadcast"
-            )
             if quoted_id:
                 is_status_reply = "status@broadcast" in quoted_id
                 url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/send-reply"
@@ -561,7 +575,7 @@ class SendingMixin:
                         "[send_text_message] @lid destination %s refused (HTTP %s: %s) — retrying with legacy %s",
                         remote_jid, response.status_code, response.text[:200], fb_phone,
                     )
-                    if mentioned_jids:
+                    if mentions_sent:
                         retry_url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/send-mentioned"
                         retry_payload = {
                             "phone": [fb_phone], "message": text,
@@ -570,6 +584,8 @@ class SendingMixin:
                             "isLid": False,
                             "options": link_preview_options
                         }
+                        if quoted_id:
+                            retry_payload["messageId"] = quoted_id
                     elif quoted_id:
                         retry_url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/send-reply"
                         retry_payload = {
@@ -619,6 +635,10 @@ class SendingMixin:
                         "isLid": active_dest.endswith("@lid"),
                         "options": link_preview_options
                     }
+                    if mentions_sent:
+                        # Losing the quote must not also lose the mentions.
+                        url = f"{self.wpp_server}:{self.wpp_port}/api/{self.token}/send-mentioned"
+                        payload["mentioned"] = mentioned_clean
                     response = api_post(url, json=payload, headers=headers, timeout=25)
                     if response.status_code in (200, 201):
                         wx.CallAfter(self.output, self.i18n.t("reply_quote_lost"))
