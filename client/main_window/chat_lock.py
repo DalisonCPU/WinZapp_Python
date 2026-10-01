@@ -525,18 +525,23 @@ class ChatLockMixin:
         self._cancel_chat_lock_timeout()
         self._chat_lock_unlocked = False
         cp = getattr(self, "conversations_panel", None)
+        panel = getattr(self, "locked_conversations_panel", None)
+        # Only a vault that closes under the user's eyes (the locked list on
+        # screen, or a locked chat open in view) sends them to the main list;
+        # a timeout firing in Status, Calls or the main list changes nothing.
+        was_on_screen = panel is not None and panel.IsShown()
         if cp is not None and cp.conversation is not None:
             if self.is_chat_locked(cp.conversation.get("remoteJid", "")):
+                was_on_screen = was_on_screen or cp.IsShown()
                 cp.close_conversation_for_panel_switch()
         if cp is not None:
             # A locked chat set aside must not come back after the vault shut.
             cp.forget_parked_conversation(LOCKED)
-        panel = getattr(self, "locked_conversations_panel", None)
         if panel is not None:
             panel.set_all_chats([], [])
             panel.Hide()
         self._refresh_chat_lock_navigation()
-        if show_conversations and hasattr(self, "conversations_panel"):
+        if show_conversations and was_on_screen and cp is not None:
             self.conversations_panel.show_chat_panel(MAIN)
         if not silent:
             self.output(self.i18n.t("chat_lock_closed"), interrupt=True)

@@ -47,10 +47,23 @@ and shipped two regressions that its stub-based tests could not see.
   becomes visible: it hides every other panel, lays out the detail pane by
   `core/conversation_view.panel_layout(origin, shown, has_conversation)` and
   focuses the chat list. Alt+1, Alt+4, the navigation list, the locked panel,
-  `lock_chat_vault` and `_ensure_conversations_panel_visible` all call it. Do
-  not hand-roll `Show()`/`Hide()` sequences in a new entry point.
+  `lock_chat_vault` (only when the locked list or a locked chat was on screen:
+  a vault timeout in Status, Calls or the main list moves nobody) and
+  `_ensure_conversations_panel_visible` all call it. Panel **switches** go
+  through it; do not hand-roll a Show/Hide sequence for a new one. Panel
+  **opens** (`ArchivedConversationsPanel.on_conversation_selected`,
+  `chat_list.py`'s open-by-JID, `open_locked_conversation`, the
+  `_restore_to_*_list` Esc paths) still compose their own Show/Hide, because
+  an open puts the conversation alone in the place of its list and focus
+  follows the user's setting; they were left as they were rather than routed
+  through `panel_layout`, whose "list stays visible beneath" layout is for
+  switches. Each switch logs one `[panel-switch]` line (panel, origin, parked
+  keys, layout flags, what `IsShown()` really reports afterwards; no JIDs):
+  read it first when a report says the wrong pane is on screen.
   `tests/test_panel_switch_wiring.py` runs the real entry-point methods against
-  recording widgets over origin x target.
+  recording widgets over origin x target, and
+  `tests/test_panel_switch_wx_semantics.py` repeats the key sequences with
+  wx parent/child visibility.
 - **Hide/show never rebuilds.** Showing or hiding an open conversation is
   `Show`/`Hide`/`Layout` only: no `navigate_to_conversation`, no
   `populate_messages`, no request. Only a conversation *displaced* from the

@@ -27,6 +27,14 @@ from core.conversation_view import (
 )
 
 
+def _is_shown(widget):
+    """IsShown() that cannot raise (a destroyed widget answers None)."""
+    try:
+        return bool(widget.IsShown())
+    except Exception:
+        return None
+
+
 class ConversationPanelVisibilityMixin:
 
     def _parked_conversations(self) -> dict:
@@ -110,7 +118,7 @@ class ConversationPanelVisibilityMixin:
                 LOCKED: "locked_conversations_panel"}.get(shown)
         return getattr(self.main_window, name, None) if name else None
 
-    def _apply_panel_layout(self, shown: str, list_panel) -> None:
+    def _apply_panel_layout(self, shown: str, list_panel) -> dict:
         """Show and hide this panel's parts for `shown` being the chat list on
         screen (see panel_layout()). Only Show/Hide/Layout: hiding or showing
         an open conversation never rebuilds it or asks the network for
@@ -127,6 +135,22 @@ class ConversationPanelVisibilityMixin:
             list_panel.Show(layout["list_panel"])
         self.Layout()
         self.main_window.content_panel.Layout()
+        return layout
+
+    def _log_panel_switch(self, shown: str, layout: dict) -> None:
+        """One line per switch saying what the layout asked for and what is
+        actually shown afterwards, so a report of the wrong thing on screen
+        can be read off the log. Panel names and flags only: no JID, name or
+        message text."""
+        logging.info(
+            "[panel-switch] shown=%s origin=%s parked=%s layout=%s actual: "
+            "detail=%s panel=%s messages_list=%s message_field=%s",
+            shown, getattr(self, "_conversation_origin", None),
+            sorted(self._parked_conversations()), layout,
+            _is_shown(getattr(self, "conversation_panel", None)),
+            _is_shown(self),
+            _is_shown(getattr(self, "messages_list", None)),
+            _is_shown(getattr(self, "message_field", None)))
 
     def _still_on_panel(self, shown: str, list_panel) -> bool:
         """Whether `shown` is still the panel on screen (a deferred step must
@@ -154,7 +178,8 @@ class ConversationPanelVisibilityMixin:
         reopen_due = shown in self._parked_conversations() and (
             self.conversation is None or not conversation_visible_in(
                 getattr(self, "_conversation_origin", None), shown))
-        self._apply_panel_layout(shown, list_panel)
+        layout = self._apply_panel_layout(shown, list_panel)
+        self._log_panel_switch(shown, layout)
         if focus:
             if list_panel is None:
                 self._restore_conversation_selection()
