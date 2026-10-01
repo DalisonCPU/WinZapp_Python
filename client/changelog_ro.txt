@@ -64,6 +64,8 @@ NOUTĂȚI
 
 - Conversațiile arhivate și blocate pot fi acum selectate la fel ca cele principale: Ctrl+Spațiu, Shift+săgeți, Shift+Home/End, Ctrl+Shift+Spațiu și Spațiu în modul de selecție, cu același sunet și aceleași anunțuri. Meniul „Acțiuni în bloc” (cu scurtături proprii) permite dezarhivarea, golirea, ștergerea și marcarea ca citite sau necitite a celor arhivate, respectiv deblocarea sau marcarea ca citite sau necitite a celor blocate.
 
+- Descărcarea automată a fișierelor media respectă acum imediat opțiunea „Descărcați automat media” din fila Stocare din Setări: debifarea ei oprește descărcarea în curs, iar bifarea ei (sau bifarea încă unui tip de media) pornește descărcarea fără a aștepta următoarea sincronizare. Debifată, se aplică acum și fișierelor media din mesajele care sosesc cât timp WinZapp este deschis, iar lista de tipuri este dezactivată, păstrând ce era bifat.
+
 CORECTĂRI
 
 - Când porneați un mesaj vocal cu anunțurile înregistrării dezactivate, cititorul de ecran nu mai începe să spună „Trimiteți” înainte de a fi întrerupt. WinZapp evită acum mutarea automată a focalizării care provoca acest fragment, păstrând disponibile Ctrl+R, Ctrl+Shift+P și Ctrl+Shift+D.
@@ -131,6 +133,12 @@ CORECTĂRI
 - Deschis dintr-un folder de rețea — de exemplu, folderul Descărcări al unei mașini virtuale Parallels pe Mac, care se află de fapt pe celălalt computer —, WinZapp nu putea instala serverul local și afișa o eroare de neînțeles. Acum anunță că nu poate funcționa de acolo și explică ce trebuie făcut: instalarea cu WinZappInstaller sau mutarea folderului pe un disc al acestui computer.
 
 - Răspunsul la solicitarea de actualizare cât timp WinZapp încă pornea îl putea lăsa fără fereastră, rulând în fundal, iar se redeschidea abia după încheierea procesului sau repornirea calculatorului. Acum solicitarea așteaptă deschiderea ferestrei principale, iar dacă o închidere se blochează, WinZapp se încheie singur în loc să rămână blocat.
+
+- Cititorul de ecran nu mai recitește fără motiv mesajul aflat în focus în conversația deschisă. Când sosea un mesaj nou împreună cu o reacție (sau după un mesaj trimis de dumneavoastră), actualizarea automată rescria întreaga listă de mesaje, iar NVDA repeta elementul pe care vă aflați; acum lista este actualizată rând cu rând și se modifică doar rândurile care s-au schimbat cu adevărat.
+
+- Anunțurile „scrie” și „înregistrează un mesaj audio” sunt din nou rostite în grupuri. WhatsApp a început să indice cine scrie într-un mod pe care WinZapp nu îl citea, așa că doar conversațiile individuale le anunțau.
+
+- Alegerea din listă a unei conversații deja deschise respectă acum setarea „Când deschideți o conversație, concentrați-vă” (câmpul de mesaj sau separatorul de necitite / ultimul mesaj); înainte focusul mergea întotdeauna la câmpul de mesaj.
 
 V1.1.1.0
 

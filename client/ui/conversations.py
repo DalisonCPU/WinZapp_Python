@@ -144,6 +144,7 @@ from ui.conversation_panel.mentions import MentionsMixin
 from ui.conversation_panel.unread_separator import UnreadSeparatorMixin
 from ui.conversation_panel.history_loading import HistoryLoadingMixin
 from ui.conversation_panel.chat_selection import ChatSelectionMixin
+from ui.conversation_panel.message_rows import MessageRowsMixin
 from ui.conversation_panel.audio_playback import AudioPlaybackMixin
 from ui.conversation_panel.formatting import FormattingMixin
 from ui.conversation_panel.message_rendering import MessageRenderingMixin
@@ -176,6 +177,7 @@ class ConversationsPanel(
     UnreadSeparatorMixin,
     HistoryLoadingMixin,
     ChatSelectionMixin,
+    MessageRowsMixin,
     AudioPlaybackMixin,
     FormattingMixin,
     MessageRenderingMixin,

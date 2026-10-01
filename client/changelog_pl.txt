@@ -64,6 +64,8 @@ ULEPSZENIA
 
 - Zarchiwizowane i zablokowane czaty można teraz zaznaczać tak samo jak główne rozmowy: Ctrl+Spacja, Shift+strzałki, Shift+Home/End, Ctrl+Shift+Spacja oraz Spacja w trybie zaznaczania, z tym samym dźwiękiem i komunikatami. Menu „Akcje masowe” (z własnymi skrótami) pozwala przywracać z archiwum, czyścić, usuwać oraz oznaczać jako przeczytane lub nieprzeczytane zarchiwizowane czaty, a w zablokowanych — odblokowywać lub oznaczać jako przeczytane albo nieprzeczytane.
 
+- Automatyczne pobieranie multimediów od razu stosuje się teraz do opcji „Automatycznie pobieraj multimedia” na karcie Pamięć w Ustawieniach: odznaczenie jej przerywa trwające pobieranie, a zaznaczenie (lub zaznaczenie kolejnego typu multimediów) rozpoczyna pobieranie bez czekania na następną synchronizację. Odznaczona, dotyczy teraz także multimediów w wiadomościach przychodzących, gdy WinZapp jest otwarty, a lista typów jest wyłączona i zachowuje to, co było zaznaczone.
+
 POPRAWKI
 
 - Po rozpoczęciu nagrywania wiadomości głosowej przy wyciszonych komunikatach czytnik ekranu nie zaczyna już wypowiadać „Wyślij”, zanim zostanie przerwany. WinZapp nie wykonuje teraz automatycznego przeniesienia fokusu, które powodowało ten urwany komunikat, a skróty Ctrl+R, Ctrl+Shift+P i Ctrl+Shift+D nadal działają.
@@ -131,6 +133,12 @@ POPRAWKI
 - Uruchomiony z folderu sieciowego — na przykład z folderu Pobrane maszyny wirtualnej Parallels na Macu, który w rzeczywistości znajduje się na drugim komputerze — WinZapp nie mógł zainstalować lokalnego serwera i pokazywał niezrozumiały błąd. Teraz informuje, że nie może stamtąd działać, i wyjaśnia, co zrobić: zainstalować go za pomocą WinZappInstaller albo przenieść folder na dysk tego komputera.
 
 - Odpowiedź na monit o aktualizację, gdy WinZapp jeszcze się uruchamiał, mogła zostawić go bez okna, działającego w tle, a otworzył się ponownie dopiero po zakończeniu procesu lub restarcie komputera. Teraz monit czeka na otwarcie głównego okna, a jeśli zamykanie się zawiesi, WinZapp kończy się sam zamiast pozostać zablokowany.
+
+- Czytnik ekranu nie odczytuje już bez powodu ponownie wiadomości w fokusie w otwartej rozmowie. Gdy nowa wiadomość przychodziła razem z reakcją (lub po wysłanej przez Ciebie wiadomości), automatyczne odświeżanie przepisywało całą listę wiadomości, a NVDA powtarzał element, na którym byłeś; teraz lista jest aktualizowana wiersz po wierszu i zmieniają się tylko te wiersze, które faktycznie się zmieniły.
+
+- Komunikaty „pisze” i „nagrywa wiadomość głosową” są znów odczytywane w grupach. WhatsApp zaczął informować, kto pisze, w sposób, którego WinZapp nie odczytywał, więc ogłaszały to tylko rozmowy indywidualne.
+
+- Wybranie z listy rozmowy, która była już otwarta, uwzględnia teraz ustawienie „Przy otwieraniu czatu ustaw fokus na” (pole wiadomości albo separator nieprzeczytanych / ostatnia wiadomość); wcześniej fokus zawsze trafiał do pola wiadomości.
 
 V1.1.1.0
 

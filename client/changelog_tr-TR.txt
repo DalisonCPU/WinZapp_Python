@@ -64,6 +64,8 @@ YENİLİKLER
 
 - Arşivlenmiş ve kilitli sohbetler artık ana sohbetler gibi seçilebiliyor: Ctrl+Boşluk, Shift+ok tuşları, Shift+Home/End, Ctrl+Shift+Boşluk ve seçim modundaki Boşluk; aynı ses ve aynı duyurularla. "Toplu işlemler" menüsü (kendi kısayollarıyla) arşivlenmişlerde arşivden çıkarma, temizleme, silme ve okundu/okunmadı işaretleme; kilitlilerde kilit kaldırma ve okundu/okunmadı işaretleme sağlar.
 
+- Otomatik medya indirme artık Ayarlar'ın Depolama sekmesindeki "Medyayı otomatik olarak indir" seçeneğine anında uyuyor: işareti kaldırmak süren indirmeyi durdurur, işaretlemek (ya da bir medya türü daha işaretlemek) bir sonraki eşitlemeyi beklemeden indirmeyi başlatır. İşaretsizken artık WinZapp açıkken gelen mesajlardaki medya için de geçerlidir ve tür listesi, işaretli olanları koruyarak devre dışı kalır.
+
 DÜZELTMELER
 
 - Sesli mesaj kayıt anonsları susturulduğunda, kayıt başlatılırken ekran okuyucunun sözü kesilmeden önce "Gönder" düğmesini seslendirmesi sorunu giderildi. WinZapp artık anonsun yarıda kesilmesine (kırpılmasına) yol açan otomatik odak hareketini önlerken Ctrl+R, Ctrl+Shift+P ve Ctrl+Shift+D kısayollarını kullanılabilir durumda tutar.
@@ -131,6 +133,12 @@ DÜZELTMELER
 - Bir ağ klasöründen açıldığında —örneğin Mac'teki bir Parallels sanal makinesinin, aslında diğer bilgisayarda bulunan İndirilenler klasöründen— WinZapp yerel sunucuyu kuramıyor ve anlaşılmaz bir hata gösteriyordu. Artık oradan çalışamayacağını söylüyor ve nasıl çözüleceğini açıklıyor: WinZappInstaller ile kurmak ya da klasörü bu bilgisayardaki bir diske taşımak.
 
 - WinZapp henüz başlarken güncelleme istemini yanıtlamak, programı penceresiz ve arka planda çalışır durumda bırakabiliyordu; yeniden açılması ancak işlem sonlandırıldıktan veya bilgisayar yeniden başlatıldıktan sonra mümkündü. Artık istem ana pencerenin açılmasını bekliyor ve kapanış takılırsa WinZapp takılı kalmak yerine kendini sonlandırıyor.
+
+- Ekran okuyucu artık açık sohbette odaktaki iletiyi sebepsiz yere yeniden okumuyor. Yeni bir ileti bir tepkiyle birlikte geldiğinde (ya da sizin gönderdiğiniz bir iletiden sonra) otomatik yenileme tüm ileti listesini yeniden yazıyor ve NVDA üzerinde bulunduğunuz öğeyi tekrarlıyordu; artık liste satır satır güncelleniyor ve yalnızca gerçekten değişen satırlara dokunuluyor.
+
+- "Yazıyor" ve "ses kaydediyor" duyuruları gruplarda yeniden seslendiriliyor. WhatsApp, kimin yazdığını WinZapp'ın okumadığı bir biçimde bildirmeye başlamıştı; bu yüzden yalnızca bireysel sohbetlerde duyuruluyordu.
+
+- Listeden zaten açık olan bir sohbeti seçmek artık "Bir sohbet açıldığında odaklanılacak yer" ayarına uyuyor (mesaj alanı veya okunmamışlar ayırıcısı / son mesaj); önceden odak her zaman mesaj alanına gidiyordu.
 
 V1.1.1.0
 

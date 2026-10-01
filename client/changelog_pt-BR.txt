@@ -64,6 +64,8 @@ MELHORIAS
 
 - Conversas arquivadas e trancadas agora podem ser selecionadas como as conversas principais: Ctrl+Espaço, Shift+setas, Shift+Home/End, Ctrl+Shift+Espaço e o Espaço do modo de seleção, com o mesmo som e os mesmos anúncios. O menu "Ações em massa" (e atalhos próprios) permite desarquivar, limpar, apagar e marcar como lidas ou não lidas as arquivadas, e destrancar ou marcar como lidas ou não lidas as trancadas.
 
+- O download automático de mídias agora obedece na hora à opção "Baixar mídias automaticamente" da aba Armazenamento das Configurações: desmarcá-la interrompe o download em andamento, e marcá-la (ou marcar mais um tipo de mídia) começa a baixar sem esperar a próxima sincronização. Desmarcada, ela agora vale também para as mídias das mensagens que chegam enquanto o WinZapp está aberto, e a lista de tipos fica desabilitada, guardando o que estava marcado.
+
 CORREÇÕES
 
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de tela não começa mais a dizer “Enviar” antes de ser interrompido. O WinZapp agora evita a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.
@@ -131,6 +133,12 @@ CORREÇÕES
 - Aberto de uma pasta de rede — por exemplo, a pasta Downloads de uma máquina virtual Parallels no Mac, que na verdade fica no outro computador —, o WinZapp não conseguia instalar o servidor local e mostrava um erro incompreensível. Agora ele avisa que não pode funcionar dali e explica como resolver: instalar pelo WinZappInstaller ou mover a pasta para um disco do próprio computador.
 
 - Responder ao aviso de atualização enquanto o WinZapp ainda estava iniciando podia deixá-lo sem janela, rodando em segundo plano, e ele só voltava a abrir depois de finalizar o processo ou reiniciar o computador. Agora o aviso espera a janela principal abrir e, se um encerramento travar, o WinZapp termina sozinho em vez de ficar preso.
+
+- O leitor de tela não relê mais, sem motivo, a mensagem em foco na conversa aberta. Quando uma mensagem nova chegava junto com uma reação (ou depois de uma mensagem enviada por você), a atualização automática reescrevia a lista de mensagens inteira e o NVDA repetia o item em que você estava; agora a lista é atualizada linha por linha, e só mudam as linhas que realmente mudaram.
+
+- O aviso de "digitando" e de "gravando áudio" voltou a ser falado nos grupos. O WhatsApp passou a informar quem está digitando de um jeito que o WinZapp não lia, então só as conversas individuais anunciavam.
+
+- Ao escolher na lista uma conversa que já estava aberta, o foco agora respeita a configuração "Ao abrir uma conversa, focar" (campo de mensagem, ou separador de não lidas / última mensagem); antes ia sempre para o campo de mensagem.
 
 V1.1.1.0
 

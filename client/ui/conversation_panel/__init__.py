@@ -20,6 +20,7 @@ Where to look (and where new code goes):
     list_refresh             populate_messages, repaints, incoming messages
     message_list             moving in the message list: select, activate, jump
     message_rendering        a message record -> its row text
+    message_rows             writing rows into the list one by one, never clearing it
     unread_separator         the unread-messages separator row
     history_loading          loading older history into the open conversation
     message_menu             message context menu and read-only actions

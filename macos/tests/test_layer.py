@@ -431,10 +431,23 @@ def test_a_failed_regional_format_is_logged_and_tried_again(caplog):
         return answer
 
     assert fmt() is None and "no formatter" in caplog.text
+    caplog.clear()
     assert fmt() is None            # no pattern: not cached either
     assert fmt() == "%d/%m/%Y"
     assert fmt() == "%d/%m/%Y"      # a success is cached
     assert answers == ["never asked"]
+
+
+def test_a_persistent_formatter_failure_is_logged_once(caplog):
+    from winzapp_mac import platform_mac as pm
+
+    @pm._cached_success
+    def fmt():
+        raise RuntimeError("always broken")
+
+    for _ in range(5):
+        assert fmt() is None
+    assert caplog.text.count("[platform_mac]") == 1
 
 
 # ---------------------------------------------------------- stale node ---
@@ -464,12 +477,24 @@ def test_only_the_runtimes_own_node_is_stopped(tmp_path):
 
 # ----------------------------------------------------- message-box log ---
 
-def test_the_message_box_log_masks_phone_numbers():
-    from core.pii_redaction import redact_phone
+def test_the_message_box_log_never_records_the_text():
     from winzapp_mac import diagnostics_mac
     entry = diagnostics_mac.persistent_entry(
-        "WinZapp", "Could not send to 5511987654321@s.whatsapp.net (lid 123456789012345@lid)",
+        "WinZapp", "Delete the chat with Maria Silva (5511987654321@s.whatsapp.net)?",
         "  File connect.py, line 1\n", when="2026-09-30 15:00:00")
-    assert "5511987654321" not in entry and "123456789012345" not in entry
-    assert entry.startswith("2026-09-30 15:00:00 'WinZapp' | 'Could not send to ")
-    assert redact_phone("5511987654321") in entry
+    assert "Maria" not in entry and "5511987654321" not in entry
+    assert entry.startswith("2026-09-30 15:00:00 'WinZapp' | 64 characters")
+    assert "connect.py" in entry
+
+
+def test_the_message_box_log_is_capped(tmp_path):
+    from winzapp_mac import diagnostics_mac
+    path = str(tmp_path / "message-boxes.log")
+    with open(path, "w") as fh:
+        fh.write("x" * 100)
+    diagnostics_mac._rotate(path, max_bytes=1000)
+    assert not (tmp_path / "message-boxes.log.1").exists()
+    with open(path, "w") as fh:
+        fh.write("x" * 2000)
+    diagnostics_mac._rotate(path, max_bytes=1000)
+    assert (tmp_path / "message-boxes.log.1").exists() and not (tmp_path / "message-boxes.log").exists()

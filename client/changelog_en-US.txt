@@ -64,6 +64,8 @@ IMPROVEMENTS
 
 - Archived and locked chats can now be selected just like the main conversations: Ctrl+Space, Shift+arrows, Shift+Home/End, Ctrl+Shift+Space and selection-mode Space, with the same sound and announcements. The "Bulk actions" menu (with its own shortcuts) can unarchive, clear, delete and mark archived chats as read or unread, and unlock or mark locked chats as read or unread.
 
+- Automatic media download now follows the "Automatically download media" option in the Storage tab of Settings right away: unchecking it stops the download in progress, and checking it (or checking another media type) starts downloading without waiting for the next sync. When unchecked, it now also applies to media in messages that arrive while WinZapp is open, and the list of types is disabled, keeping what was checked.
+
 FIXES
 
 - Starting a voice message with recording announcements silenced no longer lets the screen reader begin saying “Send” before being cut off. WinZapp now avoids the automatic focus move that caused the clipped announcement while keeping Ctrl+R, Ctrl+Shift+P and Ctrl+Shift+D available.
@@ -131,6 +133,12 @@ FIXES
 - Opened from a network folder — for example, the Downloads folder of a Parallels virtual machine on a Mac, which actually lives on the other computer — WinZapp couldn't install its local server and showed an unintelligible error. Now it says it can't run from there and explains how to fix it: install with WinZappInstaller, or move the folder to a drive on the computer itself.
 
 - Answering the update prompt while WinZapp was still starting could leave it without a window, running in the background, and it only opened again after the process was ended or the computer restarted. The prompt now waits for the main window to open, and if a shutdown gets stuck WinZapp ends itself instead of staying stuck.
+
+- The screen reader no longer re-reads the focused message in the open conversation for no reason. When a new message arrived together with a reaction (or after a message you sent), the automatic refresh rewrote the whole message list and NVDA repeated the item you were on; now the list is updated row by row, and only the rows that really changed are touched.
+
+- The "typing" and "recording audio" announcements are spoken in groups again. WhatsApp started reporting who is typing in a way WinZapp did not read, so only one-to-one chats announced it.
+
+- Choosing a conversation that was already open from the list now respects the "When opening a chat, focus" setting (message field, or unread separator / last message); it always went to the message field before.
 
 V1.1.1.0
 

@@ -56,8 +56,10 @@ def _mac_pattern(date_style, time_style):
 
 def _cached_success(fn):
     """Cache a result, but not a failure: a formatter that raised (or found
-    no pattern) is tried again on the next call, and the error is logged."""
+    no pattern) is tried again on the next call, and the error is logged
+    once, not on every formatted date."""
     box = []
+    logged = []
 
     @functools.wraps(fn)
     def wrapper():
@@ -66,13 +68,15 @@ def _cached_success(fn):
         try:
             value = fn()
         except Exception:
-            logging.exception("[platform_mac] %s failed; WinZapp's default is used", fn.__name__)
+            if not logged:
+                logged.append(True)
+                logging.exception("[platform_mac] %s failed; WinZapp's default is used", fn.__name__)
             return None
         if value:
             box.append(value)
         return value
 
-    wrapper.cache_clear = box.clear
+    wrapper.cache_clear = lambda: (box.clear(), logged.clear())
     return wrapper
 
 

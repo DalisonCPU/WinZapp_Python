@@ -750,6 +750,53 @@ def auto_download_allows(settings, msg) -> bool:
     return category in allowed
 
 
+def auto_download_enabled(settings) -> bool:
+    """Whether media may be fetched without being asked (Configuracoes >
+    Armazenamento > "Baixar midias automaticamente").
+
+    On unless explicitly turned off: that is the default, so a missing or
+    corrupt value keeps the behaviour everyone has always had instead of
+    silently leaving recent audios and documents undownloaded. Read live, from the
+    settings dict the dialog updates in place, by every automatic sweep's
+    ``should_stop`` — that is what lets unticking the box end a sweep that is
+    already running instead of only preventing the next one.
+
+    The master switch: sync_if_media() asks it for the sweeps and for a
+    message arriving live alike, and auto_download_allows() only narrows what
+    it lets through. "Baixar midias" in the menu is an explicit request and
+    is the one path that does not ask.
+    """
+    section = settings.get("storage") if isinstance(settings, dict) else None
+    return not (isinstance(section, dict) and section.get("auto_download_media") is False)
+
+
+def _auto_download_categories(storage) -> set:
+    """The categories a storage section lets through, as auto_download_allows()
+    reads it: every one of them when no list was ever saved."""
+    saved = storage.get("auto_download_media_types") if isinstance(storage, dict) else None
+    if not isinstance(saved, (list, tuple)):
+        return set(AUTO_DOWNLOAD_MEDIA_TYPES)
+    return set(saved) & set(AUTO_DOWNLOAD_MEDIA_TYPES)
+
+
+def auto_download_newly_wanted(old_storage, new_storage) -> bool:
+    """Whether a settings change asks for media nothing has swept for yet.
+
+    True when the auto-download is on afterwards and either it was off before
+    or a category was ticked that was not. Unticking never needs a sweep (the
+    running one notices by itself), and neither does a change made while the
+    auto-download stays off.
+    """
+    if not auto_download_enabled({"storage": new_storage}):
+        return False
+    wanted = _auto_download_categories(new_storage)
+    if not wanted:
+        return False
+    if not auto_download_enabled({"storage": old_storage}):
+        return True
+    return bool(wanted - _auto_download_categories(old_storage))
+
+
 # The Media tab's "Filtrar midias" radio, mirroring the conversation list's own
 # filter. Order is the order the radio shows them in.
 GROUP_MEDIA_FILTER_ALL = "all"
@@ -1122,6 +1169,10 @@ DEFAULT_SETTINGS = {
     "cleared_chats": {},
     "cleared_starred_chats": {},
     "storage": {
+        # On by default, deliberately — a design decision, not an oversight.
+        # Off, a recent voice message or document is not on the computer when
+        # the person opens it, so playing it first says "baixando" and, offline,
+        # cannot play at all. Existing installs keep what they saved.
         "auto_download_media": True,
         # Which categories the auto-download covers. All of them by default —
         # see auto_download_allows(). Links are not a category here.
