@@ -61,6 +61,8 @@ uv run build-onefile                   # single-file WinZapp.exe
 - `client/api/` and `client/node/` are git-ignored and must exist before
   building. The Node version lives in `client/node_download_config.py`.
   Details: `docs/reference/build-and-setup.md`.
+- `macos/` is a Mac-only layer the Windows build never runs; what it asks of
+  a Windows change: `docs/reference/macos.md`.
 
 ## Architecture
 
