@@ -1,0 +1,84 @@
+"""MessageRowsMixin — part of ConversationsPanel (see ui/conversation_panel/__init__.py).
+
+Writing the open conversation's rows into ``messages_list`` without ever
+clearing it.
+
+A native ListView row is one MSAA object. ``DeleteAllItems()`` followed by
+re-``Append()``ing every row hands the screen reader a brand-new list, and
+putting focus back on the row the user was sitting on re-announces it even
+though nothing about it changed — the "NVDA reads the focused message again,
+for no reason" bug. It cannot be made quiet (see
+docs/traps/screen-reader-speech.md), so the rebuild must not happen: every
+write goes through ``_sync_message_rows()``, which deletes and inserts only the
+rows that really differ and rewrites a row's text only when the text differs.
+A row that did not change — the focused one above all — is not touched.
+"""
+
+import logging
+
+from core.list_row_diff import plan_row_diff
+
+
+class MessageRowsMixin:
+    """Per-row writes to the messages list."""
+
+    def _message_row_key(self, msg):
+        """The identity a row keeps across refreshes: the message id, or a
+        fixed key for the two sentinel rows. A message without an id (a send
+        still pending) falls back to the record object itself, which is stable
+        for as long as the record is the same dict."""
+        if isinstance(msg, dict):
+            kind = msg.get("_type")
+            if kind == "unread_separator":
+                return ("separator",)
+            if kind == "empty_placeholder":
+                return ("placeholder",)
+            mid = (msg.get("key") or {}).get("id", "")
+            if mid:
+                return ("id", mid)
+        return ("object", id(msg))
+
+    def _sync_message_rows(self, old_rows: list, new_rows: list) -> None:
+        """Make ``messages_list`` show *new_rows*, given that it now shows
+        *old_rows*, touching only the rows that differ.
+
+        ``self._sorted_messages`` must already be *new_rows*: rendering a row
+        (the unread separator's position, the ", N de M" suffix) reads it.
+
+        The one fallback is a control that does not match *old_rows* — a count
+        that disagrees means a targeted delete or insert would land on the
+        wrong row, so the control is resynced from scratch. That is a repair of
+        an inconsistency, not a way to refresh, and it is logged.
+        """
+        lst = self.messages_list
+        texts = [self._render_message_line(m) for m in new_rows]
+        if lst.GetItemCount() != len(old_rows):
+            logging.warning(
+                "[_sync_message_rows] list out of step (control=%d, backing=%d) "
+                "— resyncing from scratch", lst.GetItemCount(), len(old_rows))
+            lst.DeleteAllItems()
+            for text in texts:
+                lst.Append((text,))
+            return
+
+        deletes, inserts = plan_row_diff(
+            [self._message_row_key(m) for m in old_rows],
+            [self._message_row_key(m) for m in new_rows],
+        )
+        for index in deletes:
+            lst.DeleteItem(index)
+        for index in inserts:
+            lst.InsertItem(index, texts[index])
+        inserted = set(inserts)
+        rewritten = 0
+        for index, text in enumerate(texts):
+            if index in inserted:
+                continue
+            if lst.GetItemText(index) != text:
+                lst.SetItemText(index, text)
+                rewritten += 1
+        if deletes or inserts or rewritten:
+            logging.info(
+                "[_sync_message_rows] %d row(s) deleted, %d inserted, %d rewritten, "
+                "%d row(s) total — no rebuild.",
+                len(deletes), len(inserts), rewritten, len(new_rows))

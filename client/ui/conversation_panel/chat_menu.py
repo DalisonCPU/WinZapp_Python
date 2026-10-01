@@ -292,8 +292,9 @@ class ChatMenuMixin:
         """
         if not (self.conversation and self.conversation.get("remoteJid") == jid):
             return
+        _old_rows = self._sorted_messages
         self._sorted_messages = []
-        self.messages_list.DeleteAllItems()
+        self._sync_message_rows(_old_rows, [])
         self.selected_messages.clear()
         # _unread_sep_idx pointed into the list just emptied above — left
         # stale, a live message arriving right after (on_incoming_message,

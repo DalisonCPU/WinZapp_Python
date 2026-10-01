@@ -134,6 +134,8 @@ CORREÇÕES
 
 - Responder ao aviso de atualização enquanto o WinZapp ainda estava iniciando podia deixá-lo sem janela, rodando em segundo plano, e ele só voltava a abrir depois de finalizar o processo ou reiniciar o computador. Agora o aviso espera a janela principal abrir e, se um encerramento travar, o WinZapp termina sozinho em vez de ficar preso.
 
+- O leitor de tela não relê mais, sem motivo, a mensagem em foco na conversa aberta. Quando uma mensagem nova chegava junto com uma reação (ou depois de uma mensagem enviada por você), a atualização automática reescrevia a lista de mensagens inteira e o NVDA repetia o item em que você estava; agora a lista é atualizada linha por linha, e só mudam as linhas que realmente mudaram.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta conectada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua conexão com o WhatsApp realmente fica guardada — e a restaurá-la sozinho quando ela deixa de ser aceita, avisando o que aconteceu. Junto vieram as correções das situações que quebravam a sessão e faziam o programa pedir para parear de novo: desligar o computador, suspender e retomar, e o próprio programa reiniciando a conexão. Também chegaram a verificação ortográfica no campo de mensagem e as ações sobre links.

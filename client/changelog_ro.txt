@@ -134,6 +134,8 @@ CORECTĂRI
 
 - Răspunsul la solicitarea de actualizare cât timp WinZapp încă pornea îl putea lăsa fără fereastră, rulând în fundal, iar se redeschidea abia după încheierea procesului sau repornirea calculatorului. Acum solicitarea așteaptă deschiderea ferestrei principale, iar dacă o închidere se blochează, WinZapp se încheie singur în loc să rămână blocat.
 
+- Cititorul de ecran nu mai recitește fără motiv mesajul aflat în focus în conversația deschisă. Când sosea un mesaj nou împreună cu o reacție (sau după un mesaj trimis de dumneavoastră), actualizarea automată rescria întreaga listă de mesaje, iar NVDA repeta elementul pe care vă aflați; acum lista este actualizată rând cu rând și se modifică doar rândurile care s-au schimbat cu adevărat.
+
 V1.1.1.0
 
 Această versiune se concentrează pe menținerea contului conectat. WinZapp păstrează acum o copie de siguranță a profilului browserului — locul în care se află de fapt conexiunea cu WhatsApp — și o restaurează singur atunci când nu mai este acceptată, spunându-vă ce s-a întâmplat. Împreună cu aceasta vin corecții pentru situațiile care stricau sesiunea și lăsau aplicația să ceară o nouă asociere: închiderea computerului, suspendarea și reluarea și repornirea conexiunii de către aplicație. Au sosit și verificarea ortografică în câmpul de mesaj și acțiunile pentru linkuri.

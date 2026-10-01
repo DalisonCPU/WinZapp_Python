@@ -134,6 +134,8 @@ DÜZELTMELER
 
 - WinZapp henüz başlarken güncelleme istemini yanıtlamak, programı penceresiz ve arka planda çalışır durumda bırakabiliyordu; yeniden açılması ancak işlem sonlandırıldıktan veya bilgisayar yeniden başlatıldıktan sonra mümkündü. Artık istem ana pencerenin açılmasını bekliyor ve kapanış takılırsa WinZapp takılı kalmak yerine kendini sonlandırıyor.
 
+- Ekran okuyucu artık açık sohbette odaktaki iletiyi sebepsiz yere yeniden okumuyor. Yeni bir ileti bir tepkiyle birlikte geldiğinde (ya da sizin gönderdiğiniz bir iletiden sonra) otomatik yenileme tüm ileti listesini yeniden yazıyor ve NVDA üzerinde bulunduğunuz öğeyi tekrarlıyordu; artık liste satır satır güncelleniyor ve yalnızca gerçekten değişen satırlara dokunuluyor.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.
