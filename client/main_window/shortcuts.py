@@ -101,18 +101,11 @@ class ShortcutsMixin:
         cp = self.conversations_panel
         if cp.IsShown() and cp.conversation_panel.IsShown():
             return
-        if hasattr(self, "archived_conversations_panel"):
-            self.archived_conversations_panel.Hide()
-        if hasattr(self, "locked_conversations_panel"):
-            self.locked_conversations_panel.Hide()
-        if hasattr(self, "status_panel"):
-            self.status_panel.Hide()
-        if hasattr(self, "calls_panel"):
-            self.calls_panel.Hide()
         # Explicit navigation to the open conversation: show the panel it
-        # belongs to, laid out the way that panel shows it.
-        cp.reveal_conversation_for_panel(cp._conversation_origin)
-        self.content_panel.Layout()
+        # belongs to, laid out the way that panel shows it. The caller puts
+        # focus (on the messages), so none is moved here.
+        cp.show_chat_panel(
+            getattr(cp, "_conversation_origin", None) or MAIN, focus=False)
 
     def _on_global_alt2(self, event):
         """Alt+2: jump to last message regardless of which panel has focus."""
@@ -259,37 +252,16 @@ class ShortcutsMixin:
 
     def on_alt_1(self, event):
         self.lock_chat_vault(silent=True, show_conversations=False)
-        if hasattr(self, "archived_conversations_panel"):
-            self.archived_conversations_panel.Hide()
-        if hasattr(self, "locked_conversations_panel"):
-            self.locked_conversations_panel.Hide()
-        if hasattr(self, "status_panel"):
-            self.status_panel.Hide()
-        if hasattr(self, "calls_panel"):
-            self.calls_panel.Hide()
-        # A conversation opened from the archived or locked list hid this
-        # panel's chat list (see ConversationsPanel.reveal_conversation_for_panel);
-        # showing the main panel brings the list back and hides any
-        # conversation that belongs to another panel.
-        self.conversations_panel.Show()
-        self.conversations_panel.reveal_conversation_for_panel(MAIN)
-        self.content_panel.Layout()
-        # Restore focus AND selection so the list never ends up empty-focused
-        # when navigating back from a conversation or another panel.
-        self.conversations_panel._restore_conversation_selection()
+        # Brings the main chat list back (a conversation opened from the
+        # archived or locked list had hidden it), hides any conversation that
+        # belongs to another panel, and restores focus AND selection in the
+        # list so it never ends up empty-focused.
+        self.conversations_panel.show_chat_panel(MAIN)
 
     def on_alt_4(self, event):
         self.lock_chat_vault(silent=True, show_conversations=False)
-        self.conversations_panel.Hide()
-        if hasattr(self, "locked_conversations_panel"):
-            self.locked_conversations_panel.Hide()
-        if hasattr(self, "status_panel"):
-            self.status_panel.Hide()
-        if hasattr(self, "calls_panel"):
-            self.calls_panel.Hide()
         if hasattr(self, "archived_conversations_panel"):
-            self.conversations_panel.switch_to_chat_panel(
-                ARCHIVED, self.archived_conversations_panel)
+            self.conversations_panel.show_chat_panel(ARCHIVED)
 
     def on_alt_5(self, event):
         self.lock_chat_vault(silent=True, show_conversations=False)

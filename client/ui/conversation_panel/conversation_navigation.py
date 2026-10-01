@@ -212,9 +212,12 @@ class ConversationNavigationMixin:
         self.messages_list.SetFocus()
 
     def navigate_to_conversation(self, conversation, *, origin=None,
-                                 take_focus=True, mark_read=True):
+                                 take_focus=True, mark_read=True, resume=False):
         """Open `conversation`. `origin` is the panel it belongs to (MAIN,
-        ARCHIVED or LOCKED); left out, it follows resolve_origin()."""
+        ARCHIVED or LOCKED); left out, it follows resolve_origin().
+        `resume=True` is a conversation coming back after another one took
+        the shared widget (panel_visibility): the list is rebuilt, but what
+        the first open already asked the server for is not asked again."""
         self._begin_conversation_visit(conversation, origin)
         if self.conversation is not None and self.conversation.get("remoteJid") == conversation.get("remoteJid"):
             self.conversation = conversation
@@ -235,11 +238,12 @@ class ConversationNavigationMixin:
         # gate on asking the *phone* for its older history: every such request
         # notifies the phone, so it is spent on chats the user opens rather
         # than on every chat in the account. See _note_conversation_opened().
-        try:
-            self.main_window._note_conversation_opened(
-                conversation.get("remoteJid") or "")
-        except Exception:
-            logging.exception("[conversations] could not record the open (non-fatal)")
+        if not resume:
+            try:
+                self.main_window._note_conversation_opened(
+                    conversation.get("remoteJid") or "")
+            except Exception:
+                logging.exception("[conversations] could not record the open (non-fatal)")
         self._stop_typing_for_current_conversation()
         self._cancel_active_recording()
         # Leaving the conversation invalidates any pending auto-chain timers —
@@ -362,16 +366,17 @@ class ConversationNavigationMixin:
         # wx.CallAfter queue as the focus change, scheduled further down,
         # guarantees FIFO order instead of leaving it to thread-timing luck.
         # Background: fetch profile/last-seen and update button note
-        threading.Thread(
-            target=self._fetch_and_update_profile,
-            args=(conversation,),
-            daemon=True,
-        ).start()
-        # Subscribe to presence events for this contact so last-seen and typing
-        # indicators arrive via onpresencechanged Socket.IO events.
-        self.main_window.subscribe_presence(jid)
+        if not resume:
+            threading.Thread(
+                target=self._fetch_and_update_profile,
+                args=(conversation,),
+                daemon=True,
+            ).start()
+            # Subscribe to presence events for this contact so last-seen and typing
+            # indicators arrive via onpresencechanged Socket.IO events.
+            self.main_window.subscribe_presence(jid)
         # Background: cache group participants for @mention suggestions
-        if is_group:
+        if is_group and not resume:
             threading.Thread(
                 target=self._fetch_group_participants,
                 args=(jid,),
@@ -381,7 +386,8 @@ class ConversationNavigationMixin:
             self.search_field.Clear()
         self.populate_messages()
         self._sync_pending_document_gauge()
-        self._backfill_reactions_for_open_conversation()
+        if not resume:
+            self._backfill_reactions_for_open_conversation()
 
         # Re-show audio controls only if the playing audio message is focused.
         if (self._current_audio_id is not None

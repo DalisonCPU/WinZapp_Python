@@ -29,6 +29,9 @@ from main_window.identity_rules import (
 )
 
 
+_GROUP_INFO_LOCK = threading.Lock()
+
+
 class GroupsMixin:
     """Group metadata: names, send permissions, admin/settings/subject changes and
     group management actions.
@@ -477,6 +480,22 @@ class GroupsMixin:
         except Exception as e:
             logging.error(f"[get_group_info] error: {e}")
         return {}
+
+    def get_group_info_recent(self, jid: str, max_age: float = 5.0) -> dict:
+        """get_group_info(), unless a non-empty answer for `jid` is younger
+        than `max_age` seconds. Opening a group starts two background threads
+        (the data note and the @mention participants) that both need it; the
+        lock makes the second one wait for the first instead of sending a
+        second GET /group-info."""
+        with _GROUP_INFO_LOCK:
+            cache = self.__dict__.setdefault("_group_info_recent", {})
+            hit = cache.get(jid)
+            if hit and time.monotonic() - hit[0] < max_age:
+                return hit[1]
+            data = self.get_group_info(jid)
+            if data:
+                cache[jid] = (time.monotonic(), data)
+            return data
 
     # ── Group ─────────────────────────────────────────────────────────────────
 

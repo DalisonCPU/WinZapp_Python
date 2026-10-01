@@ -7,7 +7,7 @@ available here.
 
 import logging
 import wx
-from core.conversation_view import LOCKED
+from core.conversation_view import LOCKED, MAIN
 from ui.chat_lock import (
     ChatLockChangePinDialog,
     ChatLockRecoveryDialog,
@@ -513,19 +513,12 @@ class ChatLockMixin:
         if not never_set_up and not getattr(self, "_chat_lock_unlocked", False):
             if not self.unlock_chat_lock_vault(show_panel=False):
                 return
-        self.conversations_panel.Hide()
-        if hasattr(self, "archived_conversations_panel"):
-            self.archived_conversations_panel.Hide()
-        if hasattr(self, "status_panel"):
-            self.status_panel.Hide()
-        if hasattr(self, "calls_panel"):
-            self.calls_panel.Hide()
         panel = self.locked_conversations_panel
         chats, names = getattr(self, "_locked_chat_rows", ([], []))
         panel.set_all_chats(chats, names)
-        # Shows the list, or the locked conversation that was left open in
-        # its place.
-        self.conversations_panel.switch_to_chat_panel(LOCKED, panel)
+        # The locked list, with the locked conversation that was left open
+        # beneath it, and focus in the list.
+        self.conversations_panel.show_chat_panel(LOCKED)
         self.touch_chat_lock_timeout()
 
     def lock_chat_vault(self, *, silent=False, show_conversations=True):
@@ -544,11 +537,7 @@ class ChatLockMixin:
             panel.Hide()
         self._refresh_chat_lock_navigation()
         if show_conversations and hasattr(self, "conversations_panel"):
-            self.conversations_panel.conversations_label.Show()
-            self.conversations_panel.conversations_list.Show()
-            self.conversations_panel.Show()
-            self.content_panel.Layout()
-            self.conversations_panel._restore_conversation_selection()
+            self.conversations_panel.show_chat_panel(MAIN)
         if not silent:
             self.output(self.i18n.t("chat_lock_closed"), interrupt=True)
 
