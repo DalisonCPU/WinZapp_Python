@@ -77,11 +77,13 @@ test = "winzapp_tools.cli:test"
 [dependency-groups]
 dev = [
     "coverage==7.14.3",
+    "execnet==2.1.2",
     "pyinstaller==6.21.0",
     "pyinstaller-hooks-contrib==2026.6",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
+    "pytest-xdist==3.8.0",
 ]
 
 [build-system]
