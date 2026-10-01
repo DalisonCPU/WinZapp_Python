@@ -136,6 +136,8 @@ CORREÇÕES
 
 - O leitor de ecrã deixa de reler, sem motivo, a mensagem em foco na conversa aberta. Quando uma mensagem nova chegava juntamente com uma reação (ou depois de uma mensagem enviada por si), a atualização automática reescrevia a lista de mensagens inteira e o NVDA repetia o item em que estava; agora a lista é atualizada linha a linha, e só mudam as linhas que realmente mudaram.
 
+- O aviso de "a escrever" e de "a gravar áudio" voltou a ser falado nos grupos. O WhatsApp passou a indicar quem está a escrever de uma forma que o WinZapp não lia, pelo que só as conversas individuais anunciavam.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta ligada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua ligação ao WhatsApp fica realmente guardada — e a restaurá-la sozinho quando ela deixa de ser aceite, avisando o que aconteceu. Com ela vieram as correções das situações que quebravam a sessão e faziam o programa pedir para emparelhar de novo: desligar o computador, suspender e retomar, e o próprio programa a reiniciar a ligação. Chegaram também a verificação ortográfica no campo de mensagem e as ações sobre ligações.

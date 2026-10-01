@@ -136,6 +136,8 @@ POPRAWKI
 
 - Czytnik ekranu nie odczytuje już bez powodu ponownie wiadomości w fokusie w otwartej rozmowie. Gdy nowa wiadomość przychodziła razem z reakcją (lub po wysłanej przez Ciebie wiadomości), automatyczne odświeżanie przepisywało całą listę wiadomości, a NVDA powtarzał element, na którym byłeś; teraz lista jest aktualizowana wiersz po wierszu i zmieniają się tylko te wiersze, które faktycznie się zmieniły.
 
+- Komunikaty „pisze” i „nagrywa wiadomość głosową” są znów odczytywane w grupach. WhatsApp zaczął informować, kto pisze, w sposób, którego WinZapp nie odczytywał, więc ogłaszały to tylko rozmowy indywidualne.
+
 V1.1.1.0
 
 Ta wersja dotyczy utrzymania połączenia z Twoim kontem. WinZapp zapisuje teraz kopię zapasową profilu przeglądarki — to w nim faktycznie przechowywane jest Twoje połączenie z WhatsApp — i sam ją przywraca, gdy przestaje być akceptowana, informując o tym, co się stało. Razem z nią pojawiają się poprawki sytuacji, które przerywały sesję i zmuszały do ponownego parowania: wyłączenie komputera, wstrzymanie i wznowienie oraz samo ponowne uruchamianie połączenia przez program. Doszły również sprawdzanie pisowni w polu wiadomości i akcje na odnośnikach.
