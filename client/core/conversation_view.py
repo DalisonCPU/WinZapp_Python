@@ -42,6 +42,26 @@ def conversation_visible_in(origin, shown_panel) -> bool:
     return origin is not None and origin == shown_panel
 
 
+def panel_layout(origin, shown_panel, has_conversation) -> dict:
+    """What is on screen when `shown_panel` (MAIN, ARCHIVED or LOCKED) is the
+    chat list being shown. One answer for every way of getting there.
+
+    detail      the open conversation's pane: only in the panel it belongs to
+    own_list    ConversationsPanel's own chat list: it is the MAIN list, so it
+                is hidden whenever the conversation sits under another list
+    panel       ConversationsPanel itself (the main list and/or the detail)
+    list_panel  the archived or locked list: always shown for its own panel,
+                the conversation (if any) sitting beneath it
+    """
+    detail = has_conversation and conversation_visible_in(origin, shown_panel)
+    return {
+        "detail": detail,
+        "own_list": shown_panel == MAIN or not detail,
+        "panel": shown_panel == MAIN or detail,
+        "list_panel": shown_panel != MAIN,
+    }
+
+
 def resolve_origin(requested, current_origin, list_shown, detail_shown) -> str:
     """The panel a conversation being opened belongs to.
 

@@ -135,13 +135,18 @@ class _Shown:
 
 
 class _ConversationsPanelStub(_Shown):
-    """The part of ConversationsPanel show_locked_chats_panel() delegates to:
-    no conversation belongs to the locked panel here, so its list shows."""
+    """The part of ConversationsPanel show_locked_chats_panel() delegates to
+    (show_chat_panel hides every other panel and shows the locked list; its
+    real behaviour is pinned in test_panel_switch_wiring.py)."""
 
-    def switch_to_chat_panel(self, shown, list_panel=None):
-        list_panel.Show()
-        list_panel.restore_selection()
-        return False
+    siblings = ()
+    locked_panel = None
+
+    def show_chat_panel(self, shown, *, focus=True):
+        self.Hide()
+        for other in self.siblings:
+            other.Hide()
+        self.locked_panel.Show()
 
 
 class _LockedPanel(_Shown):
@@ -172,6 +177,9 @@ class _PanelStub(_MainWindowStub):
         self.status_panel = _Shown()
         self.calls_panel = _Shown()
         self.locked_conversations_panel = _LockedPanel()
+        self.conversations_panel.locked_panel = self.locked_conversations_panel
+        self.conversations_panel.siblings = (
+            self.archived_conversations_panel, self.status_panel, self.calls_panel)
         self.content_panel = type("_L", (), {"Layout": lambda self: None})()
 
 

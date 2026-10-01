@@ -7,7 +7,7 @@ available here.
 
 import logging
 import wx
-from core.conversation_view import LOCKED
+from core.conversation_view import LOCKED, MAIN
 from ui.chat_lock import (
     ChatLockChangePinDialog,
     ChatLockRecoveryDialog,
@@ -513,42 +513,36 @@ class ChatLockMixin:
         if not never_set_up and not getattr(self, "_chat_lock_unlocked", False):
             if not self.unlock_chat_lock_vault(show_panel=False):
                 return
-        self.conversations_panel.Hide()
-        if hasattr(self, "archived_conversations_panel"):
-            self.archived_conversations_panel.Hide()
-        if hasattr(self, "status_panel"):
-            self.status_panel.Hide()
-        if hasattr(self, "calls_panel"):
-            self.calls_panel.Hide()
         panel = self.locked_conversations_panel
         chats, names = getattr(self, "_locked_chat_rows", ([], []))
         panel.set_all_chats(chats, names)
-        # Shows the list, or the locked conversation that was left open in
-        # its place.
-        self.conversations_panel.switch_to_chat_panel(LOCKED, panel)
+        # The locked list, with the locked conversation that was left open
+        # beneath it, and focus in the list.
+        self.conversations_panel.show_chat_panel(LOCKED)
         self.touch_chat_lock_timeout()
 
     def lock_chat_vault(self, *, silent=False, show_conversations=True):
         self._cancel_chat_lock_timeout()
         self._chat_lock_unlocked = False
         cp = getattr(self, "conversations_panel", None)
+        panel = getattr(self, "locked_conversations_panel", None)
+        # Only a vault that closes under the user's eyes (the locked list on
+        # screen, or a locked chat open in view) sends them to the main list;
+        # a timeout firing in Status, Calls or the main list changes nothing.
+        was_on_screen = panel is not None and panel.IsShown()
         if cp is not None and cp.conversation is not None:
             if self.is_chat_locked(cp.conversation.get("remoteJid", "")):
+                was_on_screen = was_on_screen or cp.IsShown()
                 cp.close_conversation_for_panel_switch()
         if cp is not None:
             # A locked chat set aside must not come back after the vault shut.
             cp.forget_parked_conversation(LOCKED)
-        panel = getattr(self, "locked_conversations_panel", None)
         if panel is not None:
             panel.set_all_chats([], [])
             panel.Hide()
         self._refresh_chat_lock_navigation()
-        if show_conversations and hasattr(self, "conversations_panel"):
-            self.conversations_panel.conversations_label.Show()
-            self.conversations_panel.conversations_list.Show()
-            self.conversations_panel.Show()
-            self.content_panel.Layout()
-            self.conversations_panel._restore_conversation_selection()
+        if show_conversations and was_on_screen and cp is not None:
+            self.conversations_panel.show_chat_panel(MAIN)
         if not silent:
             self.output(self.i18n.t("chat_lock_closed"), interrupt=True)
 

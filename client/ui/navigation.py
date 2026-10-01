@@ -143,11 +143,9 @@ class NavigationPanel(wx.Panel):
             mw.calls_panel.Hide()
 
         if key == "conversations":
-            mw.conversations_panel.Show()
             # Brings the chat list back (an archived chat's detail pane hid
             # it) and hides any conversation that belongs to another panel.
-            mw.conversations_panel.reveal_conversation_for_panel(MAIN)
-            mw.content_panel.Layout()
+            mw.conversations_panel.show_chat_panel(MAIN, focus=False)
             mw.conversations_panel.conversations_list.SetFocus()
             if (mw.conversations_panel.conversations_list.GetFocusedItem() != -1
                     and mw.conversations_panel.conversations_list.GetItemCount() > 0):
@@ -158,8 +156,7 @@ class NavigationPanel(wx.Panel):
                     interrupt=True,
                 )
         elif key == "archived" and hasattr(mw, "archived_conversations_panel"):
-            mw.conversations_panel.switch_to_chat_panel(
-                ARCHIVED, mw.archived_conversations_panel)
+            mw.conversations_panel.show_chat_panel(ARCHIVED)
         elif key == "status" and hasattr(mw, "status_panel"):
             mw.status_panel.Show()
             mw.content_panel.Layout()

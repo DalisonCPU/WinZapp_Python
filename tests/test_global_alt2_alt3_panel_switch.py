@@ -46,11 +46,15 @@ class _FakeConversationsPanel(_FakeWidget):
         self.jump_last_calls   = 0
         self.jump_unread_calls = 0
 
-    def reveal_conversation_for_panel(self, shown):
-        assert shown == self._conversation_origin
+    siblings = ()
+
+    def show_chat_panel(self, shown, *, focus=True):
+        # Real behaviour: test_panel_switch_wiring.py.
+        assert shown == self._conversation_origin and focus is False
+        for other in self.siblings:
+            other.Hide()
         self.Show()
         self.conversation_panel.Show()
-        return False
 
     def _on_accel_jump_last(self, event):
         self.jump_last_calls += 1
@@ -71,6 +75,8 @@ class _Stub:
         self.archived_conversations_panel = _FakeWidget(shown=False)
         self.status_panel = _FakeWidget(shown=True)
         self.content_panel = _FakeWidget()
+        self.conversations_panel.siblings = (
+            self.archived_conversations_panel, self.status_panel)
 
 
 class TestAlt2BringsConversationsPanelToFront:

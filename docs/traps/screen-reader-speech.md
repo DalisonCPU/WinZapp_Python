@@ -26,3 +26,57 @@ accepted the mix), or after the user's own send (a pending row with no id is
 typing/recording presence. A structural test fails if a new
 `messages_list.DeleteAllItems` appears in the panel's modules. Focus is restored
 only when the control does not already hold it on the right row.
+
+## Switching to a chat panel: focus the chat list, hide and show never rebuild (2026-10-01)
+
+PR #339 made an open conversation visible only in the panel it was opened from,
+and shipped two regressions that its stub-based tests could not see.
+
+- **Focus.** Alt+4 with an archived chat open put the conversation in place of
+  the archived list and focused its *message list* (`_focus_revealed_conversation`).
+  Switching to a conversation panel (Alt+1 main, Alt+4 archived, the locked
+  list, the navigation list) always focuses that panel's **chat list**. The
+  open conversation is shown again beneath the archived/locked list, and the
+  main list's own pane beside it, but showing it never takes focus.
+  Opening a chat from a list is the one place focus follows the "focus when
+  opening a chat" setting. Alt+2, Alt+3 and Alt+M are explicit asks for the
+  messages: they show the conversation's own panel (`focus=False`) and the
+  handler moves focus itself.
+- **One function.** `ConversationPanelVisibilityMixin.show_chat_panel()`
+  (`ui/conversation_panel/panel_visibility.py`) is the only way a chat panel
+  becomes visible: it hides every other panel, lays out the detail pane by
+  `core/conversation_view.panel_layout(origin, shown, has_conversation)` and
+  focuses the chat list. Alt+1, Alt+4, the navigation list, the locked panel,
+  `lock_chat_vault` (only when the locked list or a locked chat was on screen:
+  a vault timeout in Status, Calls or the main list moves nobody) and
+  `_ensure_conversations_panel_visible` all call it. Panel **switches** go
+  through it; do not hand-roll a Show/Hide sequence for a new one. Panel
+  **opens** (`ArchivedConversationsPanel.on_conversation_selected`,
+  `chat_list.py`'s open-by-JID, `open_locked_conversation`, the
+  `_restore_to_*_list` Esc paths) still compose their own Show/Hide, because
+  an open puts the conversation alone in the place of its list and focus
+  follows the user's setting; they were left as they were rather than routed
+  through `panel_layout`, whose "list stays visible beneath" layout is for
+  switches. Each switch logs one `[panel-switch]` line (panel, origin, parked
+  keys, layout flags, what `IsShown()` really reports afterwards; no JIDs):
+  read it first when a report says the wrong pane is on screen.
+  `tests/test_panel_switch_wiring.py` runs the real entry-point methods against
+  recording widgets over origin x target, and
+  `tests/test_panel_switch_wx_semantics.py` repeats the key sequences with
+  wx parent/child visibility.
+- **Hide/show never rebuilds.** Showing or hiding an open conversation is
+  `Show`/`Hide`/`Layout` only: no `navigate_to_conversation`, no
+  `populate_messages`, no request. Only a conversation *displaced* from the
+  shared widget by another one is reopened, and that reopen is deferred with
+  `wx.CallAfter` until the list is on screen and focused, is dropped when the
+  user has already moved on, and passes `resume=True` so it does not repeat
+  what the first open asked the server for (presence subscription, profile /
+  group-info / reactions backfill, participants fetch). The participants cache
+  and the data-button note are parked with the conversation and restored.
+- **Where the time goes on an open** (UI thread): the DB read of up to 200
+  messages plus `populate_messages` (log: "rebuilt 200 row(s) in ~90-160 ms").
+  The serial `GET /reactions/<id>` calls (up to 40, ~41 ms each, one per
+  message) are a background thread that predates #339 (commit 040b589b) with a
+  five-minute per-chat cooldown; they do not block the UI but each applied
+  batch triggers one more `populate_messages`. `/group-info` was fetched by two
+  threads at once; both now go through `get_group_info_recent()`.
