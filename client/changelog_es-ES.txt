@@ -64,6 +64,8 @@ MEJORAS
 
 - Las conversaciones archivadas y bloqueadas ahora se pueden seleccionar igual que las principales: Ctrl+Espacio, Mayús+flechas, Mayús+Inicio/Fin, Ctrl+Mayús+Espacio y el Espacio del modo de selección, con el mismo sonido y los mismos anuncios. El menú "Acciones en masa" (con atajos propios) permite desarchivar, vaciar, eliminar y marcar como leídas o no leídas las archivadas, y desbloquear o marcar como leídas o no leídas las bloqueadas.
 
+- La descarga automática de medios ahora obedece al instante a la opción "Descargar medios automáticamente" de la pestaña Almacenamiento de Configuración: desmarcarla detiene la descarga en curso, y marcarla (o marcar otro tipo de medio) empieza a descargar sin esperar a la próxima sincronización. En instalaciones nuevas viene desmarcada, para que elijas primero qué quieres descargar; quien ya usa WinZapp conserva la opción como estaba. Desmarcada, ahora se aplica también a los medios de los mensajes que llegan mientras WinZapp está abierto, y la lista de tipos queda deshabilitada, conservando lo que estaba marcado.
+
 CORRECCIONES
 
 - Al iniciar un mensaje de voz con los anuncios de grabación silenciados, el lector de pantalla ya no empieza a decir “Enviar” antes de ser interrumpido. WinZapp ahora evita el cambio automático de foco que causaba ese fragmento y mantiene disponibles Ctrl+R, Ctrl+Shift+P y Ctrl+Shift+D.

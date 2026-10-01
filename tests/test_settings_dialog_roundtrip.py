@@ -263,6 +263,7 @@ def _make_frame(settings):
     frame.set_global_hotkey = set_global_hotkey
     frame.save_settings = lambda: None
     frame.load_sounds = lambda: None
+    frame._on_auto_download_settings_changed = lambda old, new: None
     frame.apply_language_changes = lambda: None
     frame.sound_system = _FakeSoundSystem()
     frame.refresh_sound_packs = lambda: None

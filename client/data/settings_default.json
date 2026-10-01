@@ -136,7 +136,7 @@
     "cleared_chats": {},
     "cleared_starred_chats": {},
     "storage": {
-        "auto_download_media": true,
+        "auto_download_media": false,
         "auto_download_media_types": [
             "photos",
             "videos",
