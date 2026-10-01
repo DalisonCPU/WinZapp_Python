@@ -142,6 +142,8 @@ DÜZELTMELER
 
 - Listeden zaten açık olan bir sohbeti seçmek artık "Bir sohbet açıldığında odaklanılacak yer" ayarına uyuyor (mesaj alanı veya okunmamışlar ayırıcısı / son mesaj); önceden odak her zaman mesaj alanına gidiyordu.
 
+- Bir iletiye yanıt verirken yanıtta birinden bahsedildiğinde, WinZapp onu yanıt olarak gösterse de alıcılara alıntısız yeni bir ileti olarak ulaşıyordu. Alıntı artık bahsetmeyle birlikte gönderilir.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.

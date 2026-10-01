@@ -142,6 +142,8 @@ CORREÇÕES
 
 - Ao escolher na lista uma conversa que já estava aberta, o foco passa a respeitar a definição "Ao iniciar uma conversa, colocar o foco em" (campo de mensagem, ou separador de não lidas / última mensagem); antes ia sempre para o campo de mensagem.
 
+- Ao responder a uma mensagem mencionando alguém na resposta, esta chegava aos destinatários como uma mensagem nova, sem a citação, embora o WinZapp a mostrasse como resposta. Agora a citação segue junto com a menção.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta ligada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua ligação ao WhatsApp fica realmente guardada — e a restaurá-la sozinho quando ela deixa de ser aceite, avisando o que aconteceu. Com ela vieram as correções das situações que quebravam a sessão e faziam o programa pedir para emparelhar de novo: desligar o computador, suspender e retomar, e o próprio programa a reiniciar a ligação. Chegaram também a verificação ortográfica no campo de mensagem e as ações sobre ligações.
