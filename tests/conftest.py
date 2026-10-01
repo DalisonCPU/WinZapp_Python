@@ -1,5 +1,6 @@
 """Shared fixtures for all WinZapp tests — async edition."""
 
+import importlib.util
 import json
 import os
 import tempfile
@@ -108,6 +109,12 @@ def pytest_addoption(parser):
              "~45 s). Skipped by default on a developer machine; always run "
              "when the CI environment variable is set.",
     )
+    # pytest.ini carries `--dist loadgroup` (only meaningful with -n). Without
+    # pytest-xdist installed — a stale venv, a bare `pip install pytest` — that
+    # option would not exist and even a plain `pytest` would refuse to start.
+    if importlib.util.find_spec("xdist") is None:
+        parser.addoption("--dist", default="no",
+                         help="Accepted and ignored: pytest-xdist is not installed.")
 
 
 def _wx_gui_requested(config) -> bool:

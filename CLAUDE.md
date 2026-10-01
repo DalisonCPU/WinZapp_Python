@@ -11,12 +11,15 @@ you open a matching file; the reasoning is in `docs/traps/` and
    `hidden_frame()` (`tests/conftest.py`); a module building a real `Dialog`
    carries the `wxgui` marker. **`--run-wx-gui` and
    `WINZAPP_RUN_WX_GUI_TESTS=1` are CI-only**: never pass them, never hand
-   them to an agent or script, never run an ad-hoc script that creates a wx
-   window or hooks WinEvents.
+   them to an agent or script — background agents run on the user's own
+   desktop — never run an ad-hoc script that creates a wx window or hooks
+   WinEvents. Enforced by `tests/test_no_desktop_visible_windows.py`;
+   history in `docs/traps/tests-never-open-windows.md`.
 2. **Every user-facing string goes into every locale file**
    (`client/languages/<locale>.json`, `client/changelog_<locale>.txt`; the
    list is `client/languages/language_map.json`). `I18n.t()` has no fallback:
-   a missing key is shown as the raw key. Skill: `i18n-ui-string`.
+   a missing key is shown as the raw key. Reuse the words that locale already
+   uses (`docs/reference/i18n-terminology.md`). Skill: `i18n-ui-string`.
 3. **A function or fix ships with its test in the same change**: pure logic
    extracted, or the unbound method called on a plain stub. Skill:
    `write-test`.
@@ -45,7 +48,7 @@ Socket.IO. One account per process, each with its own Node, port and window.
 uv sync; uv run setup-api              # fresh checkout; setup-api clones and builds client/api/
 uv run winzapp                         # run the app
 uv run pytest tests/test_database.py   # the test files for what you touched — the normal loop
-uv run pytest -n auto                  # whole suite in parallel (~1 min); CI runs it on every PR
+uv run pytest -n auto                  # whole suite in parallel (~1 min); CI itself runs it serially
 uv run build-installer                 # WinZappInstaller.exe + WinZapp.zip
 uv run build-onefile                   # single-file WinZapp.exe
 ```
