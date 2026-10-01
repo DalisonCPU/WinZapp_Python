@@ -128,6 +128,8 @@ CORECTĂRI
 
 - Același lucru este valabil pentru orice alt panou, precum Stare sau Apeluri: cu o conversație lăsată deschisă în spatele lui, mesajele ei noi sunt anunțate ca ale oricărei alte conversații și nu sunt marcate ca citite. Mesajele conversațiilor arhivate sunt anunțate doar cât timp lista celor arhivate este pe ecran.
 
+- Anunțurile „tastează” și „înregistrează un mesaj vocal” continuau să fie rostite pentru o conversație lăsată deschisă în spatele altui panou (Alt+4, Stare, Apeluri...). Acum sunt anunțate doar cât timp conversația respectivă este pe ecran, așa cum se întâmpla deja la marcarea ca citită și la sunete.
+
 - Într-o conversație care fusese golită vreodată, contorul de mesaje necitite dispărea singur la aproximativ un minut după sosirea unui mesaj, iar deschiderea conversației nu o marca drept citită pe telefon. Se întâmpla mai ales în grupurile aglomerate și dezactivate. Acum contorul rămâne până când citiți conversația, iar citirea ei în WinZapp o marchează drept citită și pe telefon.
 
 - Mesajele cu vizualizare unică soseau fără contor, sunet sau notificare, iar după o sincronizare rămâneau pentru totdeauna ca un mesaj care încă așteaptă să se încarce. Acum apare „Mesaj cu vizualizare unică. Deschideți-l pe telefon pentru a-l vedea.”, cu sunetul și notificarea unui mesaj nou. Conținutul propriu-zis rămâne doar pe telefon, ca în WhatsApp Web.
