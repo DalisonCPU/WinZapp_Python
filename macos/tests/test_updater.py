@@ -85,3 +85,29 @@ def test_updater_stays_off_without_a_releases_repository(monkeypatch):
     assert not um.enabled()
     um.install()
     assert (updater.GITHUB_API_LATEST_RELEASE, updater.UpdateChecker._do_install) == before
+
+
+class _Stub:
+    _version = "2.0.0.9"
+
+
+def test_an_unverifiable_release_is_not_installed(monkeypatch):
+    """Offline, rate-limited or missing provenance: no raw, a reason, no install."""
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python"})
+
+    def offline(url):
+        raise um.provenance.ProvenanceError("request failed: URLError")
+    monkeypatch.setattr(um.provenance, "fetch_release_asset", offline)
+    raw, detail = um.MacUpdateProgress._provenance(_Stub())
+    assert raw is None and "could not verify" in detail
+
+
+def test_the_provenance_url_is_built_from_the_release_repo_and_tag(monkeypatch):
+    seen = []
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python"})
+    monkeypatch.setattr(um.provenance, "fetch_release_asset",
+                        lambda url: seen.append(url) or b"{}")
+    raw, _ = um.MacUpdateProgress._provenance(_Stub())
+    assert raw is None      # "{}" is not a provenance
+    assert seen == ["https://github.com/rocco-labs/WinZapp_Python/releases/download/v2.0.0.9/"
+                    + um.provenance.provenance_name(um.ARCH)]

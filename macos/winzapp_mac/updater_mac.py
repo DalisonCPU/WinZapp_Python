@@ -12,6 +12,11 @@ the Mac differs is replaced:
   inside must be signed by the same Apple Developer team as the running app
   and pass Gatekeeper (notarized). Gabriel's release keys cannot sign builds
   published elsewhere, so the Apple signature is what is trusted here.
+* Provenance: the release must also carry WinZapp-macOS-provenance-<arch>.json,
+  and the official repository's tag for that release must point at the commit
+  it names (provenance.py). The Apple signature says who built it; this says
+  the code is a commit of gabrielhhaber/WinZapp_Python. Any failure to verify,
+  offline or rate-limited included, installs nothing.
 * Installing: a small helper waits for WinZapp to quit, swaps the app bundle
   in place and opens the new one.
 
@@ -32,6 +37,8 @@ import tempfile
 import threading
 
 import wx
+
+from . import provenance
 
 ARCH = platform.machine()   # arm64 / x86_64
 
@@ -171,16 +178,41 @@ class MacUpdateProgress(wx.Dialog):
             self.EndModal(wx.ID_CANCEL)
         wx.CallAfter(ui)
 
+    def _provenance(self):
+        """(raw, detail): the release's provenance file once it is verified
+        against the official repository, or (None, why not). Done before the
+        download, so an unverifiable release costs nothing."""
+        from version import __version__
+        tag = "v" + self._version
+        if not provenance.is_release_tag(tag):
+            return None, "could not verify commit provenance: not a release tag"
+        url = (f"https://github.com/{releases_repo(_info())}/releases/download/"
+               f"{tag}/{provenance.provenance_name(ARCH)}")
+        try:
+            raw = provenance.fetch_release_asset(url)
+        except provenance.ProvenanceError as exc:
+            return None, f"could not verify commit provenance: {exc}"
+        ok, detail = provenance.verify_release(
+            raw, tag, __version__, provenance.fetch_official,
+            running_commit=_info().get(provenance.SOURCE_COMMIT_KEY) or "")
+        return (raw if ok else None), detail
+
     def _work(self):
         from updater import _verify_sha256sums
         work = tempfile.mkdtemp(prefix="winzapp-update-")
         try:
             zpath = os.path.join(work, asset_name())
+            raw, detail = self._provenance()
+            if raw is None:
+                return self._fail(detail)
             _download(self._zip_url, zpath, self._progress)
             ok, detail = _verify_sha256sums(zpath, asset_name(), self._sums_url,
                                             stable_keys=(), alpha_keys=())
             if not ok or not self._sums_url:
                 return self._fail(detail if not ok else "the release has no SHA256SUMS.txt")
+            ok, detail = provenance.check_artifact(raw, asset_name(), zpath)
+            if not ok:
+                return self._fail(detail)
             subprocess.run(["ditto", "-x", "-k", zpath, work], check=True)
             new_app = os.path.join(work, "WinZapp.app")
             running = _bundle_path()
