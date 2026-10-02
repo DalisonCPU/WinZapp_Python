@@ -113,7 +113,11 @@ const modAvailable = () => loadedScripts >= world.scriptsNeeded;
 const mod = {
   forwardMessages: async (a) => {
     calls.forward.push(a);
-    if (world.rejectForward) throw new Error('rejected by whatsapp');
+    if (world.forwardDelayMs) await new Promise((r) => setTimeout(r, world.forwardDelayMs));
+    if (world.rejectForward || (world.rejectFirstOnly && calls.forward.length === 1)) {
+      throw new Error('rejected by whatsapp');
+    }
+    if (world.circular) { const c = { id: 'x' }; c.self = c; return c; }
     return ['sent'];
   },
 };
@@ -155,12 +159,16 @@ global.document = {
 const fn = eval('(' + src + ')');
 const args = { chatId: 'chat@c.us', messageIds: ['a', 'b'] };
 (async () => {
-  let out, err = null;
-  try {
-    const runs = await Promise.all(world.concurrent ? [fn(args), fn(args)] : [fn(args)]);
-    out = runs;
-  } catch (e) { err = String(e && e.message || e); }
-  console.log(JSON.stringify({ out, err, calls }));
+  const batches = [];
+  for (const batch of world.batches || [[args]]) {
+    const settled = await Promise.allSettled(batch.map((a) => fn(a)));
+    batches.push(settled.map((r) => r.status === 'fulfilled'
+      ? { value: r.value } : { err: String(r.reason && r.reason.message || r.reason) }));
+  }
+  const first = batches[0];
+  const out = first.filter((r) => 'value' in r).map((r) => r.value);
+  const failed = first.find((r) => 'err' in r);
+  console.log(JSON.stringify({ out, err: failed ? failed.err : null, batches, calls }));
 })();
 """
 
@@ -223,9 +231,75 @@ class TestRunInFakePage:
         assert len(r["calls"]["forward"]) == 1
 
     def test_concurrent_forwards_share_one_heal(self, tmp_path):
-        r = _run(tmp_path, concurrent=True)
+        other = {"chatId": "chat@c.us", "messageIds": ["c"]}
+        first = {"chatId": "chat@c.us", "messageIds": ["a"]}
+        r = _run(tmp_path, batches=[[first, other]])
         assert len(r["calls"]["scripts"]) == 1
-        assert len(r["calls"]["forward"]) == 2  # one send per request
+        assert len(r["calls"]["forward"]) == 2  # different ids: both are sent
+
+    def test_never_loads_a_url_outside_the_whitelist(self, tmp_path):
+        """The module never resolves, so the loop walks every candidate; each
+        look-alike below must still be refused (mutating the host check to
+        ``|| true`` makes this fail)."""
+        good = "https://static.whatsapp.net/rsrc.php/ok.js"
+        bad = [
+            "https://evilstatic.whatsapp.net/x.js",
+            "https://static.whatsapp.net.evil.com/x.js",
+            "https://user@static.whatsapp.net/x.js",
+            "https://user:pw@static.whatsapp.net/x.js",
+            "https://static.whatsapp.net:8443/x.js",
+            "http://static.whatsapp.net/x.js",
+            "https://static.whatsapp.net/x.css",
+            "https://static.whatsapp.net/x.js.css",
+        ]
+        urls = [good] + bad
+        resources = {f"r{i}": {"src": u} for i, u in enumerate(urls)}
+        components = {"WAWebForwardMessageFlow.react": {"r": list(resources)}}
+        r = _run(tmp_path, scriptsNeeded=99, resources=resources,
+                 components=components)
+        assert r["calls"]["scripts"] == [good]
+        assert r["calls"]["forward"] == []
+        assert r["out"][0]["ok"] is False
+
+    def test_a_later_candidate_can_resolve_the_module(self, tmp_path):
+        resources = {
+            "r0": {"src": "https://static.whatsapp.net/one.js"},
+            "r1": {"src": "https://static.whatsapp.net/two.js"},
+        }
+        components = {"WAWebForwardMessageFlow.react": {"r": ["r0", "r1"]}}
+        r = _run(tmp_path, scriptsNeeded=2, resources=resources,
+                 components=components)
+        assert len(r["calls"]["scripts"]) == 2
+        assert r["out"][0]["ok"] is True
+
+    def test_an_overlapping_retry_waits_instead_of_sending(self, tmp_path):
+        same = {"chatId": "chat@c.us", "messageIds": ["a", "b"]}
+        r = _run(tmp_path, forwardDelayMs=50, batches=[[same, same]])
+        assert len(r["calls"]["forward"]) == 1
+        first, second = r["batches"][0]
+        assert first == second and first["value"]["ok"] is True
+
+    def test_different_chat_or_ids_are_not_deduped(self, tmp_path):
+        a = {"chatId": "chat@c.us", "messageIds": ["a"]}
+        b = {"chatId": "chat@c.us", "messageIds": ["b"]}
+        c = {"chatId": "other@c.us", "messageIds": ["a"]}
+        r = _run(tmp_path, forwardDelayMs=20, batches=[[a, b, c]])
+        assert len(r["calls"]["forward"]) == 3
+
+    def test_a_rejection_releases_the_key_for_a_later_forward(self, tmp_path):
+        same = {"chatId": "chat@c.us", "messageIds": ["a"]}
+        r = _run(tmp_path, rejectFirstOnly=True, forwardDelayMs=20,
+                 batches=[[same, same], [same]])
+        # The overlapping twin shares the rejection (no second send) ...
+        assert [x.get("err") for x in r["batches"][0]] == ["rejected by whatsapp"] * 2
+        # ... and the key is free again for a deliberate later forward.
+        assert r["batches"][1][0]["value"]["ok"] is True
+        assert len(r["calls"]["forward"]) == 2
+
+    def test_the_response_is_serializable_even_for_a_circular_result(self, tmp_path):
+        r = _run(tmp_path, circular=True)
+        assert r["err"] is None
+        assert r["out"] == [{"ok": True, "response": None}]
 
     def test_a_working_build_uses_the_library_path(self, tmp_path):
         r = _run(tmp_path, alwaysWorks=True, bound=True)

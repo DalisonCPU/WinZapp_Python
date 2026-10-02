@@ -38,7 +38,7 @@ export const FORWARD_RUNTIME_SOURCE = String.raw`async function (args) {
   ];
   const maxComponents = 12;
   const perScriptMs = 15000;
-  const budgetMs = (args && args.budgetMs) || 20000;
+  const budgetMs = (args && args.budgetMs) || 10000;
   const chatId = args && args.chatId;
   const messageIds = (args && args.messageIds) || [];
 
@@ -77,6 +77,9 @@ export const FORWARD_RUNTIME_SOURCE = String.raw`async function (args) {
       if (
         url.protocol === 'https:' &&
         url.hostname === 'static.whatsapp.net' &&
+        url.port === '' &&
+        !url.username &&
+        !url.password &&
         url.pathname.endsWith('.js')
       ) {
         return url.href;
@@ -177,41 +180,70 @@ export const FORWARD_RUNTIME_SOURCE = String.raw`async function (args) {
     return ok;
   };
 
-  const WPP = win.WPP;
-  let mod = forwardModule();
-  const bound = Boolean(
-    WPP && WPP.whatsapp && WPP.whatsapp.functions &&
-      typeof WPP.whatsapp.functions.forwardMessages === 'function'
-  );
-  if (mod && bound) {
-    // A build that works: exactly what the library call does.
-    return { ok: true, response: await WPP.chat.forwardMessages(chatId, messageIds) };
+  // The response crosses back to Node by value. A raw result that cannot be
+  // serialized would fail the evaluate AFTER the send, i.e. a 500 and a retry
+  // from Python that forwards the same messages again.
+  const serializable = (value) => {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const run = async () => {
+    const WPP = win.WPP;
+    let mod = forwardModule();
+    const bound = Boolean(
+      WPP && WPP.whatsapp && WPP.whatsapp.functions &&
+        typeof WPP.whatsapp.functions.forwardMessages === 'function'
+    );
+    if (mod && bound) {
+      // A build that works: exactly what the library call does.
+      const libResponse = await WPP.chat.forwardMessages(chatId, messageIds);
+      return { ok: true, response: serializable(libResponse) };
+    }
+    if (!mod) {
+      await heal();
+      mod = forwardModule();
+    }
+    if (!mod) {
+      return {
+        ok: false,
+        detail:
+          'forwardMessages unavailable: require(' + moduleName + ') failed: ' +
+          (lastRequireError || 'no forwardMessages export') +
+          (notes.length ? ' [' + notes.join('; ') + ']' : ''),
+      };
+    }
+    const chat = await WPP.chat.find(chatId);
+    const msgs = [];
+    for (const id of messageIds) msgs.push(await WPP.chat.getMessageById(id));
+    // The single send. Whatever it throws propagates: no retry, no second path.
+    const response = await mod.forwardMessages({
+      chat: chat,
+      msgs: msgs,
+      multicast: false,
+      includeCaption: false,
+      appendedText: false,
+    });
+    return { ok: true, response: serializable(response) };
+  };
+
+  // Python gives up on its POST after 20 s and posts the same forward again
+  // while this evaluate is still running. The second request must wait for
+  // the first one's result, never send. The key is released on any outcome so
+  // a later, deliberate forward of the same messages is not blocked.
+  const inflight = (win.__winzappForwardInflight = win.__winzappForwardInflight || {});
+  const key = String(chatId) + '|' + messageIds.join(',');
+  if (inflight[key]) return await inflight[key];
+  const pending = run();
+  inflight[key] = pending;
+  try {
+    return await pending;
+  } finally {
+    delete inflight[key];
   }
-  if (!mod) {
-    await heal();
-    mod = forwardModule();
-  }
-  if (!mod) {
-    return {
-      ok: false,
-      detail:
-        'forwardMessages unavailable: require(' + moduleName + ') failed: ' +
-        (lastRequireError || 'no forwardMessages export') +
-        (notes.length ? ' [' + notes.join('; ') + ']' : ''),
-    };
-  }
-  const chat = await WPP.chat.find(chatId);
-  const msgs = [];
-  for (const id of messageIds) msgs.push(await WPP.chat.getMessageById(id));
-  // The single send. Whatever it throws propagates: no retry, no second path.
-  const response = await mod.forwardMessages({
-    chat: chat,
-    msgs: msgs,
-    multicast: false,
-    includeCaption: false,
-    appendedText: false,
-  });
-  return { ok: true, response: response };
 }`;
 
 export function buildForwardRuntimeExpression(args: {
