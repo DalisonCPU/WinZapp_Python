@@ -28,6 +28,7 @@ import {
   SyncMessageListSchema,
 } from '../dto/sync';
 import { contactToArray, unlinkAsync } from '../util/functions';
+import { buildForwardRuntimeExpression } from '../util/forwardRuntime';
 import { clientsArray } from '../util/sessionUtil';
 
 function returnSucess(res: any, session: any, phone: any, data: any) {
@@ -2001,23 +2002,35 @@ export async function forwardMessages(req: Request, res: Response) {
       }
      }
    */
-  const { phone, messageId, isGroup = false } = req.body;
+  const { phone, messageId } = req.body;
 
   try {
-    let response;
-
-    if (!isGroup) {
-      response = await req.client.forwardMessagesV2(`${phone[0]}`, messageId);
-    } else {
-      response = await req.client.forwardMessagesV2(`${phone[0]}`, messageId);
+    // wa-js's forwardMessages is unusable on builds whose forward module has
+    // unresolved dependencies (forward_messages_not_available), so the page
+    // heals that and forwards through WhatsApp's own function; see
+    // util/forwardRuntime.ts. A rejected forward propagates: never retried here.
+    const outcome: any = await req.client.page.evaluate(
+      buildForwardRuntimeExpression({
+        chatId: `${phone[0]}`,
+        messageIds: Array.isArray(messageId) ? messageId : [messageId],
+      })
+    );
+    if (!outcome || outcome.ok !== true) {
+      throw new Error(outcome?.detail || 'forwardMessages returned no outcome');
     }
+    const response = outcome.response;
 
     res.status(201).json({ status: 'success', response: response });
   } catch (e) {
     req.logger.error(e);
     res
       .status(500)
-      .json({ status: 'error', message: 'Error forwarding message', error: e });
+      .json({
+        status: 'error',
+        message: 'Error forwarding message',
+        detail: String((e as any)?.message || '').slice(0, 500),
+        error: e,
+      });
   }
 }
 
