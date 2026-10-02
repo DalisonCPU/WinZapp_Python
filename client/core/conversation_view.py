@@ -1,10 +1,11 @@
 """Whether the open conversation is the one being shown.
 
-ConversationsPanel keeps its conversation open while the user is on another
-panel (Alt+4 archived, ...): coming back must not mean finding the chat
-again. But an open conversation that is hidden is not being read, so it must
-not be marked read, notified as "the current chat" or kept out of the unread
-counts.
+ConversationsPanel keeps its conversation open while the user is on a chat
+list (Alt+1, Alt+4, ...), but hidden: a plain panel switch never shows it
+(showing it cost a perceptible delay). Only an explicit ask for it (Alt+M,
+Alt+2, Alt+3) or opening a chat brings it back. An open conversation that is
+hidden is not being read, so it must not be marked read, notified as "the
+current chat" or kept out of the unread counts.
 """
 
 MAIN, ARCHIVED, LOCKED = "main", "archived", "locked"
@@ -42,18 +43,20 @@ def conversation_visible_in(origin, shown_panel) -> bool:
     return origin is not None and origin == shown_panel
 
 
-def panel_layout(origin, shown_panel, has_conversation) -> dict:
+def panel_layout(origin, shown_panel, has_conversation, reveal=False) -> dict:
     """What is on screen when `shown_panel` (MAIN, ARCHIVED or LOCKED) is the
     chat list being shown. One answer for every way of getting there.
 
-    detail      the open conversation's pane: only in the panel it belongs to
+    detail      the open conversation's pane: never on a plain switch; on an
+                explicit reveal, only in the panel it belongs to
     own_list    ConversationsPanel's own chat list: it is the MAIN list, so it
                 is hidden whenever the conversation sits under another list
     panel       ConversationsPanel itself (the main list and/or the detail)
     list_panel  the archived or locked list: always shown for its own panel,
                 the conversation (if any) sitting beneath it
     """
-    detail = has_conversation and conversation_visible_in(origin, shown_panel)
+    detail = (reveal and has_conversation
+              and conversation_visible_in(origin, shown_panel))
     return {
         "detail": detail,
         "own_list": shown_panel == MAIN or not detail,
@@ -78,13 +81,12 @@ def resolve_origin(requested, current_origin, list_shown, detail_shown) -> str:
     return MAIN
 
 
-def parked_chat_reopenable(origin, chat_locked, vault_unlocked) -> bool:
-    """A conversation set aside while another took the shared panel comes back
-    only if it may still be shown: a locked chat needs the vault open and any
-    other must not have been locked since."""
-    if origin == LOCKED:
-        return bool(chat_locked and vault_unlocked)
-    return not chat_locked
+def mnemonic_letter(label, default) -> str:
+    """The letter after the "&" of a label ("&Messages" -> "M"), or `default`."""
+    amp = label.find("&")
+    if 0 <= amp < len(label) - 1 and label[amp + 1].isalpha():
+        return label[amp + 1].upper()
+    return default
 
 
 def archived_chat_stays_silent(is_current_conv: bool, archived_panel_shown: bool) -> bool:

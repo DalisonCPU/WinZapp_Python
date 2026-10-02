@@ -1,15 +1,16 @@
 """An open conversation is on screen only while the panel it was opened from
 (main, archived or locked) is the one shown.
 
-The pure rules are tested here; the real entry points (Alt+1, Alt+4, the
-navigation list, the locked panel, Alt+2/3/M) are in test_panel_switch_wiring.py.
+The pure rules are tested here (a plain switch hides it everywhere; an
+explicit reveal shows it in its own panel); the real entry points (Alt+1,
+Alt+4, the navigation list, the locked panel, Alt+2/3/M) are in
+test_panel_switch_wiring.py.
 """
 
 from core.conversation_view import (
-    ARCHIVED, LOCKED, MAIN, conversation_visible_in, parked_chat_reopenable,
+    ARCHIVED, LOCKED, MAIN, conversation_visible_in, mnemonic_letter,
     resolve_origin,
 )
-from ui.conversation_panel.panel_visibility import ConversationPanelVisibilityMixin
 
 A = "a@s.whatsapp.net"
 
@@ -38,23 +39,12 @@ def test_an_explicit_origin_wins():
     assert resolve_origin(ARCHIVED, MAIN, True, True) == ARCHIVED
 
 
-def test_parked_chat_reopen_rules():
-    assert parked_chat_reopenable(MAIN, False, False)
-    assert not parked_chat_reopenable(MAIN, True, True)
-    assert parked_chat_reopenable(LOCKED, True, True)
-    assert not parked_chat_reopenable(LOCKED, True, False)
-    assert not parked_chat_reopenable(LOCKED, False, True)
-
-
-class _Panel(ConversationPanelVisibilityMixin):
-    pass
-
-
-def test_forgetting_the_parked_locked_conversation():
-    p = _Panel()
-    p._parked_conversations()[LOCKED] = {"jid": A, "msg_id": ""}
-    p.forget_parked_conversation(LOCKED)
-    assert LOCKED not in p._parked_conversations()
+def test_mnemonic_letter():
+    assert mnemonic_letter("&Mensagens", "X") == "M"
+    assert mnemonic_letter("Ty&pe a message to", "X") == "P"
+    assert mnemonic_letter("Messages", "M") == "M"
+    assert mnemonic_letter("Messages &", "M") == "M"
+    assert mnemonic_letter("& x", "M") == "M"
 
 
 def _esc(monkeypatch, origin, jid=A, unlocked=True):

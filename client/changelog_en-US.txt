@@ -38,7 +38,7 @@ WHAT'S NEW
 
 - Esc deselects before closing. With messages selected, the first Esc only deselects them all and just the second one closes the conversation. It can be turned off in Settings, User Interface too.
 
-- Stereo voice messages. With a microphone that really records in stereo, a voice message can keep the sound of both sides. Tick "Record voice messages in stereo by default" in the Audio Devices tab of Settings, or use the new button below "Record voice message" (Ctrl+Shift+G) to record just one message in the other mode: stereo when the default is mono, mono when it is stereo. Since iPhones can't play stereo voice messages, a stereo recording is sent as audio, and WinZapp tells you so first, with a "Don't show again" option; to be warned again, use the matching option in the User Interface tab. If the microphone doesn't provide two channels, the message is recorded in mono and WinZapp tells you.
+- Stereo voice messages. With a microphone that really records in stereo, a voice message can keep the sound of both sides. Tick "Record voice messages in stereo by default" in the Audio Devices tab of Settings, or use the new button below "Record voice message" (Ctrl+Shift+G) to record just one message in the other mode: stereo when the default is mono, mono when it is stereo. A stereo recording is sent as an audio message rather than a voice message, so it plays on iPhone too. If the microphone doesn't provide two channels, the message is recorded in mono and WinZapp tells you.
 
 - Resync only the open chat with Shift+F5, also in the Sync menu. Unlike F5, which deletes and downloads every chat again, Shift+F5 fetches the open chat's messages from WhatsApp again, puts any missing ones in the right place and removes the ones that no longer exist there, without touching older history. F5 and Shift+F5 now ask for confirmation, with No as the default and a "Don't show again" option; to be asked again, use the matching options in the User Interface tab of Settings. When the chat is already up to date, or WhatsApp has no messages in it, Shift+F5 says so instead of saying it couldn't resync.
 
@@ -71,6 +71,8 @@ IMPROVEMENTS
 - When a call cannot start because the WhatsApp Web version in use does not support calls, WinZapp now says so and what to try (restart WinZapp, or choose "Force reinstall WPPConnect" in the Help menu) instead of reading out an error code.
 
 FIXES
+
+- Forwarding messages no longer fails on recent WhatsApp Web versions, where every forward was refused with the error “forwardMessages function is not available”.
 
 - Starting a voice message with recording announcements silenced no longer lets the screen reader begin saying “Send” before being cut off. WinZapp now avoids the automatic focus move that caused the clipped announcement while keeping Ctrl+R, Ctrl+Shift+P and Ctrl+Shift+D available.
 
@@ -124,7 +126,7 @@ FIXES
 
 - In archived chats, Alt+M did not move to the messages list of the open chat, as it does in the main chats. It now works from anywhere in the panel.
 
-- An open chat is now on screen only while you are in the list it was opened from: the main chats (Alt+1), the archived chats (Alt+4) or the locked chats. Switching to another of those hides it, and coming back shows it again with the message list exactly where you were reading. This also fixes an archived chat staying on screen in the main chats. A chat opened from the main chats belongs to them, even an archived one found with the search field, and opening a chat in another list no longer loses the one you had open there: it is back when you return.
+- A chat you have open in one list is now hidden when you switch to another: the main chats (Alt+1), the archived chats (Alt+4) or the locked chats. Switching only changes the list and puts you on it; it does not show or reload the open chat. The chat stays open, and you bring it back with Alt+M, Alt+2 or Alt+3, or by opening it again; it then appears in the list it was opened from. This also fixes an archived chat staying on screen in the main chats. A chat opened from the main chats belongs to them, even an archived one found with the search field.
 
 - The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
 

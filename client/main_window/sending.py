@@ -38,7 +38,7 @@ from app_paths import (
     resource_path,
 )
 from core.utils import encrypt
-from core.voice_stereo import opus_encode_args, sends_as_audio_file
+from core.voice_stereo import opus_encode_args
 
 # The directory layout _find_api_ffmpeg() searches is relative to main.py.
 _MAIN_PY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main.py")
@@ -757,15 +757,14 @@ class SendingMixin:
             return system_ffmpeg
         return None
 
-    def _convert_wav_to_ogg(self, wav_path: str, stereo: bool = False) -> str | None:
+    def _convert_wav_to_ogg(self, wav_path: str) -> str | None:
         """
         Convert a WAV file to OGG/Opus using the bundled ffmpeg binary.
         Returns the path to the new .ogg file, or None on failure.
 
-        ``stereo`` keeps two channels (issue #82, core/voice_stereo.py); by
-        default every recording is downmixed to mono, as before. Decided by
-        the caller, never read off the WAV: a mono message recorded on a
-        microphone that only opens with two channels has a stereo WAV.
+        Always mono: a mono message recorded on a microphone that only opens
+        with two channels has a stereo WAV, and is downmixed here. A stereo
+        recording never comes through this encoder (core/voice_stereo.py).
         """
         ffmpeg = self._find_api_ffmpeg()
         if not ffmpeg or not os.path.isfile(ffmpeg):
@@ -780,7 +779,7 @@ class SendingMixin:
 
             result = subprocess.run(
                 [ffmpeg, "-y", "-i", wav_path,
-                 *opus_encode_args(stereo),
+                 *opus_encode_args(),
                  "-vbr", "on", "-compression_level", "10",
                  ogg_path],
                 capture_output=True,
@@ -797,43 +796,8 @@ class SendingMixin:
             logging.error("[audio] ffmpeg conversion exception: %s", exc)
         return None
 
-    def _send_recording_as_audio_file(self, remote_jid: str, wav_path: str,
-                                      quoted=None, ogg_bytes: bytes = None):
-        """Send a stereo recording as an audio message rather than a voice
-        message: WhatsApp on iPhone cannot play a stereo voice message, while
-        it plays a stereo audio message (core/voice_stereo.py). The same
-        OGG/Opus bytes, uploaded through /send-file as type "audio" — which
-        sets no isPtt — instead of /send-voice-base64. Same result contract
-        as send_audio_message().
-        """
-        ogg_path = None
-        try:
-            if ogg_bytes:
-                fd, ogg_path = tempfile.mkstemp(suffix=".ogg")
-                with os.fdopen(fd, "wb") as fh:
-                    fh.write(ogg_bytes)
-            else:
-                # The pre-encode failed; same fallback as the voice path below.
-                ogg_path = self._convert_wav_to_ogg(wav_path, stereo=True)
-            if not ogg_path:
-                err_msg = self.i18n.t("audio_convert_failed")
-                logging.error("[send_audio_message] %s", err_msg)
-                return {"ok": False, "error": err_msg, "retry": False}
-            # Named, not tmpXXXX.ogg: the name is what a recipient who saves
-            # the audio gets.
-            return self.send_media_attachment(
-                remote_jid, ogg_path, "audio", quoted=quoted,
-                custom_filename=f"{self.i18n.t('default_filename_audio')}.ogg",
-            )
-        finally:
-            if ogg_path:
-                try:
-                    os.unlink(ogg_path)
-                except OSError:
-                    pass
-
     def send_audio_message(self, remote_jid: str, wav_path: str, quoted=None,
-                           ogg_bytes: bytes = None, stereo: bool = False) -> bool:
+                           ogg_bytes: bytes = None) -> bool:
         """
         Encode a recorded WAV file to OGG Opus via FFmpeg (or pre-encoded ogg_bytes)
         and send it as a PTT voice message using /send-voice-base64.
@@ -842,12 +806,9 @@ class SendingMixin:
                    disk read and OGG encoding entirely — just base64 + POST.
                    On retry (ogg_bytes=None) falls back to reading wav_path.
 
-        A stereo recording is sent as an audio message instead — see
-        _send_recording_as_audio_file().
+        Only mono voice messages come here: a stereo recording goes out as an
+        audio message through send_media_attachment (core/voice_stereo.py).
         """
-        if sends_as_audio_file(stereo):
-            return self._send_recording_as_audio_file(remote_jid, wav_path, quoted=quoted,
-                                                      ogg_bytes=ogg_bytes)
         # Canonical destination: @lid when known, else the @c.us phone form —
         # see _resolve_jid_for_send's docstring for why @lid has to win here.
         import time as _time
@@ -861,7 +822,7 @@ class SendingMixin:
             # Fallback path: convert WAV to OGG using ffmpeg and read the bytes
             _t_fallback = _time.perf_counter()
             logging.info("[VOICE_TIMING] ogg_bytes is None — running ffmpeg AGAIN as fallback (this should NOT happen!)")
-            ogg_path = self._convert_wav_to_ogg(wav_path, stereo=stereo)
+            ogg_path = self._convert_wav_to_ogg(wav_path)
             if ogg_path and os.path.isfile(ogg_path):
                 try:
                     with open(ogg_path, "rb") as fh:

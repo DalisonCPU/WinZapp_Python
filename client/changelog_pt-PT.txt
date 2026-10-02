@@ -38,7 +38,7 @@ NOVIDADES
 
 - O Esc desmarca antes de fechar. Com mensagens marcadas, o primeiro Esc apenas desmarca todas e só o segundo fecha a conversa. Também pode ser desativado nas Definições, Interface do utilizador.
 
-- Mensagens de voz em estéreo. Com um microfone que grava em estéreo de verdade, a mensagem de voz pode manter o som dos dois lados. Marque "Gravar mensagens de voz em estéreo por predefinição" no separador Dispositivos de áudio das Definições, ou utilize o novo botão abaixo de "Gravar mensagem de voz" (Ctrl+Shift+G) para gravar apenas uma mensagem no outro modo: em estéreo quando a predefinição for mono, e em mono quando for estéreo. Como o iPhone não reproduz mensagens de voz em estéreo, a gravação em estéreo é enviada como áudio, e o WinZapp avisa isso antes, com a opção "Não mostrar novamente"; para voltar a ser avisado, use a opção correspondente no separador Interface do utilizador. Se o microfone não disponibilizar dois canais, a mensagem é gravada em mono e o WinZapp avisa.
+- Mensagens de voz em estéreo. Com um microfone que grava em estéreo de verdade, a mensagem de voz pode manter o som dos dois lados. Marque "Gravar mensagens de voz em estéreo por predefinição" no separador Dispositivos de áudio das Definições, ou utilize o novo botão abaixo de "Gravar mensagem de voz" (Ctrl+Shift+G) para gravar apenas uma mensagem no outro modo: em estéreo quando a predefinição for mono, e em mono quando for estéreo. A gravação em estéreo é enviada como mensagem de áudio, e não como mensagem de voz, e por isso também é reproduzida no iPhone. Se o microfone não disponibilizar dois canais, a mensagem é gravada em mono e o WinZapp avisa.
 
 - Ressincronizar apenas a conversa aberta com Shift+F5, também no menu Sincronização. Ao contrário do F5, que apaga e descarrega de novo todas as conversas, o Shift+F5 volta a obter do WhatsApp as mensagens da conversa aberta, coloca no sítio certo as que faltavam e remove as que já não existem lá, sem mexer no histórico mais antigo. O F5 e o Shift+F5 passam a pedir confirmação, com Não como predefinição e a opção "Não mostrar novamente"; para voltar a ser perguntado, use as opções correspondentes no separador Interface do utilizador das Definições. Quando a conversa já está atualizada, ou quando o WhatsApp não tem mensagens dela, o Shift+F5 di-lo, em vez de dizer que não foi possível ressincronizar.
 
@@ -71,6 +71,8 @@ MELHORIAS
 - Quando uma chamada não pode ser iniciada porque a versão do WhatsApp Web em uso não suporta chamadas, o WinZapp passa a dizê-lo e o que tentar (reiniciar o WinZapp ou escolher "Forçar reinstalação da WPPConnect" no menu Ajuda), em vez de ler um código de erro.
 
 CORREÇÕES
+
+- Reencaminhar mensagens já não falha nas versões recentes do WhatsApp Web, em que todo o reencaminhamento era recusado com o erro “forwardMessages function is not available”.
 
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de ecrã já não começa a dizer “Enviar” antes de ser interrompido. O WinZapp evita agora a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.
 
@@ -124,7 +126,7 @@ CORREÇÕES
 
 - Nas conversas arquivadas, Alt+M não levava para a lista de mensagens da conversa aberta, como faz nas conversas principais. Agora funciona a partir de qualquer ponto do painel.
 
-- Uma conversa aberta passa a aparecer no ecrã apenas enquanto está na lista de onde foi aberta: as conversas principais (Alt+1), as conversas arquivadas (Alt+4) ou as conversas trancadas. Ao mudar para outra delas, a conversa desaparece do ecrã, e ao voltar reaparece com a lista de mensagens exatamente onde estava a ler. Isto também corrige uma conversa arquivada que continuava no ecrã nas conversas principais. Uma conversa aberta pelas conversas principais pertence-lhes, mesmo uma arquivada encontrada no campo de pesquisa, e abrir uma conversa noutra lista já não faz perder a que tinha aberta ali: ela volta quando regressa.
+- Uma conversa aberta numa lista passa a ficar oculta quando muda para outra: as conversas principais (Alt+1), as conversas arquivadas (Alt+4) ou as conversas trancadas. Mudar só altera a lista e deixa-o nela; não mostra nem recarrega a conversa aberta. A conversa continua aberta, e pode trazê-la de volta com Alt+M, Alt+2 ou Alt+3, ou abrindo-a de novo; aparece então na lista de onde foi aberta. Isto também corrige uma conversa arquivada que continuava no ecrã nas conversas principais. Uma conversa aberta pelas conversas principais pertence-lhes, mesmo uma arquivada encontrada no campo de pesquisa.
 
 - O mesmo vale para qualquer outro painel, como Estado ou Chamadas: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. As mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está no ecrã.
 

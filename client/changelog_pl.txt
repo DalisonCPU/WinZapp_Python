@@ -38,7 +38,7 @@ NOWOŚCI
 
 - Esc odznacza przed zamknięciem. Gdy wiadomości są zaznaczone, pierwszy Esc tylko odznacza wszystkie, a dopiero drugi zamyka czat. To także można wyłączyć w Ustawieniach, Interfejs użytkownika.
 
-- Wiadomości głosowe w stereo. Z mikrofonem, który naprawdę nagrywa w stereo, wiadomość głosowa może zachować dźwięk z obu stron. Zaznacz „Domyślnie nagrywaj wiadomości głosowe w stereo” na karcie Urządzenia audio w Ustawieniach albo użyj nowego przycisku pod „Nagraj wiadomość głosową” (Ctrl+Shift+G), aby nagrać tylko jedną wiadomość w drugim trybie: w stereo, gdy domyślny jest mono, i w mono, gdy domyślny jest stereo. Ponieważ iPhone nie odtwarza wiadomości głosowych w stereo, nagranie w stereo jest wysyłane jako audio, a WinZapp najpierw o tym informuje, z opcją „Nie pokazuj ponownie”; aby ostrzeżenie wróciło, użyj odpowiedniej opcji na karcie Interfejs użytkownika. Jeśli mikrofon nie udostępnia dwóch kanałów, wiadomość zostaje nagrana w mono, a WinZapp o tym informuje.
+- Wiadomości głosowe w stereo. Z mikrofonem, który naprawdę nagrywa w stereo, wiadomość głosowa może zachować dźwięk z obu stron. Zaznacz „Domyślnie nagrywaj wiadomości głosowe w stereo” na karcie Urządzenia audio w Ustawieniach albo użyj nowego przycisku pod „Nagraj wiadomość głosową” (Ctrl+Shift+G), aby nagrać tylko jedną wiadomość w drugim trybie: w stereo, gdy domyślny jest mono, i w mono, gdy domyślny jest stereo. Nagranie w stereo jest wysyłane jako wiadomość audio, a nie wiadomość głosowa, dlatego odtworzy się także na iPhonie. Jeśli mikrofon nie udostępnia dwóch kanałów, wiadomość zostaje nagrana w mono, a WinZapp o tym informuje.
 
 - Ponowna synchronizacja tylko otwartego czatu za pomocą Shift+F5, również w menu Synchronizacja. W przeciwieństwie do F5, który usuwa i ponownie pobiera wszystkie czaty, Shift+F5 ponownie pobiera z WhatsApp wiadomości otwartego czatu, wstawia brakujące we właściwe miejsce i usuwa te, których już tam nie ma, bez naruszania starszej historii. F5 i Shift+F5 pytają teraz o potwierdzenie, z Nie jako domyślną odpowiedzią i opcją „Nie pokazuj ponownie”; aby pytanie wróciło, użyj odpowiednich opcji na karcie Interfejs użytkownika w Ustawieniach. Gdy czat jest już aktualny albo WhatsApp nie ma z niego wiadomości, Shift+F5 mówi o tym, zamiast twierdzić, że ponowna synchronizacja się nie udała.
 
@@ -71,6 +71,8 @@ ULEPSZENIA
 - Gdy nie można rozpocząć połączenia, bo używana wersja WhatsApp Web nie obsługuje połączeń, WinZapp teraz o tym informuje i podpowiada, co zrobić (uruchomić WinZappa ponownie albo wybrać "Wymuś ponowną instalację WPPConnect" w menu Pomoc), zamiast odczytywać kod błędu.
 
 POPRAWKI
+
+- Przekazywanie wiadomości nie kończy się już błędem w najnowszych wersjach WhatsApp Web, w których każde przekazanie było odrzucane z komunikatem “forwardMessages function is not available”.
 
 - Po rozpoczęciu nagrywania wiadomości głosowej przy wyciszonych komunikatach czytnik ekranu nie zaczyna już wypowiadać „Wyślij”, zanim zostanie przerwany. WinZapp nie wykonuje teraz automatycznego przeniesienia fokusu, które powodowało ten urwany komunikat, a skróty Ctrl+R, Ctrl+Shift+P i Ctrl+Shift+D nadal działają.
 
@@ -124,7 +126,7 @@ POPRAWKI
 
 - W zarchiwizowanych czatach Alt+M nie przenosił do listy wiadomości otwartego czatu, tak jak w głównych czatach. Teraz działa z dowolnego miejsca w panelu.
 
-- Otwarty czat jest teraz widoczny na ekranie tylko wtedy, gdy jesteś na liście, z której został otwarty: czaty główne (Alt+1), zarchiwizowane czaty (Alt+4) lub zablokowane czaty. Przejście na inną z nich ukrywa czat, a po powrocie pojawia się on ponownie z listą wiadomości dokładnie w miejscu, w którym czytałeś. Naprawia to także zarchiwizowany czat, który pozostawał na ekranie w czatach głównych. Czat otwarty z czatów głównych należy do nich, nawet zarchiwizowany znaleziony w polu wyszukiwania, a otwarcie czatu na innej liście nie powoduje już utraty czatu otwartego tam wcześniej: wraca, gdy wrócisz.
+- Czat otwarty na jednej liście jest teraz ukrywany po przejściu na inną: czaty główne (Alt+1), zarchiwizowane czaty (Alt+4) lub zablokowane czaty. Przejście zmienia tylko listę i ustawia cię na niej; nie pokazuje ani nie wczytuje ponownie otwartego czatu. Czat pozostaje otwarty, a przywrócisz go skrótem Alt+W, Alt+2 lub Alt+3 albo otwierając go ponownie; pojawi się wtedy na liście, z której został otwarty. Naprawia to także zarchiwizowany czat, który pozostawał na ekranie w czatach głównych. Czat otwarty z czatów głównych należy do nich, nawet zarchiwizowany znaleziony w polu wyszukiwania.
 
 - To samo dotyczy każdego innego panelu, takiego jak Status czy Połączenia: gdy za nim zostaje otwarty czat, jego nowe wiadomości są zapowiadane jak wiadomości z innych czatów i nie są oznaczane jako przeczytane. Wiadomości z zarchiwizowanych czatów są zapowiadane tylko wtedy, gdy lista zarchiwizowanych jest na ekranie.
 
