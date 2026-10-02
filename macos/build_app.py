@@ -15,7 +15,11 @@ Steps
      STAMP; the app installs it into Application Support at launch
      (winzapp_mac/paths_mac.py).
   6. Info.plist keys (mic/camera prompts), ad-hoc signature.
-  7. --zip: macos/dist/WinZapp-macOS-<arch>.zip for a release.
+  7. --zip: macos/dist/WinZapp-macOS-<arch>.zip for a release, and next to it
+     WinZapp-macOS-provenance-<arch>.json when HEAD is the commit our
+     repository's release tag points at (winzapp_mac/provenance.py; the
+     tag and commit are also written to Info.plist as WinZappReleaseTag and
+     WinZappSourceCommit).
      --install: the app into /Applications (only while WinZapp is not running).
 
 Requires Homebrew's portaudio (brew install portaudio) for PyAudio.
@@ -24,6 +28,7 @@ Every step fails loudly; nothing is installed unless all of them passed.
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import platform
@@ -59,6 +64,57 @@ WINDOWS_ONLY = re.compile(r"^(pywin32|pywin32-ctypes|comtypes|Windows-Toasts|win
 MAC_EXTRA = ["pyobjc-framework-Cocoa", "pyobjc-framework-ApplicationServices",
              "pyobjc-framework-UserNotifications", "pyobjc-framework-Intents"]
 BUNDLE_ID = os.environ.get("WINZAPP_BUNDLE_ID", "com.winzapp.macos")
+
+
+def load_provenance():
+    """winzapp_mac/provenance.py by path: it is pure standard library, and
+    importing the winzapp_mac package would pull in PyObjC."""
+    spec = importlib.util.spec_from_file_location(
+        "winzapp_provenance", os.path.join(HERE, "winzapp_mac", "provenance.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def release_source():
+    """(tag, commit) tying this build to our repository, or None for a
+    development build. A tag that does not hold stops the build; a release
+    build (one that names a releases repository) without a tag too, because
+    no updater would accept it."""
+    prov = load_provenance()
+
+    def git(*args):
+        return subprocess.run(["git", "-C", ROOT, *args], check=True, capture_output=True,
+                              text=True).stdout.strip()
+    try:
+        source = prov.resolve_build_source(git, prov.fetch_official,
+                                           os.environ.get("WINZAPP_RELEASE_TAG", ""))
+    except prov.ProvenanceError as exc:
+        sys.exit(f"Commit provenance: {exc}")
+    if source is None and os.environ.get("WINZAPP_MAC_RELEASES_REPO"):
+        sys.exit("Commit provenance: a release build must be built from a release tag of "
+                 f"{prov.OFFICIAL_REPO} (check it out, or set WINZAPP_RELEASE_TAG).")
+    if source is None:
+        print("   (HEAD is not a release tag: no commit provenance; this build will not self-update)")
+    return source
+
+
+def write_provenance(source, zip_path):
+    """WinZapp-macOS-provenance-<arch>.json next to the zip; none (and no
+    stale one) without a source."""
+    prov = load_provenance()
+    out = os.path.join(DIST, prov.provenance_name(ARCH))
+    if os.path.exists(out):
+        os.remove(out)
+    if source is None:
+        return None
+    tag, commit = source
+    with open(zip_path, "rb") as fh:
+        digest = hashlib.sha256(fh.read()).hexdigest()
+    with open(out, "wb") as fh:
+        fh.write(prov.build_provenance(tag, commit, {os.path.basename(zip_path): digest}))
+    print(f"   provenance {os.path.relpath(out, ROOT)} ({tag} -> {commit[:12]})")
+    return out
 
 
 def step(msg):
@@ -368,7 +424,7 @@ def bundle_runtime(node_dir):
 
 
 # 6 ------------------------------------------------------------------------
-def finish_bundle():
+def finish_bundle(source=None):
     step("Info.plist + signature")
     plist_path = os.path.join(APP, "Contents", "Info.plist")
     with open(plist_path, "rb") as fh:
@@ -392,6 +448,13 @@ def finish_bundle():
     # say where their updates are published (winzapp_mac/updater_mac.py).
     if os.environ.get("WINZAPP_MAC_RELEASES_REPO"):
         plist["WinZappMacReleasesRepo"] = os.environ["WINZAPP_MAC_RELEASES_REPO"]
+    # The official tag and commit this app is built from: the tag is the
+    # running version for the updater's downgrade check (client/version.py
+    # says 2.0.0.0 in every tagged commit), the commit is refused as an update.
+    plist.pop("WinZappSourceCommit", None)
+    plist.pop("WinZappReleaseTag", None)
+    if source:
+        plist["WinZappReleaseTag"], plist["WinZappSourceCommit"] = source
     with open(plist_path, "wb") as fh:
         plistlib.dump(plist, fh)
     identity = os.environ.get("WINZAPP_SIGN_IDENTITY")
@@ -559,6 +622,8 @@ def main():
         install()
         print("\nDone.")
         return
+    # First, before minutes of work: a tag that does not hold stops here.
+    source = release_source() if a.zip or os.environ.get("WINZAPP_MAC_RELEASES_REPO") else None
     if not a.no_deps:
         python_deps()
     node_dir = node_runtime()
@@ -567,10 +632,10 @@ def main():
         build_api(node_dir)
     pyinstaller()
     bundle_runtime(node_dir)
-    finish_bundle()
+    finish_bundle(source)
     notarize()
     if a.zip:
-        make_zip()
+        write_provenance(source, make_zip())
     if a.install:
         install()
     print("\nDone.")
