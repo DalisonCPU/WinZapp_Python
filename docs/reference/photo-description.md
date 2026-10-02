@@ -406,6 +406,15 @@ Full GitHub CI and test artifact generation are still pending at this point.
 Only the fork's feature/photo-description branch is authorized for push; its
 main branch is not being updated, avoiding an unintended alpha publication.
 
+The first authorized full CI run, `37073339227` at merge commit `69dd9074`,
+passed 11,621 tests and skipped 87, with two failures in the older native
+settings-tab tests (386.17 seconds). Their total-page assertions still expected
+15/14 pages without the new photo page; the locked-tab index assertions passed
+and all seven photo native tests passed. The tests now explicitly check the
+photo page's appended index and translated title alongside totals of 16/15.
+No production behavior or window safety gate was changed. These native cases
+are verified only by the subsequent CI run, never by a local GUI opt-in.
+
 Window-free tests use generated photos, temporary encrypted credentials, fake
 HTTP responses and unbound GUI methods against plain stubs. Native control
 tests are marked `wxgui`, for CI only. **Never** run the full suite or opt into
