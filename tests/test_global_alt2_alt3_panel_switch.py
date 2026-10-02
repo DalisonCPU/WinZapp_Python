@@ -48,9 +48,8 @@ class _FakeConversationsPanel(_FakeWidget):
 
     siblings = ()
 
-    def show_chat_panel(self, shown, *, focus=True):
+    def reveal_open_conversation(self):
         # Real behaviour: test_panel_switch_wiring.py.
-        assert shown == self._conversation_origin and focus is False
         for other in self.siblings:
             other.Hide()
         self.Show()

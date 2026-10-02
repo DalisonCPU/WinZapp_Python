@@ -124,7 +124,7 @@ CORECTĂRI
 
 - În conversațiile arhivate, Alt+M nu ducea la lista de mesaje a conversației deschise, așa cum face în conversațiile principale. Acum funcționează de oriunde din panou.
 
-- O conversație deschisă apare acum pe ecran doar cât timp te afli în lista din care a fost deschisă: conversațiile principale (Alt+1), conversațiile arhivate (Alt+4) sau conversațiile blocate. La trecerea la alta dintre ele, conversația dispare de pe ecran, iar la întoarcere reapare cu lista de mesaje exact unde citeai. Aceasta corectează și o conversație arhivată care rămânea pe ecran în conversațiile principale. O conversație deschisă din cele principale le aparține, chiar și una arhivată găsită cu câmpul de căutare, iar deschiderea unei conversații în altă listă nu mai duce la pierderea celei deschise acolo: revine când te întorci.
+- O conversație deschisă într-o listă este acum ascunsă când treci la alta: conversațiile principale (Alt+1), conversațiile arhivate (Alt+4) sau conversațiile blocate. Trecerea schimbă doar lista și te lasă în ea; nu afișează și nu reîncarcă conversația deschisă. Conversația rămâne deschisă, iar o aduci înapoi cu Alt+M, Alt+2 sau Alt+3, ori deschizând-o din nou; apare atunci în lista din care a fost deschisă. Aceasta corectează și o conversație arhivată care rămânea pe ecran în conversațiile principale. O conversație deschisă din cele principale le aparține, chiar și una arhivată găsită cu câmpul de căutare.
 
 - Același lucru este valabil pentru orice alt panou, precum Stare sau Apeluri: cu o conversație lăsată deschisă în spatele lui, mesajele ei noi sunt anunțate ca ale oricărei alte conversații și nu sunt marcate ca citite. Mesajele conversațiilor arhivate sunt anunțate doar cât timp lista celor arhivate este pe ecran.
 

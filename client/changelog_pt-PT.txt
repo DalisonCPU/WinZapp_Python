@@ -124,7 +124,7 @@ CORREÇÕES
 
 - Nas conversas arquivadas, Alt+M não levava para a lista de mensagens da conversa aberta, como faz nas conversas principais. Agora funciona a partir de qualquer ponto do painel.
 
-- Uma conversa aberta passa a aparecer no ecrã apenas enquanto está na lista de onde foi aberta: as conversas principais (Alt+1), as conversas arquivadas (Alt+4) ou as conversas trancadas. Ao mudar para outra delas, a conversa desaparece do ecrã, e ao voltar reaparece com a lista de mensagens exatamente onde estava a ler. Isto também corrige uma conversa arquivada que continuava no ecrã nas conversas principais. Uma conversa aberta pelas conversas principais pertence-lhes, mesmo uma arquivada encontrada no campo de pesquisa, e abrir uma conversa noutra lista já não faz perder a que tinha aberta ali: ela volta quando regressa.
+- Uma conversa aberta numa lista passa a ficar oculta quando muda para outra: as conversas principais (Alt+1), as conversas arquivadas (Alt+4) ou as conversas trancadas. Mudar só altera a lista e deixa-o nela; não mostra nem recarrega a conversa aberta. A conversa continua aberta, e traz de volta com Alt+M, Alt+2 ou Alt+3, ou abrindo-a de novo; aparece então na lista de onde foi aberta. Isto também corrige uma conversa arquivada que continuava no ecrã nas conversas principais. Uma conversa aberta pelas conversas principais pertence-lhes, mesmo uma arquivada encontrada no campo de pesquisa.
 
 - O mesmo vale para qualquer outro painel, como Estado ou Chamadas: com uma conversa aberta atrás dele, as mensagens novas dela passam a ser anunciadas como de outra conversa, sem serem marcadas como lidas. As mensagens de conversas arquivadas só são anunciadas quando a lista de arquivadas está no ecrã.
 

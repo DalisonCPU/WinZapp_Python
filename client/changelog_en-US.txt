@@ -124,7 +124,7 @@ FIXES
 
 - In archived chats, Alt+M did not move to the messages list of the open chat, as it does in the main chats. It now works from anywhere in the panel.
 
-- An open chat is now on screen only while you are in the list it was opened from: the main chats (Alt+1), the archived chats (Alt+4) or the locked chats. Switching to another of those hides it, and coming back shows it again with the message list exactly where you were reading. This also fixes an archived chat staying on screen in the main chats. A chat opened from the main chats belongs to them, even an archived one found with the search field, and opening a chat in another list no longer loses the one you had open there: it is back when you return.
+- A chat you have open in one list is now hidden when you switch to another: the main chats (Alt+1), the archived chats (Alt+4) or the locked chats. Switching only changes the list and puts you on it; it does not show or reload the open chat. The chat stays open, and you bring it back with Alt+M, Alt+2 or Alt+3, or by opening it again; it then appears in the list it was opened from. This also fixes an archived chat staying on screen in the main chats. A chat opened from the main chats belongs to them, even an archived one found with the search field.
 
 - The same goes for any other panel, such as Status or Calls: with a chat left open behind it, its new messages are announced like those of any other chat and are not marked as read. Messages from archived chats are only announced while the archived list is on screen.
 

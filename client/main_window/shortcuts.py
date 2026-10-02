@@ -98,14 +98,10 @@ class ShortcutsMixin:
         switch to the right panel" when called from anywhere but the
         conversations/archived panels.
         """
-        cp = self.conversations_panel
-        if cp.IsShown() and cp.conversation_panel.IsShown():
-            return
-        # Explicit navigation to the open conversation: show the panel it
-        # belongs to, laid out the way that panel shows it. The caller puts
-        # focus (on the messages), so none is moved here.
-        cp.show_chat_panel(
-            getattr(cp, "_conversation_origin", None) or MAIN, focus=False)
+        # A plain panel switch leaves the open conversation hidden, so this
+        # explicit ask is what shows it, in the panel it belongs to. The
+        # caller puts focus (on the messages), so none is moved here.
+        self.conversations_panel.reveal_open_conversation()
 
     def _on_global_alt2(self, event):
         """Alt+2: jump to last message regardless of which panel has focus."""

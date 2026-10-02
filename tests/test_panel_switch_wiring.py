@@ -1,19 +1,21 @@
 """Switching to a chat panel, through the real methods of every entry point.
 
-#339 made an open conversation visible only in the panel it was opened from,
-but tested it against stubs that re-implemented the callers. Here Alt+1, Alt+4,
-the locked-chats panel, the navigation list and Alt+2/3/M run the real
-MainWindow / NavigationPanel / ConversationsPanel methods against widgets that
-only record Show/Hide/SetFocus, so the call order is the shipped one.
+A plain panel switch (Alt+1, Alt+4, the navigation list, the locked-chats
+panel) must never make an open conversation visible and never load anything:
+showing it again on every Alt+1 <-> Alt+4 was a perceptible delay (#339 showed
+it again on return, #346 only made that cheaper). The conversation stays open
+but hidden; only an explicit ask (Alt+M, Alt+2, Alt+3, the composer's letter)
+or opening a chat brings it back, in the panel it belongs to.
 
-The rules pinned, for origin {main, archived, locked, none} x target panel:
-  * the open conversation's detail pane is shown only in its own panel;
-  * keyboard focus goes to that panel's chat list, never to a message list
-    or the composer (the regression in #339: Alt+4 with an archived
-    conversation open landed in its messages);
-  * hiding and showing never rebuilds the message list or asks the network
-    for anything; only a conversation displaced by another one is reopened,
-    right after the switch, without the requests its first open made.
+The real MainWindow / NavigationPanel / ConversationsPanel methods run against
+widgets that only record Show/Hide/SetFocus, so the call order is the shipped
+one. Rules pinned, for origin {main, archived, locked, none} x target panel:
+  * after every plain switch the detail pane is hidden, the conversation is
+    still open, and focus is on that panel's chat list (never a message list);
+  * a switch costs Show/Hide + focus: no populate, no request, no thread, no
+    CallAfter, however many times it repeats;
+  * an explicit reveal shows the conversation in the panel it belongs to,
+    whichever panel was on screen, and a hidden conversation is not "in view".
 
 No window is created.
 """
@@ -23,7 +25,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from core.conversation_view import ARCHIVED, LOCKED, MAIN, panel_layout
+from core.conversation_view import (
+    ARCHIVED, LOCKED, MAIN, conversation_in_view, panel_layout,
+)
 from main import MainWindow
 from ui.conversation_panel import conversation_navigation as nav_module
 from ui.conversation_panel.conversation_navigation import ConversationNavigationMixin
@@ -103,6 +107,8 @@ class _MW:
     show_locked_chats_panel = MainWindow.show_locked_chats_panel
     _ensure_conversations_panel_visible = MainWindow._ensure_conversations_panel_visible
     _on_global_alt2 = MainWindow._on_global_alt2
+    _on_global_alt3 = MainWindow._on_global_alt3
+    _on_global_focus_messages = MainWindow._on_global_focus_messages
 
     def __init__(self, log):
         self.log = log
@@ -178,12 +184,9 @@ class _Panel(ConversationPanelVisibilityMixin):
         self.log = log
         self.conversation = None
         self._conversation_origin = None
-        self._shown_panel = None
-        self._parked_by_origin = {}
         self._group_participants_cache = []
         self._last_list_focus_jid = ""
         self._last_open_jid = ""
-        self._last_msg = 4
         self.chats_list = [{"remoteJid": A}]
         self._sorted_messages = []
         self._outgoing_virtual_messages = {}
@@ -196,7 +199,6 @@ class _Panel(ConversationPanelVisibilityMixin):
         self.search_field = MagicMock()
         self.search_field.GetValue.return_value = ""
         self.counts = {"populate": 0, "backfill": 0}
-        self.threads = []
         self.panel_shown = True
         self.conversation_panel = _Widget("detail", log)
         self.conversations_label = _Widget("own_label", log, True)
@@ -227,8 +229,23 @@ class _Panel(ConversationPanelVisibilityMixin):
     def _backfill_reactions_for_open_conversation(self):
         self.counts["backfill"] += 1
 
+    # What Alt+2 / Alt+3 / Alt+M / the composer letter do once the pane is
+    # shown: put focus in the messages (or the composer).
+    def _no_conversation_open_announced(self):
+        return self.conversation is None
+
+    def _on_accel_jump_last(self, event):
+        if not self._no_conversation_open_announced():
+            self.messages_list.SetFocus()
+
+    _on_accel_jump_unread = _on_accel_jump_last
+    _on_accel_focus_list = _on_accel_jump_last
+
+    def _on_accel_focus_field(self, event):
+        self.message_field.SetFocus()
+
     def _focused_msg_id(self):
-        return "msg-%d" % self._last_msg
+        return "msg-4"
 
     def _is_separator(self, msg):
         return False
@@ -258,15 +275,16 @@ def world(monkeypatch):
             started.append(getattr(self.target, "__name__", str(self.target)))
 
     monkeypatch.setattr(nav_module.threading, "Thread", _Thread)
-    import ui.conversation_panel.panel_visibility as pv
-    monkeypatch.setattr(pv.wx, "CallAfter", lambda fn, *a: queued.append((fn, a)))
     monkeypatch.setattr(nav_module.wx, "CallAfter", lambda fn, *a: queued.append((fn, a)))
+    import ui.conversation_panel.panel_visibility as pv
+    if hasattr(pv, "wx"):  # the switch itself must not defer anything
+        monkeypatch.setattr(pv.wx, "CallAfter", lambda fn, *a: queued.append((fn, a)))
     mw = _MW(log)
     mw.started, mw.queued = started, queued
     return mw
 
 
-def _open(mw, jid, origin, *, hidden=True):
+def _open(mw, jid, origin):
     """Open a chat the way its panel's list does, then settle."""
     panel = mw.conversations_panel
     if origin in (ARCHIVED, LOCKED):
@@ -274,13 +292,6 @@ def _open(mw, jid, origin, *, hidden=True):
         panel.conversations_label.Hide()
     panel.navigate_to_conversation(mw.chats[jid], origin=origin)
     mw.queued.clear()
-
-
-def _flush(mw):
-    """Run what the switch deferred (the reopen), like the event loop."""
-    while mw.queued:
-        fn, args = mw.queued.pop(0)
-        fn(*args)
 
 
 def _enter(mw, target):
@@ -301,50 +312,60 @@ def _focus_calls(mw):
     return [e[0] for e in mw.log if e[1] == "SetFocus"]
 
 
+def _work(mw):
+    """Everything a switch must not cost: rebuilds, requests, threads, queued
+    callbacks, database reads."""
+    return (dict(mw.conversations_panel.counts), list(mw.requests),
+            list(mw.started), len(mw.queued), mw.db.get_messages.call_count)
+
+
 CHAT_LIST_FOCUS = {MAIN: "own_list", ARCHIVED: "archived_list_panel",
                    LOCKED: "locked_list_panel"}
 ORIGINS = [MAIN, ARCHIVED, LOCKED, None]
 TARGETS = [MAIN, ARCHIVED, LOCKED]
+ENTRIES = [(MAIN, "alt1"), (MAIN, "nav"), (ARCHIVED, "alt4"),
+           (ARCHIVED, "nav"), (LOCKED, "locked")]
 
 
 class TestPanelLayoutRule:
     @pytest.mark.parametrize("origin,target", list(itertools.product(ORIGINS, TARGETS)))
-    def test_detail_only_in_own_panel(self, origin, target):
+    def test_a_plain_switch_never_shows_the_detail(self, origin, target):
         layout = panel_layout(origin, target, True)
+        assert layout["detail"] is False
+        assert layout["panel"] == (target == MAIN)
+        assert layout["own_list"] is True
+        assert layout["list_panel"] == (target != MAIN)
+
+    @pytest.mark.parametrize("origin,target", list(itertools.product(ORIGINS, TARGETS)))
+    def test_a_reveal_shows_it_only_in_its_own_panel(self, origin, target):
+        layout = panel_layout(origin, target, True, reveal=True)
         assert layout["detail"] == (origin == target)
         assert layout["panel"] == (target == MAIN or origin == target)
         assert layout["list_panel"] == (target != MAIN)
-        assert not panel_layout(origin, target, False)["detail"]
-        # the main list is hidden only when a conversation sits under another list
+        # the main list is hidden only when the conversation sits under another list
         assert layout["own_list"] == (target == MAIN or origin != target)
-
-
-ENTRIES = [(MAIN, "alt1"), (MAIN, "nav"), (ARCHIVED, "alt4"),
-           (ARCHIVED, "nav"), (LOCKED, "locked")]
+        assert not panel_layout(origin, target, False, reveal=True)["detail"]
 
 
 class TestEveryEntryPointByOriginAndTarget:
     @pytest.mark.parametrize("origin", ORIGINS)
     @pytest.mark.parametrize("target,label", ENTRIES)
-    def test_with_an_open_conversation(self, world, origin, target, label):
+    def test_with_an_open_conversation_it_stays_hidden(self, world, origin, target, label):
         panel = world.conversations_panel
         _open(world, A, origin or MAIN)
         panel._conversation_origin = origin   # None: opened some other way
         world.log.clear()
 
         dict(_enter(world, target))[label]()
-        _flush(world)
 
-        visible = origin == target
-        assert panel.conversation_panel.shown == visible, (label, origin, target)
+        assert not panel.conversation_panel.shown, (label, origin, target)
         assert panel.conversation is not None  # hidden, never closed
+        assert not conversation_in_view(panel)
         if target == MAIN:
             assert panel.panel_shown and panel.conversations_list.shown
             assert not world.archived_conversations_panel.shown
-        elif visible:
-            assert panel.panel_shown and not panel.conversations_list.shown
         else:
-            assert not panel.panel_shown, "another panel's conversation stayed on screen"
+            assert not panel.panel_shown, "a conversation pane stayed on screen"
         list_panel = {ARCHIVED: world.archived_conversations_panel,
                       LOCKED: world.locked_conversations_panel}.get(target)
         if list_panel is not None:
@@ -367,169 +388,159 @@ class TestEveryEntryPointByOriginAndTarget:
         assert _focus_calls(world)[-1] == CHAT_LIST_FOCUS[target]
         assert not world.queued
 
-    def test_alt_2_brings_the_conversation_forward_in_its_own_panel_without_moving_focus(self, world):
-        for origin in (MAIN, ARCHIVED, LOCKED):
+    def test_returning_to_the_origin_panel_does_not_show_it_again(self, world):
+        # The old rule ("shown again on return") deliberately reversed.
+        for origin, away, back in ((MAIN, "on_alt_4", "on_alt_1"),
+                                   (ARCHIVED, "on_alt_1", "on_alt_4")):
             fresh = _MW([])
             fresh.started, fresh.queued = world.started, world.queued
             _open(fresh, A, origin)
-            fresh.status_panel.shown = True
-            fresh.conversations_panel.Hide()
-            fresh.conversations_panel.conversation_panel.Hide()
-            fresh.conversations_panel._on_accel_jump_last = lambda e: None
-            fresh._on_global_alt2(None)
-            panel = fresh.conversations_panel
-            assert panel.panel_shown and panel.conversation_panel.shown
-            assert not fresh.status_panel.shown
-            assert _focus_calls(fresh) == []  # the caller moves focus to the messages
-
-    def test_alt_4_with_an_archived_conversation_focuses_the_archived_list(self, world):
-        _open(world, A, ARCHIVED)
-        world.log.clear()
-        world.on_alt_4(None)
-        panel = world.conversations_panel
-        assert world.archived_conversations_panel.shown
-        assert panel.conversation_panel.shown  # shown again, beneath the list
-        assert _focus_calls(world) == ["archived_list_panel"]
-
-    def test_alt_4_with_a_main_conversation_hides_it(self, world):
-        _open(world, A, MAIN)
-        world.on_alt_4(None)
-        panel = world.conversations_panel
-        assert not panel.panel_shown and not panel.conversation_panel.shown
-        assert world.archived_conversations_panel.shown
-
-    def test_alt_1_with_an_archived_conversation_hides_it(self, world):
-        _open(world, A, ARCHIVED)
-        world.on_alt_1(None)
-        panel = world.conversations_panel
-        assert panel.panel_shown and panel.conversations_list.shown
-        assert not panel.conversation_panel.shown
-        assert _focus_calls(world)[-1] == "own_list"
+            getattr(fresh, away)(None)
+            getattr(fresh, back)(None)
+            assert not fresh.conversations_panel.conversation_panel.shown
+            assert fresh.conversations_panel.conversation is not None
 
 
-class TestHideShowNeverRebuilds:
-    def test_a_hide_show_cycle_costs_no_rebuild_and_no_request(self, world):
-        _open(world, A, MAIN)
-        panel = world.conversations_panel
-        before = (dict(panel.counts), list(world.requests), list(world.started),
-                  world.db.get_messages.call_count)
-        for _ in range(3):
+class TestASwitchCostsNothingButShowHide:
+    @pytest.mark.parametrize("origin", [MAIN, ARCHIVED, LOCKED])
+    def test_repeated_cycles_cost_no_populate_no_request_no_thread(self, world, origin):
+        _open(world, G, origin)
+        before = _work(world)
+        for _ in range(4):
             world.on_alt_4(None)
             world.on_alt_1(None)
             world.show_locked_chats_panel()
             world.on_alt_1(None)
-        _flush(world)
-        assert (dict(panel.counts), list(world.requests), list(world.started),
-                world.db.get_messages.call_count) == before
-        assert panel.conversation_panel.shown  # back in its own panel
-
-    def test_message_list_state_is_untouched_by_a_cycle(self, world):
-        _open(world, A, ARCHIVED)
-        panel = world.conversations_panel
-        world.log.clear()
-        world.on_alt_1(None)
-        world.on_alt_4(None)
-        assert not any(e[0] == "messages_list" for e in world.log)
-
-
-class TestReopeningADisplacedConversation:
-    def _displace(self, world):
-        """Main conversation A is displaced by archived B in the shared widget."""
-        _open(world, A, MAIN)
-        world.on_alt_4(None)
-        world.archived_conversations_panel.Hide()
-        world.conversations_panel.Show()
-        _open(world, B, ARCHIVED)
-
-    def test_open_costs_one_populate_and_each_request_once(self, world):
-        _open(world, G, MAIN)
-        panel = world.conversations_panel
-        assert panel.counts == {"populate": 1, "backfill": 1}
-        assert world.requests == ["note_opened", "subscribe_presence"]
-        assert sorted(world.started) == ["<lambda>", "<lambda>"]  # profile + participants
-        assert world.db.get_messages.call_count == 1
-
-    def test_switch_returns_at_once_and_reopens_without_refetching(self, world):
-        self._displace(world)
-        panel = world.conversations_panel
-        panel.counts.update(populate=0, backfill=0)
-        world.requests.clear()
-        world.started.clear()
-        world.db.get_messages.reset_mock()
-        world.on_alt_1(None)
-        # nothing rebuilt yet: the list is on screen and focused first
-        assert panel.counts["populate"] == 0 and world.queued
-        assert _focus_calls(world)[-1] == "own_list"
-        _flush(world)
-        assert panel.conversation["remoteJid"] == A
-        assert panel.counts == {"populate": 1, "backfill": 0}
-        assert world.requests == []          # no presence, group-info, reactions
-        assert world.started == []           # no profile / participants threads
-        assert world.db.get_messages.call_count == 1
-        assert panel.conversation_panel.shown and panel.panel_shown
-        assert _focus_calls(world)[-1] == "own_list"  # reopen never took focus
-
-    def test_a_reopen_restores_what_the_first_open_fetched(self, world):
-        _open(world, G, MAIN)
-        panel = world.conversations_panel
-        panel._group_participants_cache = [("Ann", "ann@s.whatsapp.net")]
-        panel._conv_data_btn.note = "Group, 5 participants"
-        world.on_alt_4(None)
-        world.archived_conversations_panel.Hide()
-        world.conversations_panel.Show()
-        _open(world, B, ARCHIVED)
-        panel._conv_data_btn.note = "other"
-        world.on_alt_1(None)
-        _flush(world)
-        assert panel._group_participants_cache == [("Ann", "ann@s.whatsapp.net")]
-        assert panel._conv_data_btn.note == "Group, 5 participants"
-
-    def test_a_deferred_reopen_is_dropped_when_the_user_moved_on(self, world):
-        self._displace(world)
-        panel = world.conversations_panel
-        panel.counts["populate"] = 0
-        world.on_alt_1(None)
-        world.status_panel.Show()
-        panel.Hide()                     # went to Status before the reopen ran
-        _flush(world)
-        assert panel.counts["populate"] == 0
-        assert not panel.panel_shown
-
-    def test_the_displaced_conversations_return_in_their_own_panels(self, world):
-        self._displace(world)
-        world.on_alt_1(None)
-        _flush(world)
-        assert world.conversations_panel.conversation["remoteJid"] == A
-        world.on_alt_4(None)
-        _flush(world)
-        assert world.conversations_panel.conversation["remoteJid"] == B
-        assert world.conversations_panel.conversation_panel.shown
-        assert _focus_calls(world)[-1] == "archived_list_panel"
-
-    def test_the_displaced_conversation_is_parked_with_its_row_and_comes_back_unread_and_unfocused(self, world):
-        self._displace(world)
-        parked = world.conversations_panel._parked_conversations()[MAIN]
-        assert (parked["jid"], parked["msg_id"]) == (A, "msg-4")
-        world.requests.clear()
-        world.log.clear()
-        world.on_alt_1(None)
-        _flush(world)
-        assert "mark_read" not in world.requests and not world.queued
-        assert "messages_list" not in _focus_calls(world)
-        assert "message_field" not in _focus_calls(world)
-
-    def test_a_parked_chat_locked_in_the_meantime_is_not_reopened(self, world):
-        self._displace(world)
-        world.locked.add(A)
-        world.on_alt_1(None)
-        _flush(world)
-        assert world.conversations_panel.conversation["remoteJid"] == B
+            dict(_enter(world, ARCHIVED))["nav"]()
+            dict(_enter(world, MAIN))["nav"]()
+        assert _work(world) == before
         assert not world.conversations_panel.conversation_panel.shown
 
-    def test_opening_the_same_chat_from_another_panel_changes_its_owner(self, world):
+    def test_the_message_list_is_untouched_by_a_cycle(self, world):
+        _open(world, A, ARCHIVED)
+        world.log.clear()
+        world.on_alt_1(None)
+        world.on_alt_4(None)
+        assert not any(e[0] in ("messages_list", "message_field") for e in world.log)
+
+    def test_the_hidden_conversation_is_not_in_view(self, world):
+        _open(world, A, MAIN)
+        assert conversation_in_view(world.conversations_panel)
+        world.on_alt_4(None)
+        assert not conversation_in_view(world.conversations_panel)
+        world.on_alt_1(None)
+        assert not conversation_in_view(world.conversations_panel)
+
+
+def _go_to(mw, where):
+    """Be on `where` (a chat panel or 'status'), the way the user got there."""
+    if where == "status":
+        mw.conversations_panel.Hide()
+        mw.archived_conversations_panel.Hide()
+        mw.locked_conversations_panel.Hide()
+        mw.status_panel.Show()
+    else:
+        dict(_enter(mw, where))[{MAIN: "alt1", ARCHIVED: "alt4", LOCKED: "locked"}[where]]()
+    mw.log.clear()
+
+
+def _on_screen_for(mw, origin):
+    panel = mw.conversations_panel
+    assert panel.conversation_panel.shown and panel.panel_shown
+    assert conversation_in_view(panel)
+    assert not mw.status_panel.shown
+    assert mw.archived_conversations_panel.shown == (origin == ARCHIVED)
+    assert mw.locked_conversations_panel.shown == (origin == LOCKED)
+    assert panel.conversations_list.shown == (origin == MAIN)
+
+
+EXPLICIT = {
+    "alt_m": lambda mw: mw._on_global_focus_messages(None),
+    "alt_2": lambda mw: mw._on_global_alt2(None),
+    "alt_3": lambda mw: mw._on_global_alt3(None),
+    "list_alt_m": lambda mw: mw.conversations_panel._on_list_focus_messages(None),
+    "list_alt_2": lambda mw: mw.conversations_panel._on_list_jump_last(None),
+    "list_alt_3": lambda mw: mw.conversations_panel._on_list_jump_unread(None),
+    "list_field": lambda mw: mw.conversations_panel._on_list_focus_field(None),
+}
+
+
+class TestExplicitRevealsShowTheConversationInItsOwnPanel:
+    @pytest.mark.parametrize("command", sorted(EXPLICIT))
+    @pytest.mark.parametrize("start", [MAIN, ARCHIVED, LOCKED, "status"])
+    @pytest.mark.parametrize("origin", [MAIN, ARCHIVED, LOCKED])
+    def test_reveal(self, world, origin, start, command):
+        _open(world, A, origin)
+        _go_to(world, start)
+        before = _work(world)
+
+        EXPLICIT[command](world)
+
+        _on_screen_for(world, origin)
+        target = "message_field" if command == "list_field" else "messages_list"
+        assert _focus_calls(world)[-1] == target
+        # revealing costs Show/Hide only: nothing is reloaded or requested
+        assert _work(world) == before
+
+    @pytest.mark.parametrize("command", sorted(EXPLICIT))
+    def test_with_no_conversation_nothing_appears(self, world, command):
+        _go_to(world, ARCHIVED)
+        EXPLICIT[command](world)
+        assert not world.conversations_panel.conversation_panel.shown
+        assert not world.conversations_panel.panel_shown
+        assert world.archived_conversations_panel.shown
+
+    def test_a_reveal_then_a_switch_hides_it_again(self, world):
         _open(world, A, MAIN)
         world.on_alt_4(None)
+        world._on_global_focus_messages(None)
+        _on_screen_for(world, MAIN)
+        world.on_alt_4(None)
+        assert not world.conversations_panel.conversation_panel.shown
+
+
+class TestADisplacedConversation:
+    """Archived X open, the user opens main Y from the main list: Y is the
+    conversation now. X is not kept aside (nothing asks for it explicitly: an
+    explicit command always means the open conversation, Y); it returns by
+    being opened from its list again."""
+
+    def _displace(self, world):
+        _open(world, B, ARCHIVED)
+        world.on_alt_1(None)
+        _open(world, A, MAIN)
+
+    def test_explicit_commands_reveal_the_open_one_in_its_panel(self, world):
+        self._displace(world)
+        world.on_alt_4(None)
+        world._on_global_focus_messages(None)
+        assert world.conversations_panel.conversation["remoteJid"] == A
+        _on_screen_for(world, MAIN)
+
+    def test_switches_never_reopen_the_displaced_one(self, world):
+        self._displace(world)
+        before = _work(world)
+        for _ in range(3):
+            world.on_alt_4(None)
+            world.on_alt_1(None)
+        assert _work(world) == before
+        assert world.conversations_panel.conversation["remoteJid"] == A
+        assert not hasattr(ConversationPanelVisibilityMixin, "_reopen_parked_conversation")
+
+    def test_it_is_opened_again_from_its_own_list(self, world):
+        self._displace(world)
+        world.on_alt_4(None)
+        _open(world, B, ARCHIVED)
+        panel = world.conversations_panel
+        assert panel.conversation["remoteJid"] == B
+        assert panel._conversation_origin == ARCHIVED
+        assert panel.conversation_panel.shown
+
+    def test_opening_the_same_chat_from_another_panel_changes_its_owner_and_shows_it(self, world):
+        _open(world, A, MAIN)
+        world.on_alt_4(None)
+        assert not world.conversations_panel.conversation_panel.shown
         _open(world, A, ARCHIVED)
         panel = world.conversations_panel
         assert panel._conversation_origin == ARCHIVED
-        assert panel._parked_conversations() == {}
+        assert panel.conversation_panel.shown

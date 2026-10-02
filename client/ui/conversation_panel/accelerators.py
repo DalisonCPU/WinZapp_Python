@@ -6,6 +6,7 @@ ConversationsPanel.__init__/init_UI is available here.
 """
 
 import wx
+from core.conversation_view import mnemonic_letter
 
 
 class AcceleratorsMixin:
@@ -39,6 +40,12 @@ class AcceleratorsMixin:
         # ("go to messages") is supposed to do from there anyway.
         self.ID_ALT_2_LIST          = wx.NewIdRef()
         self.ID_ALT_3_LIST          = wx.NewIdRef()
+        # A panel switch leaves the open conversation hidden, so these are
+        # explicit asks for it: Alt+M (messages) and the composer's letter
+        # reveal it in its panel and move focus there, as the native mnemonics
+        # of the labels inside the hidden pane cannot (panel_visibility).
+        self.ID_ALT_M_LIST          = wx.NewIdRef()
+        self.ID_ALT_FIELD_LIST      = wx.NewIdRef()
         # ── Mass actions (only act while conversations are selected) ─────────
         # One shortcut per entry of the chat list's "Ações em massa" submenu,
         # for the same reason the messages list has its own set (see
@@ -64,7 +71,10 @@ class AcceleratorsMixin:
         CS = wx.ACCEL_CTRL | wx.ACCEL_SHIFT
         AS = wx.ACCEL_ALT | wx.ACCEL_SHIFT
         CAS = wx.ACCEL_CTRL | wx.ACCEL_ALT | wx.ACCEL_SHIFT
+        i18n = self.main_window.i18n
         accel_tbl = wx.AcceleratorTable([
+            (wx.ACCEL_ALT,    ord(mnemonic_letter(i18n.t("messages"), "M")), self.ID_ALT_M_LIST),
+            (wx.ACCEL_ALT,    ord(mnemonic_letter(i18n.t("type_message"), "D")), self.ID_ALT_FIELD_LIST),
             (wx.ACCEL_CTRL,   ord("F"),        self.ID_CTRL_F),
             (wx.ACCEL_CTRL,   ord("N"),        self.ID_CTRL_N),
             (wx.ACCEL_NORMAL, wx.WXK_DELETE,   self.ID_DELETE_CONV),
@@ -104,8 +114,10 @@ class AcceleratorsMixin:
         self.Bind(wx.EVT_MENU, self._on_accel_lock_list,           id=self.ID_LOCK_LIST)
         self.Bind(wx.EVT_MENU, self._on_accel_pin_list,            id=self.ID_PIN_LIST)
         self.Bind(wx.EVT_MENU, self.on_context_menu_close,         id=self.ID_CLOSE_CONV_LIST)
-        self.Bind(wx.EVT_MENU, self._on_accel_jump_last,           id=self.ID_ALT_2_LIST)
-        self.Bind(wx.EVT_MENU, self._on_accel_jump_unread,         id=self.ID_ALT_3_LIST)
+        self.Bind(wx.EVT_MENU, self._on_list_jump_last,            id=self.ID_ALT_2_LIST)
+        self.Bind(wx.EVT_MENU, self._on_list_jump_unread,          id=self.ID_ALT_3_LIST)
+        self.Bind(wx.EVT_MENU, self._on_list_focus_messages,       id=self.ID_ALT_M_LIST)
+        self.Bind(wx.EVT_MENU, self._on_list_focus_field,          id=self.ID_ALT_FIELD_LIST)
         self.Bind(wx.EVT_MENU, self._on_accel_bulk_clear_chats,    id=self.ID_BULK_CLEAR_CHATS)
         self.Bind(wx.EVT_MENU, self._on_accel_bulk_delete_chats,   id=self.ID_BULK_DELETE_CHATS)
         self.Bind(wx.EVT_MENU, self._on_accel_bulk_archive_chats,  id=self.ID_BULK_ARCHIVE_CHATS)
