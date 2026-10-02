@@ -204,11 +204,10 @@ class TestVoiceSender:
     def test_the_pending_row_already_reads_as_audio(self):
         """The row shown while sending must say what is going out. Checked
         through is_voice_message() itself: the row keeps _is_voice_recording
-        (the sent sound needs it), and that flag used to win over ptt."""
+        (the sent sound needs it), and that flag used to win over ptt. That
+        _send_voice_message writes ptt False for a stereo recording is
+        checked by running it, in tests/test_system_audio_m4a.py."""
         from core.utils import is_voice_message
-        src = inspect.getsource(ConversationsPanel._send_voice_message)
-        assert "as_audio_file   = mixed_audio or sends_as_audio_file(stereo_out)" in src
-        assert '"ptt":     not as_audio_file,' in src
 
         def row(ptt):
             return {"_is_voice_recording": True, "messageType": "audioMessage",
@@ -395,3 +394,50 @@ class TestTheShortcut:
         panel._on_record_alternate_mode(None)
 
         assert panel.started == [True]
+
+
+# ── The name the recipient sees ───────────────────────────────────────────────
+
+
+class _MediaSender:
+    send_media_attachment = MainWindow.send_media_attachment
+
+    def __init__(self):
+        self.wpp_server, self.wpp_port, self.token = "http://127.0.0.1", 6300, "tok"
+        self.i18n = types.SimpleNamespace(t=lambda key: key)
+        self._resolve_jid_for_send = lambda jid: jid
+        self._find_api_ffmpeg = lambda: None
+        self._set_wa_connected = lambda *a, **kw: None
+
+
+def test_a_recorded_audio_upload_carries_the_localized_name_and_audio_mp4(monkeypatch, tmp_path):
+    bodies = []
+
+    def _post(url, headers=None, data=None, **_kw):
+        bodies.append(data)
+        return types.SimpleNamespace(status_code=200, text="{}",
+                                     json=lambda: {"response": [{"id": "R1"}]})
+    patch_main_global(monkeypatch, "api_post", _post)
+    m4a = tmp_path / "winzapp-mixed-abc123.m4a"
+    m4a.write_bytes(b"\x00\x00\x00\x20ftypM4A " + b"x" * 64)
+
+    _MediaSender().send_media_attachment(
+        "j@s.whatsapp.net", str(m4a), "audio",
+        custom_filename="default_filename_audio.m4a")
+
+    body = bodies[0]
+    assert body.filename == "default_filename_audio.m4a"
+    assert body.mime_type == "audio/mp4"
+    sent = b"".join(body)
+    assert b'name="filename"' in sent
+    assert sent.count(b"default_filename_audio.m4a") == 2  # the field and the file part
+    assert b"winzapp-mixed" not in sent
+
+
+def test_the_pending_message_carries_the_custom_filename_to_the_sender():
+    from core import message_queue
+    pm = PendingMessage("L1", "j@s.whatsapp.net", media_path="x.m4a", media_type="audio",
+                        custom_filename="Audio.m4a")
+    assert pm.custom_filename == "Audio.m4a"
+    assert PendingMessage("L2", "j", media_path="x.bin").custom_filename == ""
+    assert "custom_filename=msg.custom_filename" in inspect.getsource(message_queue)

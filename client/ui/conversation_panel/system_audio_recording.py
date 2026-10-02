@@ -461,7 +461,8 @@ class SystemAudioRecordingMixin:
             with open(cache_path, "wb") as cache:
                 cache.write(encrypted)
             pm = PendingMessage(local_id, remote_jid, media_path=m4a_path,
-                                media_type="audio", quoted=quoted_msg, owns_media_path=True)
+                                media_type="audio", quoted=quoted_msg, owns_media_path=True,
+                                custom_filename=f"{mw.i18n.t('default_filename_audio')}.m4a")
         except Exception:
             logging.exception("[mixed_audio] could not prepare recorded attachment")
             for path in (m4a_path, cache_path):

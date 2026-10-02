@@ -39,7 +39,8 @@ class PendingMessage:
                  quoted: dict = None,
                  mentioned_jids: list = None,
                  link_preview: dict = None,
-                 owns_media_path: bool = False):
+                 owns_media_path: bool = False,
+                 custom_filename: str = ""):
         # local_id matches the "_local_id" field in the virtual message dict
         # that was already added to the UI.
         self.local_id      = local_id
@@ -52,6 +53,9 @@ class PendingMessage:
         # Only internally-created recordings opt in. Never remove a file the
         # user picked as an attachment. This does not select the PTT sender.
         self.owns_media_path = bool(owns_media_path)
+        # The name the recipient sees, when the temp file's own name is not
+        # one (a recorded audio message).
+        self.custom_filename = custom_filename or ""
         self.recording_path = audio_path or (media_path if owns_media_path else None)
         self.caption       = caption or ""  # optional caption for media
         self.progress_callback = progress_callback
@@ -405,6 +409,7 @@ class MessageQueue:
                             msg.jid, msg.media_path, msg.media_type, msg.caption,
                             quoted=msg.quoted, upload_id=msg.local_id,
                             progress_callback=_media_progress,
+                            custom_filename=msg.custom_filename,
                         )
                     elif msg.contact_info:
                         real_id = self.main_window.send_contact_attachment(

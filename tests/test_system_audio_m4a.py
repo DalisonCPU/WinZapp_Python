@@ -339,6 +339,8 @@ class TestMixedComposer(unittest.TestCase):
         self.assertEqual((pm.media_path, pm.media_type, pm.jid),
                          (str(self.m4a_paths[0]), 'audio', 'first-chat'))
         self.assertTrue(pm.owns_media_path)
+        self.assertEqual(pm.custom_filename, 'default_filename_audio.m4a')
+        self.assertNotEqual(os.path.basename(pm.media_path), pm.custom_filename)
         self.assertEqual(pm.quoted['key']['id'], 'quoted')
         cache = self.folder / 'voice_messages' / (pm.local_id + '.msv')
         self.assertEqual(self.decrypt(cache.read_bytes()), self.encoded)
@@ -430,7 +432,8 @@ class TestMixedComposer(unittest.TestCase):
             self.assertEqual((pm.media_type, pm.jid), ('audio', 'first-chat'))
             self.assertTrue(pm.media_path.endswith('recording.m4a'))
             self.assertTrue(pm.owns_media_path)
-        row = self.p._sorted_messages[0]['message']['audioMessage']
+            self.assertEqual(pm.custom_filename, 'default_filename_audio.m4a')
+        row =self.p._sorted_messages[0]['message']['audioMessage']
         self.assertEqual({k: row[k] for k in ('ptt', 'mimetype')},
                          {k: mixed_row[k] for k in ('ptt', 'mimetype')})
         self.assertIs(row['ptt'], False)
