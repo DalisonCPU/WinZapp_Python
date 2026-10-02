@@ -42,7 +42,7 @@ The installer also registers an uninstaller, so you can remove WinZapp from Wind
 
 ### First start
 
-The release includes the program and a portable Node.js runtime, so you do not need to install Node.js. It does not include the WPPConnect Server's own dependencies (the files that let WinZapp talk to WhatsApp Web). On first start WinZapp downloads and sets them up, which needs an internet connection and shows a progress window. Later starts skip this step.
+The release includes the program and a portable Node.js runtime, so you do not need to install Node.js. It does not include the WPPConnect Server's own dependencies (the files that let WinZapp talk to WhatsApp Web). On first start WinZapp downloads and sets them up, including a browser component (Chromium) that it uses to reach WhatsApp Web. This needs an internet connection and shows a progress window. Starting the API for the first time can then take up to 3 minutes while its database is prepared; WinZapp tells you to wait. Later starts skip these steps.
 
 ### Link your WhatsApp account
 
@@ -59,13 +59,13 @@ WinZapp keeps everything next to the program, in a `data` folder: your accounts,
 
 ### Updates
 
-WinZapp checks GitHub Releases for new versions and offers to download and install them. You can also choose Help, Check for updates. The updater only accepts files whose checksums match, and, once a release carries a signature, only releases signed with the project's keys.
+WinZapp checks GitHub Releases for new versions and offers to download and install them. You can also choose Help, Check for updates. Every version of the updater checks the SHA-256 checksum of the download. Builds from the 2.0 line onward also require a valid signature and refuse a release that has none. The updater in the stable version 1.1.1.0 only checks the checksum, because signatures did not exist yet when it was built.
 
 By default you only receive stable releases. To also receive alpha releases, check "Check for alpha updates (unstable)" in Settings, General tab.
 
 ### Check your download
 
-Every release has a `SHA256SUMS.txt` file with one line per file: the checksum, then the file name. To check a download in Windows PowerShell, run this in the folder where you saved the file, and compare the result with the line for that file in `SHA256SUMS.txt`:
+Every release has a `SHA256SUMS.txt` file with one line per file: the checksum, then the file name. Newer releases start the file with a line beginning with `#`, such as `# winzapp-version: 2.0.0.3904alpha`; that is a comment, not a checksum, so ignore it. The signature file `SHA256SUMS.txt.sig` currently exists only on the alpha releases; the stable release 1.1.1.0 has none. To check a download in Windows PowerShell, run this in the folder where you saved the file, and compare the result with the line for that file in `SHA256SUMS.txt`:
 
 ```powershell
 Get-FileHash .\WinZappInstaller.exe -Algorithm SHA256
@@ -73,7 +73,7 @@ Get-FileHash .\WinZappInstaller.exe -Algorithm SHA256
 
 The two values must be identical. If they differ, delete the file and download it again from the Releases page.
 
-Be aware of the limits of this check. `SHA256SUMS.txt` is published on the same page as the files, so it protects you against a corrupted download, not against someone who can edit the release. For that reason releases are published so that they cannot be changed afterwards, and the auto-updater also verifies a signature made with keys that are not stored on GitHub. How this works is described in [docs/traps/release-integrity.md](docs/traps/release-integrity.md). Checking the signature by hand is not something we document for users yet; the updater does it for you.
+Be aware of the limits of this check. `SHA256SUMS.txt` is published on the same page as the files, so it protects you against a corrupted download, not against someone who can edit the release. For that reason newer releases (currently the alpha releases) are published as immutable, so they cannot be changed afterwards. Older stable releases, including the current "Latest" release, are not immutable. Builds from the 2.0 line onward also verify a signature made with keys that are not stored on GitHub. How this works is described in [docs/traps/release-integrity.md](docs/traps/release-integrity.md). Checking the signature by hand is not something we document for users yet; the updater does it for you.
 
 ### macOS
 
@@ -85,7 +85,7 @@ The repository contains a macOS version for VoiceOver users, described in [macos
 
 Report bugs and ask for features on [GitHub Issues](https://github.com/gabrielhhaber/WinZapp_Python/issues). Search the existing issues first. The bug form asks for your WinZapp version (Help, About the program) and your Windows version.
 
-When you report a bug, attach `log.log` and, for anything about being asked to pair again or losing your session, also `shutdown_audit.log`. Both are in the `logs` folder of your account, under `data\accounts\<account id>\logs` inside the WinZapp folder. `log.log` is replaced every time WinZapp starts, so copy it before reopening the program. Remove phone numbers, names and messages from the files before you attach them.
+When you report a bug, attach `log.log` and, for anything about being asked to pair again or losing your session, also `shutdown_audit.log`. Both are in the `logs` folder of your account, under `data\accounts\<account id>\logs` inside the WinZapp folder. If you use several accounts, each has its own folder there; open the one with the most recently modified `log.log`. `log.log` is replaced every time WinZapp starts, so copy it before reopening the program. Remove phone numbers, names and messages from the files before you attach them.
 
 ---
 
