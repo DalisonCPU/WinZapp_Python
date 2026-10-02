@@ -68,7 +68,7 @@ class Api:
         raise AssertionError(url)
 
 
-def _verify(raw=None, tag=TAG, running="2.0.0.4", api=None, **kw):
+def _verify(raw=None, tag=TAG, running="v2.0.0.4", api=None, **kw):
     return P.verify_release(raw if raw is not None else _prov(), tag, running,
                             api or Api(), **kw)
 
@@ -98,7 +98,7 @@ def test_a_tag_of_a_tag_is_peeled_and_a_chain_that_never_ends_is_refused():
 def test_an_alpha_tag_is_a_release_like_any_other():
     tag = "v2.0.0.3895alpha"
     api = Api(tags={tag: ("commit", COMMIT)})
-    assert _verify(_prov(version=tag), tag=tag, running="2.0.0.3894alpha", api=api)[0]
+    assert _verify(_prov(version=tag), tag=tag, running="v2.0.0.3894alpha", api=api)[0]
 
 
 # -- the tag is the proof -----------------------------------------------------
@@ -162,16 +162,36 @@ def test_a_stale_genuine_provenance_does_not_pass_as_a_newer_tag():
     assert not _verify(_prov(version="v2.0.0.6"), tag="v2.0.0.6", api=api)[0]
 
 
-@pytest.mark.parametrize("running", ["2.0.0.5", "2.0.0.9", "garbage", ""])
+@pytest.mark.parametrize("running", ["v2.0.0.5", "v2.0.0.9", "garbage", "", "2.0.0.4", "v2.0.0.4\n"])
 def test_a_release_that_is_not_newer_is_refused(running):
     ok, detail = _verify(running=running)
     assert not ok
 
 
 def test_an_alpha_is_older_than_its_stable():
-    assert P.tag_is_newer("v2.0.0.5", "2.0.0.5alpha")
-    assert not P.tag_is_newer("v2.0.0.5alpha", "2.0.0.5")
-    assert P.tag_is_newer("v2.0.0.10", "2.0.0.9")
+    assert P.tag_is_newer("v2.0.0.5", "v2.0.0.5alpha")
+    assert not P.tag_is_newer("v2.0.0.5alpha", "v2.0.0.5")
+    assert P.tag_is_newer("v2.0.0.10", "v2.0.0.9")
+    assert not P.tag_is_newer("v2.0.0.5", "v2.0.0.5")
+
+
+def test_an_old_genuine_tag_is_a_downgrade_for_a_running_tag():
+    """client/version.py says 2.0.0.0 in every tagged commit; the running
+    version is the tag the build was made from, so an older release is
+    refused however genuine its provenance."""
+    old = "v2.0.0.3875alpha"
+    api = Api(tags={old: ("commit", COMMIT)})
+    assert _verify(_prov(version=old), tag=old, running="v2.0.0.3895alpha", api=api)[0] is False
+    assert _verify(_prov(version=old), tag=old, running="v2.0.0.3875alpha", api=api)[0] is False
+    assert _verify(_prov(version=old), tag=old, running="v2.0.0.3874alpha", api=api)[0] is True
+
+
+def test_the_running_version_is_the_plist_release_tag():
+    assert P.running_release_tag({P.RELEASE_TAG_KEY: "v2.0.0.5alpha"}) == "v2.0.0.5alpha"
+    for info in ({}, {P.RELEASE_TAG_KEY: ""}, {P.RELEASE_TAG_KEY: "2.0.0.5"},
+                 {P.RELEASE_TAG_KEY: "v2.0.0.5\n"}, {P.RELEASE_TAG_KEY: None},
+                 {P.RELEASE_TAG_KEY: 5}):
+        assert P.running_release_tag(info) == ""
 
 
 def test_the_commit_that_is_already_running_is_not_an_update():
@@ -386,3 +406,111 @@ def test_the_updater_verifies_before_downloading_and_the_hash_before_extracting(
     assert 'enabled()' in src and "releases_repo(_info())" in src
     # the official repository is never taken from the plist or the provenance
     assert "OFFICIAL_REPO" not in src
+
+
+# -- strictness -----------------------------------------------------------------
+
+@pytest.mark.parametrize("value", ["v2.0.0.5\n", "v\u06632.0.0.5", "v2.0.0.5 ", "V2.0.0.5", "v2.0.0.5\x00"])
+def test_a_tag_must_be_plain_ascii_without_trailing_characters(value):
+    assert not P.is_release_tag(value)
+    assert not _verify(_prov(version=value), tag=value)[0]
+
+
+def test_a_commit_or_hash_with_a_trailing_newline_is_refused():
+    assert not P.is_commit(COMMIT + "\n")
+    assert not _verify(_prov(source_commit=COMMIT + "\n"))[0]
+    assert not _verify(_prov(artifacts={ZIP: ZIP_SHA + "\n"}))[0]
+    assert not _verify(_prov(artifacts={ZIP + "\n": ZIP_SHA}))[0]
+    assert not _verify(_prov(artifacts={"\u0663.zip": ZIP_SHA}))[0]
+
+
+def test_deeply_nested_json_is_a_refusal_not_a_crash():
+    raw = b"[" * P.MAX_PROVENANCE_BYTES
+    with pytest.raises(P.ProvenanceError):
+        P.parse_provenance(raw)
+    assert not _verify(raw)[0]
+    assert not _verify(b'{"a":' * 3000 + b"1" + b"}" * 3000)[0]
+
+
+def test_an_annotated_tag_answer_for_another_object_is_refused():
+    """The tag object returned must be the one asked for: without that check
+    a mirror could answer for a different, genuine tag object."""
+    class Swapped(Api):
+        def __call__(self, url):
+            if "/git/tags/" in url:
+                return json.dumps({"sha": OTHER, "object": {"type": "commit", "sha": COMMIT}}).encode()
+            return super().__call__(url)
+    ok, detail = _verify(api=Swapped(tags={TAG: ("tag", TAG_OBJ)}))
+    assert not ok and "does not match" in detail
+
+
+def test_offline_and_rate_limits_say_to_try_again_later(monkeypatch):
+    for outcome in (urllib.error.HTTPError(GOOD_URL, 403, "x", {}, None),
+                    urllib.error.HTTPError(GOOD_URL, 429, "x", {}, None),
+                    urllib.error.URLError("offline"), TimeoutError("slow"),
+                    FakeResponse(b"{}", status=503)):
+        monkeypatch.setattr(P, "_API_OPENER", FakeOpener(outcome))
+        with pytest.raises(P.ProvenanceError, match="try again later"):
+            P.fetch_official(GOOD_URL)
+
+
+def test_a_slow_trickle_hits_the_total_deadline(monkeypatch):
+    clock = iter([0, 0, 1000, 1000, 1000])
+    monkeypatch.setattr(P.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(P, "_API_OPENER", FakeOpener(FakeResponse(b"x" * 10)))
+    with pytest.raises(P.ProvenanceError, match="try again later"):
+        P.fetch_official(GOOD_URL)
+
+
+# -- the real opener, against a local server -------------------------------------
+
+def _serve(handler_cls):
+    import http.server
+    import threading
+    server = http.server.HTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def _ask_locally(status):
+    """The verifier's real opener against a 127.0.0.1 server answering
+    *status* (the production https-only check is in fetch_official; _read is
+    the part that opens and judges the answer)."""
+    import http.server
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(status)
+            if status == 302:
+                self.send_header("Location", "https://evil.example/x")
+            self.end_headers()
+            if status == 200:
+                self.wfile.write(b"{}")
+
+        def log_message(self, *a):
+            pass
+    server = _serve(Handler)
+    try:
+        return P._read(P._API_OPENER, f"http://127.0.0.1:{server.server_address[1]}/", 1000, {})
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_the_real_api_opener_refuses_a_redirect():
+    with pytest.raises(P.ProvenanceError, match="HTTP 302"):
+        _ask_locally(302)
+
+
+def test_the_real_opener_refuses_an_answer_that_is_not_https():
+    with pytest.raises(P.ProvenanceError, match="HTTPS"):
+        _ask_locally(200)
+
+
+def test_the_running_version_comes_from_the_plist_not_from_version_py():
+    updater = (_ROOT / "macos" / "winzapp_mac" / "updater_mac.py").read_text(encoding="utf-8")
+    build = (_ROOT / "macos" / "build_app.py").read_text(encoding="utf-8")
+    assert "__version__" not in updater and "from version" not in updater
+    assert "running_release_tag" in updater
+    assert "WinZappReleaseTag" in build and "WinZappSourceCommit" in build
+    assert P.RELEASE_TAG_KEY == "WinZappReleaseTag"

@@ -81,79 +81,106 @@ in System Settings, Privacy & Security ("Open Anyway").
 
 Mac releases are published from the maintainer's fork, so the Apple
 signature proves who built an update, not that its code went through this
-repository. The updater therefore also requires the release to be tied to a
-commit of `gabrielhhaber/WinZapp_Python`. Code: `winzapp_mac/provenance.py`
-(pure standard library, tested on any platform by
-`tests/test_macos_provenance.py`).
+repository. A Mac release must therefore DECLARE an official tag and commit,
+and the updater checks that this tag exists in
+`gabrielhhaber/WinZapp_Python` and points at the declared commit. That is a
+declaration checked against our repository. It does not prove the zip was
+built from that commit; the stronger guarantee needs an attestation from a
+workflow of the official repository, or a maintainer signature over the zip
+hash like Windows. Code: `winzapp_mac/provenance.py` (pure standard library,
+tested on any platform by `tests/test_macos_provenance.py`).
 
 **Threat model.** The attacker controls the releases repository (its assets,
 its CI secrets) and can publish any zip and any provenance there. They cannot
-push a tag to the official repository. A tag in the official repository
-exists only because someone with write access there created it, which is the
-same trust the Windows releases rest on. A Mac release that never went
-through the official repository must not install.
+push a tag to the official repository without write access there, which is
+the same trust the Windows releases rest on. A Mac release that cannot name
+one of our tags and its commit must not install.
+
+**The running version is the official tag the app was built from**
+(Info.plist `WinZappReleaseTag`, written by `build_app.py` before signing,
+next to `WinZappSourceCommit`). It is never `client/version.py`, which says
+`2.0.0.0` in every tagged commit (CI stamps it only at build), so an old
+genuine release would otherwise count as newer. A build without a valid
+`WinZappReleaseTag` (a development build) offers and installs no update, and
+the log says why. Versions compare as integers; an alpha or beta is older
+than the stable of the same number; an equal tag is not newer.
 
 **What is verified, in this order.** Any failure, or any answer that is not a
-clean 200 (offline, timeout, rate limit, redirect, oversized, malformed), is a
-refusal: nothing is downloaded or installed, the dialog says "could not
-verify commit provenance" and the next update check tries again.
+clean 200, is a refusal: nothing is installed. Offline, a timeout, an HTTP
+403/429 or 5xx all say "GitHub unreachable or rate-limited, try again later"
+and the next update check retries. Every request has a per-read timeout of
+15 s and a total deadline of 30 s.
 
 1. The release has `WinZapp-macOS-provenance-<arch>.json` (fetched from the
-   releases repository by tag; untrusted content). It must have exactly the
-   fields `schema` (1), `version`, `source_repo`, `source_commit`,
-   `artifacts`, with `source_repo` equal to the official repository
-   (pinned in the code), `source_commit` 40 lowercase hex, `version` a
-   release tag (`v1.2.3.4`, optionally `alpha`/`beta`), at most 8 artifacts of
-   name to 64-hex sha256, at most 16 KB.
+   releases repository by tag; untrusted content, at most 16 KB, https). It
+   must have exactly the fields `schema` (1), `version`, `source_repo`,
+   `source_commit`, `artifacts`, with `source_repo` equal to the official
+   repository (pinned in the code), `source_commit` 40 lowercase hex,
+   `version` a release tag (`v1.2.3.4`, optionally `alpha`/`beta`), at most 8
+   artifacts of name to 64-hex sha256. Every pattern is ASCII and a full
+   match (no trailing newline, no other scripts' digits); deeply nested JSON
+   is a refusal, not a crash.
 2. `version` equals the tag of the release being installed, is newer than the
-   running version, and `source_commit` is not the commit already running
-   (`WinZappSourceCommit` in Info.plist). A genuine provenance of an older
-   release cannot ride on a newer tag.
+   running tag, and `source_commit` is not the commit already running. A
+   genuine provenance of an older release cannot ride on a newer tag, and an
+   older release is refused as a downgrade.
 3. Over HTTPS to `api.github.com/repos/gabrielhhaber/WinZapp_Python` only,
-   unauthenticated, no redirects, 15 s timeout, 256 KB cap: `git/ref/tags/<tag>`
-   exists, and, peeled through annotated tag objects (`git/tags/<sha>`), is
-   exactly `source_commit`.
-4. The downloaded zip's sha256 equals the provenance's and the release's
-   `SHA256SUMS.txt`.
+   unauthenticated, no redirects, 256 KB cap: `git/ref/tags/<tag>` exists,
+   and, peeled through annotated tag objects (`git/tags/<sha>`, whose
+   answer must be for the object asked), is exactly `source_commit`.
+4. The downloaded zip (at most 2 GB, 30 minutes) has the sha256 the
+   provenance lists, and the release's `SHA256SUMS.txt` entry.
 5. As before: the app inside has the running app's Apple Team ID, passes
    `codesign --verify --deep --strict`, and `spctl` (notarized).
 
 **Why the tag and not "the commit exists in our repo".** GitHub serves a
 fork's commits through the parent's `/commits/<sha>` API, so that answers 200
 for code that was never in our repository. The tag is fork-proof. A compare
-against `main` (ancestor, "behind"/"identical") would also prove "reachable
-from main", but costs another call against the 60 an hour unauthenticated
-limit and would refuse a hotfix tag on another branch, so it is not used.
-Provenance is one file per architecture (`-arm64`, `-x86_64`) so the two build
-jobs never merge or overwrite a shared file.
+against `main` would also prove "reachable from main", but costs another call
+against the 60 an hour unauthenticated limit and would refuse a hotfix tag on
+another branch, so it is not used. Provenance is one file per architecture
+(`-arm64`, `-x86_64`) so the two build jobs never merge or overwrite a shared
+file.
 
 **What it does not prove.** That the zip was built from that commit. A
 releaser can build a modified tree and name an honest commit. `build_app.py`
 refuses a dirty tracked tree and a HEAD that is not the tag, but that runs on
-the releaser's machine. Only a reproducible build, or an attestation verified
-by the updater, would prove it. Tags can be moved by anyone with write access
-to the official repository (protect `v*` with a tag ruleset); a compromised
-maintainer account is out of scope here as it is for Windows. The check is
-also only as live as GitHub's API: it cannot run offline.
+the releaser's machine, and untracked files are not checked. Only a
+reproducible build, or an attestation from an official-repository workflow
+verified by the updater, or a maintainer signature over the zip hash, would
+prove it. A compromised maintainer account is out of scope here as it is for
+Windows. Verification needs GitHub's API, so it cannot run offline.
 
-**How a release is produced (Rocco).** On a clean checkout of the commit the
-maintainer tagged in the official repository (`git fetch` the official tags,
-check out the tag; or set `WINZAPP_RELEASE_TAG=v2.0.0.5` when the checkout has
-no tags, but HEAD must still be that tag's commit):
+**Known limit: tag protection is only as strong as the repository's tag
+rules.** The ruleset "Allow tag creation only for admins" (id 20587521)
+excludes `refs/tags/v*alpha`, so any collaborator with write access can
+create or move an alpha tag, and an alpha provenance is only as trustworthy as
+that. Recommendation to the maintainer: cover alpha tags too, or restrict
+them to the alpha workflow. This change touches no repository setting.
 
-    WINZAPP_MAC_RELEASES_REPO=rocco-labs/WinZapp_Python \
-    WINZAPP_SIGN_IDENTITY=... python3 macos/build_app.py --zip
+**How a release is produced (Rocco).** There is nothing to stamp: the tag is
+the version.
 
-`build_app.py` resolves the tag against the official API *before* building and
-stops if HEAD differs, tracked files are modified, or a release build has no
-tag. It writes the commit into Info.plist (`WinZappSourceCommit`, before
-signing) and, next to the zip, `macos/dist/WinZapp-macOS-provenance-<arch>.json`.
-Upload to the release named by that tag (same tag name as the official one):
-`WinZapp-macOS-<arch>.zip`, `WinZapp-macOS-provenance-<arch>.json` and
-`SHA256SUMS.txt` covering the zips, for both architectures. An untagged build
-makes no provenance and does not self-update (development builds never do).
-The app's running version (`client/version.py`) must be stamped to the tag's
-version before building, or the updater sees every release as not newer.
+1. Fetch the official tags (`git fetch https://github.com/gabrielhhaber/WinZapp_Python.git
+   --tags`) and check out the maintainer's tag on a clean tree. If the
+   checkout has no tags, set `WINZAPP_RELEASE_TAG=<tag>`; HEAD must still be
+   that tag's commit. Do not edit `client/version.py` (a modified tracked
+   file makes `build_app.py` refuse the build).
+2. On each architecture:
+
+       WINZAPP_MAC_RELEASES_REPO=rocco-labs/WinZapp_Python \
+       WINZAPP_SIGN_IDENTITY=... python3 macos/build_app.py --zip
+
+   `build_app.py` resolves the tag against the official API before building
+   and stops if HEAD differs, tracked files are modified, or a release build
+   has no tag. It writes `WinZappReleaseTag` and `WinZappSourceCommit` into
+   Info.plist before signing, and
+   `macos/dist/WinZapp-macOS-provenance-<arch>.json` next to the zip.
+3. Publish a release in the fork with the same tag name as the official one,
+   with `WinZapp-macOS-<arch>.zip`, `WinZapp-macOS-provenance-<arch>.json`
+   and a `SHA256SUMS.txt` covering both zips, for both architectures.
+
+An untagged build makes no provenance and does not self-update.
 
 **What the maintainer does.** Nothing new: tag as today. The tag is the
 approval.
@@ -162,6 +189,7 @@ approval.
 the release, `actions/attest-build-provenance` (pinned by SHA, with
 `id-token: write` and `attestations: write` on that job only) signs the zip's
 digest with the workflow's identity, and `gh attestation verify <zip> --repo
-<releases repo>` checks it. That would show which workflow built the zip, and
-a future updater could require it. It needs no secret, but whether a release
-workflow exists is decided in issue #343; nothing here adds one.
+<repo>` checks it. Run from an official-repository workflow it would show
+which workflow built the zip, and a future updater could require it. It needs
+no secret, but whether a release workflow exists is decided in issue #343;
+nothing here adds one.

@@ -93,7 +93,7 @@ class _Stub:
 
 def test_an_unverifiable_release_is_not_installed(monkeypatch):
     """Offline, rate-limited or missing provenance: no raw, a reason, no install."""
-    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python"})
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python", "WinZappReleaseTag": "v2.0.0.1"})
 
     def offline(url):
         raise um.provenance.ProvenanceError("request failed: URLError")
@@ -104,10 +104,24 @@ def test_an_unverifiable_release_is_not_installed(monkeypatch):
 
 def test_the_provenance_url_is_built_from_the_release_repo_and_tag(monkeypatch):
     seen = []
-    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python"})
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python", "WinZappReleaseTag": "v2.0.0.1"})
     monkeypatch.setattr(um.provenance, "fetch_release_asset",
                         lambda url: seen.append(url) or b"{}")
     raw, _ = um.MacUpdateProgress._provenance(_Stub())
     assert raw is None      # "{}" is not a provenance
     assert seen == ["https://github.com/rocco-labs/WinZapp_Python/releases/download/v2.0.0.9/"
                     + um.provenance.provenance_name(um.ARCH)]
+
+
+def test_a_build_without_its_release_tag_offers_no_update(monkeypatch):
+    """A development build cannot tell a downgrade from an update: off, and
+    even a direct call refuses."""
+    import updater
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(um, "_info", lambda: {"WinZappMacReleasesRepo": "rocco-labs/WinZapp_Python"})
+    before = updater.UpdateChecker._do_install
+    assert not um.enabled()
+    um.install()
+    assert updater.UpdateChecker._do_install == before
+    raw, detail = um.MacUpdateProgress._provenance(_Stub())
+    assert raw is None and "no release tag" in detail

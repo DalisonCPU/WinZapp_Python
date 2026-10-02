@@ -18,7 +18,8 @@ Steps
   7. --zip: macos/dist/WinZapp-macOS-<arch>.zip for a release, and next to it
      WinZapp-macOS-provenance-<arch>.json when HEAD is the commit our
      repository's release tag points at (winzapp_mac/provenance.py; the
-     commit is also written to Info.plist as WinZappSourceCommit).
+     tag and commit are also written to Info.plist as WinZappReleaseTag and
+     WinZappSourceCommit).
      --install: the app into /Applications (only while WinZapp is not running).
 
 Requires Homebrew's portaudio (brew install portaudio) for PyAudio.
@@ -447,10 +448,13 @@ def finish_bundle(source=None):
     # say where their updates are published (winzapp_mac/updater_mac.py).
     if os.environ.get("WINZAPP_MAC_RELEASES_REPO"):
         plist["WinZappMacReleasesRepo"] = os.environ["WINZAPP_MAC_RELEASES_REPO"]
-    # The running app's own commit (updater_mac refuses an "update" to it).
+    # The official tag and commit this app is built from: the tag is the
+    # running version for the updater's downgrade check (client/version.py
+    # says 2.0.0.0 in every tagged commit), the commit is refused as an update.
     plist.pop("WinZappSourceCommit", None)
+    plist.pop("WinZappReleaseTag", None)
     if source:
-        plist["WinZappSourceCommit"] = source[1]
+        plist["WinZappReleaseTag"], plist["WinZappSourceCommit"] = source
     with open(plist_path, "wb") as fh:
         plistlib.dump(plist, fh)
     identity = os.environ.get("WINZAPP_SIGN_IDENTITY")

@@ -1,12 +1,13 @@
-"""Commit provenance of a macOS release: is this build tied to a commit of
-WinZapp's own repository?
+"""Commit provenance of a macOS release: does it declare an official tag and
+commit that WinZapp's own repository confirms?
 
 The Mac releases are published from another repository (Info.plist
 WinZappMacReleasesRepo), so the Apple signature only says "the Mac
 maintainer's Apple team signed this", never "this code went through
-gabrielhhaber/WinZapp_Python". Each Mac release therefore carries a
-provenance file, and the updater checks it against the OFFICIAL repository
-before installing. Pure standard library on purpose: no PyObjC, no wx, so the
+gabrielhhaber/WinZapp_Python". Each Mac release therefore DECLARES, in a
+provenance file, an official tag and commit, and the updater checks that
+declaration against the OFFICIAL repository before installing. It does not
+prove the zip was built from that commit. Pure standard library on purpose: no PyObjC, no wx, so the
 normal Windows `pytest` exercises it and macos/build_app.py (which runs
 before any dependency is installed) can use it too.
 
@@ -16,15 +17,19 @@ Threat model
   Cannot: push a tag to the official repository, or make api.github.com
   answer for it. The official repository's write access is the trust root the
   Windows releases already rely on.
-  Goal: a Mac update that contains code which never went through our repo
-  must not install.
+  Goal: a Mac release that cannot name one of our tags and its commit must
+  not install. A stronger guarantee (the zip IS that commit's build) needs an
+  attestation from a workflow of the official repository, or a maintainer
+  signature over the zip hash like Windows.
 
 What is verified (in this order, every step fails closed)
   1. The provenance file is well formed: exact keys, schema 1, source_repo is
      the pinned official repository, source_commit 40 lowercase hex, version a
      release tag, artifacts a small name -> sha256 map.
   2. Its version is the tag of the release being installed (no replaying the
-     provenance of another release) and is newer than the running version.
+     provenance of another release) and is newer than the running version,
+     which is the official tag the app was built from (Info.plist
+     WinZappReleaseTag), never client/version.py.
   3. Over HTTPS, no redirects, against api.github.com/repos/<OFFICIAL_REPO>
      only: the tag exists in the official repository and, peeled through
      annotated tag objects, points at exactly source_commit.
@@ -46,12 +51,17 @@ What this does NOT prove
   and a HEAD that is not the tag, but that runs on the releaser's machine.
   Only a reproducible build or a CI attestation checked by the updater
   (docs/reference/macos.md, "Commit provenance") would prove it. Tags can
-  also be moved by someone with write access; protect them (tag ruleset).
+  also be created or moved by anyone with write access: the tag rules of the
+  official repository are the real limit. Known gap: the ruleset "Allow tag
+  creation only for admins" excludes refs/tags/v*alpha, so a collaborator with
+  write access can create or move an alpha tag. Recommended to the maintainer:
+  cover alpha tags too (or restrict them to the alpha workflow).
 """
 
 import hashlib
 import json
 import re
+import time
 import urllib.error
 import urllib.request
 
@@ -60,18 +70,22 @@ OFFICIAL_REPO = "gabrielhhaber/WinZapp_Python"
 API_HOST = "api.github.com"
 SCHEMA = 1
 SOURCE_COMMIT_KEY = "WinZappSourceCommit"      # Info.plist, written by build_app.py
+RELEASE_TAG_KEY = "WinZappReleaseTag"          # the official tag it was built from
 
 MAX_PROVENANCE_BYTES = 16 * 1024
 MAX_API_BYTES = 256 * 1024
-TIMEOUT = 15
+TIMEOUT = 15                                   # per socket read
+DEADLINE = 30                                  # whole request, however slowly it trickles
 MAX_ARTIFACTS = 8
 MAX_TAG_DEPTH = 4                              # annotated tag -> tag -> ... -> commit
 
 _KEYS = {"schema", "version", "source_repo", "source_commit", "artifacts"}
-_SHA1 = re.compile(r"^[0-9a-f]{40}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_TAG = re.compile(r"^v(\d{1,9})\.(\d{1,9})\.(\d{1,9})\.(\d{1,9})(alpha|beta)?$")
-_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+# fullmatch + ASCII: "$" would let a trailing newline through, and \d would
+# take digits of other scripts.
+_SHA1 = re.compile(r"[0-9a-f]{40}", re.ASCII)
+_SHA256 = re.compile(r"[0-9a-f]{64}", re.ASCII)
+_TAG = re.compile(r"v(\d{1,9})\.(\d{1,9})\.(\d{1,9})\.(\d{1,9})(alpha|beta)?", re.ASCII)
+_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", re.ASCII)
 _PRE = {"alpha": 1, "beta": 2, "": 3}
 
 
@@ -86,25 +100,36 @@ def provenance_name(arch):
 
 
 def is_commit(value):
-    return isinstance(value, str) and bool(_SHA1.match(value))
+    return isinstance(value, str) and bool(_SHA1.fullmatch(value))
 
 
 def is_release_tag(value):
-    return isinstance(value, str) and bool(_TAG.match(value))
+    return isinstance(value, str) and bool(_TAG.fullmatch(value))
 
 
 def _tag_key(tag):
-    m = _TAG.match(tag)
+    m = _TAG.fullmatch(tag)
     return tuple(int(m.group(i)) for i in range(1, 5)), _PRE[m.group(5) or ""]
 
 
-def tag_is_newer(tag, running_version):
-    """Is release *tag* strictly newer than *running_version* ("2.0.0.5" or
-    "2.0.0.5alpha")? An unparseable version is never newer."""
-    candidate = "v" + str(running_version or "").lstrip("vV")
-    if not is_release_tag(tag) or not is_release_tag(candidate):
+def tag_is_newer(tag, running_tag):
+    """Is release *tag* strictly newer than *running_tag*, both release tags
+    ("v2.0.0.5", "v2.0.0.5alpha")? The numbers compare as integers and an
+    alpha or beta is older than the stable of the same number. An invalid
+    tag on either side, or an equal one, is never newer."""
+    if not is_release_tag(tag) or not is_release_tag(running_tag):
         return False
-    return _tag_key(tag) > _tag_key(candidate)
+    return _tag_key(tag) > _tag_key(running_tag)
+
+
+def running_release_tag(info):
+    """The official tag this app was built from (Info.plist WinZappReleaseTag,
+    written by build_app.py), or "" for a development build. The running
+    version is this and nothing else: client/version.py says 2.0.0.0 in
+    every tagged commit (CI stamps it only at build), so it cannot tell
+    an old release from a new one."""
+    tag = info.get(RELEASE_TAG_KEY)
+    return tag if is_release_tag(tag) else ""
 
 
 # -- the file -------------------------------------------------------------------
@@ -115,7 +140,7 @@ def parse_provenance(raw):
         raise ProvenanceError("provenance file missing or too large")
     try:
         data = json.loads(bytes(raw).decode("utf-8"))
-    except (ValueError, UnicodeDecodeError):
+    except (ValueError, UnicodeDecodeError, RecursionError):
         raise ProvenanceError("provenance file is not valid JSON")
     if not isinstance(data, dict) or set(data) != _KEYS:
         raise ProvenanceError("provenance file has unexpected fields")
@@ -131,8 +156,8 @@ def parse_provenance(raw):
     if not isinstance(arts, dict) or not 1 <= len(arts) <= MAX_ARTIFACTS:
         raise ProvenanceError("provenance artifacts are malformed")
     for name, digest in arts.items():
-        if not (isinstance(name, str) and _NAME.match(name)
-                and isinstance(digest, str) and _SHA256.match(digest)):
+        if not (isinstance(name, str) and _NAME.fullmatch(name)
+                and isinstance(digest, str) and _SHA256.fullmatch(digest)):
             raise ProvenanceError("provenance artifacts are malformed")
     return data
 
@@ -223,15 +248,15 @@ def resolve_build_source(git, fetch, tag_hint=""):
     return tag, head
 
 
-def verify_release(raw, tag, running_version, fetch, running_commit=""):
+def verify_release(raw, tag, running_tag, fetch, running_commit=""):
     """(ok, detail) before anything is downloaded: the provenance in *raw* is
-    valid, belongs to release *tag*, is newer than *running_version*, and the
+    valid, belongs to release *tag*, is newer than *running_tag*, and the
     official repository's tag points at its source_commit. Nothing raises."""
     try:
         data = parse_provenance(raw)
         if data["version"] != tag:
             raise ProvenanceError("provenance belongs to another release")
-        if not tag_is_newer(tag, running_version):
+        if not tag_is_newer(tag, running_tag):
             raise ProvenanceError("release is not newer than the running version")
         if running_commit and data["source_commit"] == running_commit:
             raise ProvenanceError("release is the commit already running")
@@ -280,26 +305,40 @@ _API_OPENER = urllib.request.build_opener(_NoRedirect)
 _ASSET_OPENER = urllib.request.build_opener(_HttpsRedirectOnly)
 
 
+UNREACHABLE = "GitHub unreachable or rate-limited, try again later"
+
+
 def _read(opener, url, limit, headers):
     req = urllib.request.Request(url, headers=dict(headers, **{"User-Agent": "WinZapp-macOS"}))
+    deadline = time.monotonic() + DEADLINE
     try:
         with opener.open(req, timeout=TIMEOUT) as resp:
             if resp.status != 200:
-                raise ProvenanceError(f"HTTP {resp.status}")
-            if not resp.geturl().lower().startswith("https://"):
-                raise ProvenanceError("answer did not come over HTTPS")
-            body = resp.read(limit + 1)
+                raise ProvenanceError(UNREACHABLE if resp.status in (403, 429) or resp.status >= 500
+                                      else f"HTTP {resp.status}")
             final = resp.geturl()
+            if not final.lower().startswith("https://"):
+                raise ProvenanceError("answer did not come over HTTPS")
+            chunks, size = [], 0
+            while size <= limit:
+                if time.monotonic() > deadline:
+                    raise ProvenanceError(UNREACHABLE)
+                chunk = resp.read(min(65536, limit + 1 - size))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                size += len(chunk)
     except ProvenanceError:
         raise
     except urllib.error.HTTPError as exc:
         # 3xx lands here (redirects are refused); 403/429 is the rate limit.
-        raise ProvenanceError(f"HTTP {exc.code}")
-    except Exception as exc:
-        raise ProvenanceError(f"request failed: {type(exc).__name__}")
-    if len(body) > limit:
+        raise ProvenanceError(UNREACHABLE if exc.code in (403, 429) or exc.code >= 500
+                              else f"HTTP {exc.code}")
+    except Exception:
+        raise ProvenanceError(UNREACHABLE)
+    if size > limit:
         raise ProvenanceError("answer is too large")
-    return body, final
+    return b"".join(chunks), final
 
 
 def fetch_official(url):

@@ -16,12 +16,18 @@ What it asks of a Windows change:
 
 ## Commit provenance
 
-The Mac updater installs a build only if it is tied to a commit of
-`gabrielhhaber/WinZapp_Python`, on top of the Apple Team ID, `codesign` and
-`spctl` checks. Mac releases are published from another repository, so the
-Apple signature alone says who built it, not which code. The pure verifier is
-`macos/winzapp_mac/provenance.py`; its tests run in the normal `pytest`
-(`tests/test_macos_provenance.py`). The threat model, the exact steps and the
-release procedure are in `macos/README.md`, "Commit provenance". For a
-Windows change: nothing, except that the official repository name is pinned
-in `provenance.py` and the layer reads `version.__version__`.
+A Mac release must declare an official tag and commit, and the Mac updater
+checks that the tag exists in `gabrielhhaber/WinZapp_Python` and points at the
+declared commit, on top of the Apple Team ID, `codesign` and `spctl` checks.
+That is a declaration checked against our repository; it does not prove the
+zip was built from that commit (that needs an attestation from an official
+workflow, or a maintainer signature over the zip hash as on Windows). The
+running version is the tag in Info.plist (`WinZappReleaseTag`), never
+`client/version.py`; a build without it never updates. Tag protection is only
+as strong as the repository's tag rules: the ruleset "Allow tag creation only
+for admins" (id 20587521) excludes `refs/tags/v*alpha`, a known limit.
+The pure verifier is `macos/winzapp_mac/provenance.py`; its tests run in the
+normal `pytest` (`tests/test_macos_provenance.py`). The threat model, the
+verification sequence and the release steps are in `macos/README.md`, "Commit
+provenance". For a Windows change: nothing, except that the official
+repository name is pinned in `provenance.py`.

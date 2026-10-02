@@ -12,11 +12,17 @@ the Mac differs is replaced:
   inside must be signed by the same Apple Developer team as the running app
   and pass Gatekeeper (notarized). Gabriel's release keys cannot sign builds
   published elsewhere, so the Apple signature is what is trusted here.
-* Provenance: the release must also carry WinZapp-macOS-provenance-<arch>.json,
-  and the official repository's tag for that release must point at the commit
-  it names (provenance.py). The Apple signature says who built it; this says
-  the code is a commit of gabrielhhaber/WinZapp_Python. Any failure to verify,
-  offline or rate-limited included, installs nothing.
+* Provenance: the release must also carry WinZapp-macOS-provenance-<arch>.json
+  that DECLARES an official tag and commit, and the updater checks that this
+  tag exists in gabrielhhaber/WinZapp_Python and points at that commit
+  (provenance.py). That is a declaration checked against our repository, not
+  proof that the zip was built from the commit; the stronger guarantee needs
+  an attestation from a workflow of the official repository, or a maintainer
+  signature over the zip hash as on Windows. Any failure to verify, offline
+  or rate-limited included, installs nothing.
+* The running version is the official tag the app was built from (Info.plist
+  WinZappReleaseTag). A build without it (a development build) offers and
+  installs no update.
 * Installing: a small helper waits for WinZapp to quit, swaps the app bundle
   in place and opens the new one.
 
@@ -67,7 +73,13 @@ def releases_repo(info):
 
 
 def enabled():
-    return bool(getattr(sys, "frozen", False) and releases_repo(_info()))
+    """On only for a release build: it names a releases repository and the
+    official tag it was built from (the running version for every "newer"
+    comparison). Without the tag nothing could tell a downgrade from an
+    update, so it fails closed."""
+    info = _info()
+    return bool(getattr(sys, "frozen", False) and releases_repo(info)
+                and provenance.running_release_tag(info))
 
 
 def asset_name():
@@ -120,16 +132,26 @@ open "$3"
 """
 
 
+MAX_ZIP_BYTES = 2 << 30         # the app is well under 1 GB; more is not our build
+DOWNLOAD_DEADLINE = 30 * 60
+
+
 def _download(url, dest, progress):
+    import time
     import requests
+    deadline = time.monotonic() + DOWNLOAD_DEADLINE
     with requests.get(url, stream=True, timeout=60) as resp:
         resp.raise_for_status()
         total = int(resp.headers.get("content-length") or 0)
+        if total > MAX_ZIP_BYTES:
+            raise RuntimeError("the download is larger than any WinZapp build")
         done = 0
         with open(dest, "wb") as fh:
             for chunk in resp.iter_content(1 << 20):
                 fh.write(chunk)
                 done += len(chunk)
+                if done > MAX_ZIP_BYTES or time.monotonic() > deadline:
+                    raise RuntimeError("the download is too large or too slow")
                 if total:
                     progress(int(done * 100 / total))
 
@@ -182,7 +204,9 @@ class MacUpdateProgress(wx.Dialog):
         """(raw, detail): the release's provenance file once it is verified
         against the official repository, or (None, why not). Done before the
         download, so an unverifiable release costs nothing."""
-        from version import __version__
+        running_tag = provenance.running_release_tag(_info())
+        if not running_tag:
+            return None, "could not verify commit provenance: this build has no release tag"
         tag = "v" + self._version
         if not provenance.is_release_tag(tag):
             return None, "could not verify commit provenance: not a release tag"
@@ -193,7 +217,7 @@ class MacUpdateProgress(wx.Dialog):
         except provenance.ProvenanceError as exc:
             return None, f"could not verify commit provenance: {exc}"
         ok, detail = provenance.verify_release(
-            raw, tag, __version__, provenance.fetch_official,
+            raw, tag, running_tag, provenance.fetch_official,
             running_commit=_info().get(provenance.SOURCE_COMMIT_KEY) or "")
         return (raw if ok else None), detail
 
@@ -250,6 +274,10 @@ def install():
     """Point WinZapp's own updater at the Mac releases (menubar_mac leaves
     it on only when enabled() is true)."""
     if not enabled():
+        if releases_repo(_info()) and not provenance.running_release_tag(_info()):
+            logging.warning("[updater_mac] no valid %s in Info.plist: updates are off "
+                            "(a development build cannot tell a downgrade from an update)",
+                            provenance.RELEASE_TAG_KEY)
         return
     repo = releases_repo(_info())
     import config
