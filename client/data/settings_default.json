@@ -71,7 +71,6 @@
         "confirm_mark_all_read": true,
         "confirm_resync_all": true,
         "confirm_resync_conversation": true,
-        "warn_stereo_voice_iphone": true,
         "warn_system_audio_recording": true,
         "system_audio_consent_revision": 0,
         "space_selects_in_selection_mode": true,
