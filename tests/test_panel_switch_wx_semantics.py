@@ -19,7 +19,7 @@ import pytest
 from core.conversation_view import ARCHIVED, LOCKED, MAIN
 from main import MainWindow
 from tests.test_panel_switch_wiring import (
-    A, B, _MW, _flush, _focus_calls, _open, world,  # noqa: F401 (fixture)
+    A, B, _MW, _focus_calls, _open, world,  # noqa: F401 (fixture)
 )
 
 
@@ -92,49 +92,65 @@ class TestMainChatAndAlt4:
         assert world.archived_conversations_panel.IsShown()
         assert _focus_calls(world)[-1] == "archived_list_panel"
 
-    def test_open_main_alt_4_alt_1_brings_it_back_with_focus_on_the_list(self, world):
+    def test_open_main_alt_4_alt_1_lands_on_the_list_without_the_conversation(self, world):
+        # Reversed deliberately: coming back used to show it again (the delay).
         _tree(world)
         _open(world, A, MAIN)
         world.on_alt_4(None)
         world.log.clear()
         world.on_alt_1(None)
-        _flush(world)
         shown = _on_screen(world)
-        assert shown == {"panel": True, "detail": True,
-                         "messages_list": True, "message_field": True}
+        assert shown["panel"]
+        assert _only_conversation_parts(shown) == NOTHING_OF_THE_CONVERSATION
         assert world.conversations_panel.conversations_list.IsShown()
         assert not world.archived_conversations_panel.IsShown()
         assert _focus_calls(world) == ["own_list"]
+        assert world.conversations_panel.conversation is not None
 
-    @pytest.mark.parametrize("flush_first", [False, True])
-    def test_archived_from_alt_4_then_alt_1_then_main_then_alt_4(self, world, flush_first):
+    def test_alt_m_brings_it_back_in_its_panel(self, world):
         _tree(world)
-        world.on_alt_4(None)                 # archived list
+        _open(world, A, MAIN)
+        world.on_alt_4(None)
+        world.on_alt_1(None)
+        world._on_global_focus_messages(None)
+        shown = _on_screen(world)
+        assert shown == {"panel": True, "detail": True,
+                         "messages_list": True, "message_field": True}
+        assert _focus_calls(world)[-1] == "messages_list"
+
+    def test_archived_chat_is_hidden_on_every_switch_and_back_with_alt_m(self, world):
+        _tree(world)
+        world.on_alt_4(None)
         _from_archived_list(world, A)        # open archived X
+        assert _on_screen(world)["detail"]
         world.on_alt_1(None)                 # main list; X hidden
-        _flush(world)
         assert not world.conversations_panel.conversation_panel.IsShown()
         _open(world, B, MAIN)                # open main Y from the main list
         assert world.conversations_panel.conversation_panel.IsShown()
 
         world.on_alt_4(None)
-        if flush_first:
-            _flush(world)
         panel = world.conversations_panel
-        shown = _on_screen(world)
-        if panel._conversation_origin == MAIN:
-            assert _only_conversation_parts(shown) == NOTHING_OF_THE_CONVERSATION
-        else:
-            # X returns beneath the archived list, never Y
-            assert panel.conversation["remoteJid"] == A
-        assert not (panel.conversation["remoteJid"] == B and shown["detail"])
+        assert _only_conversation_parts(_on_screen(world)) == NOTHING_OF_THE_CONVERSATION
         assert world.archived_conversations_panel.IsShown()
         assert _focus_calls(world)[-1] == "archived_list_panel"
-        _flush(world)
-        # settled: Y is parked or hidden, X is the one under the archived list
-        settled = _on_screen(world)
-        assert panel.conversation["remoteJid"] == A and settled["detail"]
-        assert not world.conversations_panel.conversations_list.IsShown()
+        assert panel.conversation["remoteJid"] == B   # X is gone, Y waits hidden
+
+        world._on_global_focus_messages(None)  # explicit: Y, in the main panel
+        assert panel.conversation_panel.IsShown()
+        assert panel.conversations_list.IsShown()
+        assert not world.archived_conversations_panel.IsShown()
+
+    def test_archived_conversation_comes_back_beneath_the_archived_list_on_alt_2(self, world):
+        _tree(world)
+        world.on_alt_4(None)
+        _from_archived_list(world, A)
+        world.on_alt_1(None)
+        world._on_global_alt2(None)
+        panel = world.conversations_panel
+        assert panel.conversation_panel.IsShown()
+        assert world.archived_conversations_panel.IsShown()
+        assert not panel.conversations_list.IsShown()
+
 
 
 class _Vault(_MW):
@@ -221,6 +237,7 @@ class TestSwitchLogLine:
         line = lines[0]
         assert "shown=archived" in line and "origin=main" in line
         assert "'detail': False" in line and "'list_panel': True" in line
+        assert "parked" not in line
         assert "detail=False" in line and "messages_list=" in line
         assert "@" not in line and "s.whatsapp.net" not in line
 

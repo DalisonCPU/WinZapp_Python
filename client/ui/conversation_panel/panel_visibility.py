@@ -1,28 +1,28 @@
 """ConversationPanelVisibilityMixin — part of ConversationsPanel (see ui/conversation_panel/__init__.py).
 
 One ConversationsPanel serves three chat lists (main, archived, locked), so
-at most one conversation is open at a time. The rule for what is on screen is
-the same for all three: a conversation belongs to the panel it was opened
-from, and is visible only while that panel is the one shown. Switching to
-another panel hides it (it stays open, message list untouched); switching back
-shows it again. A conversation opened meanwhile in the shared widget parks the
-one it displaces, to be reopened when its own panel comes back.
+at most one conversation is open at a time. A conversation belongs to the
+panel it was opened from and is visible only there.
+
+Switching panels never shows it: the conversation stays open, message list
+untouched, but hidden, and the user lands on the chat list. Showing it again
+on every Alt+1 <-> Alt+4 was a perceptible delay, so a switch is Show/Hide of
+the panels plus focus on the chat list, nothing else. The conversation comes
+back only on an explicit ask (Alt+M, Alt+2, Alt+3: reveal_open_conversation())
+or by opening a chat, and then in the panel it belongs to.
 
 Every way of making one of the three chat panels visible goes through
-show_chat_panel(): it shows or hides the detail pane by origin and puts focus
-on that panel's chat list, never in a message list. Hiding and showing is only
-Show/Hide/Layout; the one thing that rebuilds is reopening a displaced
-conversation, and that skips every network request the first open made.
+show_chat_panel(): it hides the detail pane and puts focus on that panel's
+chat list, never in a message list. Nothing here rebuilds the conversation or
+asks the network for anything.
 """
 
 import logging
-import wx
 from core.conversation_view import (
     ARCHIVED,
     LOCKED,
-    conversation_visible_in,
+    MAIN,
     panel_layout,
-    parked_chat_reopenable,
     resolve_origin,
 )
 
@@ -37,79 +37,13 @@ def _is_shown(widget):
 
 class ConversationPanelVisibilityMixin:
 
-    def _parked_conversations(self) -> dict:
-        parked = getattr(self, "_parked_by_origin", None)
-        if parked is None:
-            parked = self._parked_by_origin = {}
-        return parked
-
-    def forget_parked_conversation(self, origin: str):
-        self._parked_conversations().pop(origin, None)
-
     def _begin_conversation_visit(self, conversation, origin=None) -> str:
-        """Record which panel `conversation` is being opened for and park the
-        conversation it displaces when that one belongs to another panel."""
-        current_origin = getattr(self, "_conversation_origin", None)
+        """Record which panel `conversation` is being opened for."""
         origin = resolve_origin(
-            origin, current_origin,
+            origin, getattr(self, "_conversation_origin", None),
             self.conversations_list.IsShown(), self.conversation_panel.IsShown())
-        parked = self._parked_conversations()
-        parked.pop(origin, None)  # what is opened here supersedes it
-        current = self.conversation
-        if (current is not None and current_origin
-                and current_origin != origin
-                and current.get("remoteJid") != conversation.get("remoteJid")):
-            try:
-                msg_id = self._focused_msg_id()
-            except Exception:
-                msg_id = ""
-            try:
-                note = self._conv_data_btn.GetNote()
-            except Exception:
-                note = None
-            # What the open fetched in the background (participants for the
-            # @mention list, the last-seen/size note), so the reopen need not.
-            parked[current_origin] = {
-                "jid": current.get("remoteJid", ""), "msg_id": msg_id,
-                "participants": list(getattr(self, "_group_participants_cache", [])),
-                "note": note}
         self._conversation_origin = origin
-        self._shown_panel = origin
         return origin
-
-    def _reopen_parked_conversation(self, origin: str) -> bool:
-        entry = self._parked_conversations().pop(origin, None)
-        if not entry:
-            return False
-        mw = self.main_window
-        jid = entry["jid"]
-        chat = mw.chats.get(jid)
-        if chat is None or not parked_chat_reopenable(
-                origin, mw.is_chat_locked(jid),
-                getattr(mw, "_chat_lock_unlocked", False)):
-            return False
-        # Reopening is not reading: no focus grab and no mark-as-read, and not
-        # opening either: resume=True skips the presence subscription, the
-        # profile/group-info/reactions requests and the participants fetch.
-        self.navigate_to_conversation(
-            chat, origin=origin, take_focus=False, mark_read=False, resume=True)
-        self._group_participants_cache = entry.get("participants") or []
-        if entry.get("note"):
-            self._conv_data_btn.SetNote(entry["note"])
-        self._refocus_message(entry.get("msg_id"))
-        return True
-
-    def _refocus_message(self, msg_id):
-        """Put the list's current row back on the message the user had reached
-        (no SetFocus: the caller decides where keyboard focus goes)."""
-        if not msg_id:
-            return
-        for idx, msg in enumerate(self._sorted_messages):
-            if not self._is_separator(msg) and msg.get("key", {}).get("id") == msg_id:
-                self.messages_list.Focus(idx)
-                self.messages_list.Select(idx, True)
-                self.messages_list.EnsureVisible(idx)
-                return
 
     def _list_panel_for(self, shown: str):
         """The archived or locked list panel that `shown` stands for (None for
@@ -118,14 +52,12 @@ class ConversationPanelVisibilityMixin:
                 LOCKED: "locked_conversations_panel"}.get(shown)
         return getattr(self.main_window, name, None) if name else None
 
-    def _apply_panel_layout(self, shown: str, list_panel) -> dict:
+    def _apply_panel_layout(self, shown: str, list_panel, reveal: bool) -> dict:
         """Show and hide this panel's parts for `shown` being the chat list on
-        screen (see panel_layout()). Only Show/Hide/Layout: hiding or showing
-        an open conversation never rebuilds it or asks the network for
-        anything."""
+        screen (see panel_layout()). Only Show/Hide/Layout."""
         layout = panel_layout(
             getattr(self, "_conversation_origin", None), shown,
-            self.conversation is not None)
+            self.conversation is not None, reveal)
         if self.conversation is not None:
             self.conversation_panel.Show(layout["detail"])
         self.conversations_label.Show(layout["own_list"])
@@ -143,30 +75,25 @@ class ConversationPanelVisibilityMixin:
         can be read off the log. Panel names and flags only: no JID, name or
         message text."""
         logging.info(
-            "[panel-switch] shown=%s origin=%s parked=%s layout=%s actual: "
+            "[panel-switch] shown=%s origin=%s layout=%s actual: "
             "detail=%s panel=%s messages_list=%s message_field=%s",
-            shown, getattr(self, "_conversation_origin", None),
-            sorted(self._parked_conversations()), layout,
+            shown, getattr(self, "_conversation_origin", None), layout,
             _is_shown(getattr(self, "conversation_panel", None)),
             _is_shown(self),
             _is_shown(getattr(self, "messages_list", None)),
             _is_shown(getattr(self, "message_field", None)))
 
-    def _still_on_panel(self, shown: str, list_panel) -> bool:
-        """Whether `shown` is still the panel on screen (a deferred step must
-        not bring a panel back after the user has moved on)."""
-        if getattr(self, "_shown_panel", None) != shown:
-            return False
-        return bool((list_panel or self).IsShown())
-
-    def show_chat_panel(self, shown: str, *, focus: bool = True) -> None:
+    def show_chat_panel(self, shown: str, *, focus: bool = True,
+                        reveal: bool = False) -> None:
         """The one way a chat panel (main, archived, locked) becomes the
-        visible one: every other panel is hidden, the open conversation is
-        shown only if it belongs to `shown`, and keyboard focus goes to that
-        panel's chat list, never into a message list. A conversation set
-        aside by another one is reopened right after (see
-        _finish_panel_reopen), so the switch itself costs only Show/Hide.
-        `focus=False` for callers that place focus themselves."""
+        visible one: every other panel is hidden, the open conversation's pane
+        is hidden too, and keyboard focus goes to that panel's chat list,
+        never into a message list.
+
+        `reveal=True` is only for an explicit ask for the open conversation
+        (reveal_open_conversation()): `shown` is then the panel it belongs
+        to and its pane is shown. `focus=False` for callers that place focus
+        themselves."""
         mw = self.main_window
         list_panel = self._list_panel_for(shown)
         for name in ("archived_conversations_panel", "locked_conversations_panel",
@@ -174,26 +101,38 @@ class ConversationPanelVisibilityMixin:
             other = getattr(mw, name, None)
             if other is not None and other is not list_panel:
                 other.Hide()
-        self._shown_panel = shown
-        reopen_due = shown in self._parked_conversations() and (
-            self.conversation is None or not conversation_visible_in(
-                getattr(self, "_conversation_origin", None), shown))
-        layout = self._apply_panel_layout(shown, list_panel)
+        layout = self._apply_panel_layout(shown, list_panel, reveal)
         self._log_panel_switch(shown, layout)
         if focus:
             if list_panel is None:
                 self._restore_conversation_selection()
             else:
                 list_panel.restore_selection()
-        if reopen_due:
-            wx.CallAfter(self._finish_panel_reopen, shown)
 
-    def _finish_panel_reopen(self, shown: str) -> None:
-        list_panel = self._list_panel_for(shown)
-        if not self._still_on_panel(shown, list_panel):
+    def reveal_open_conversation(self) -> None:
+        """Make the open conversation visible, in the panel it belongs to,
+        whichever panel is on screen now (Alt+M, Alt+2, Alt+3). No focus is
+        moved here: the caller puts it on the messages. Costs Show/Hide only,
+        the conversation was never closed."""
+        if self.conversation is None:
             return
-        try:
-            self._reopen_parked_conversation(shown)
-        except Exception:
-            logging.exception("[conversations] could not reopen the parked conversation")
-        self._apply_panel_layout(shown, list_panel)
+        if self.IsShown() and self.conversation_panel.IsShown():
+            return
+        origin = getattr(self, "_conversation_origin", None) or MAIN
+        self._conversation_origin = origin
+        self.show_chat_panel(origin, focus=False, reveal=True)
+
+    # The chat list's own explicit asks for the open conversation (Alt+2,
+    # Alt+3, Alt+M): reveal it, then do what the
+    # shortcut does inside the conversation. With none open the handler says so.
+    def _on_list_jump_last(self, event):
+        self.reveal_open_conversation()
+        self._on_accel_jump_last(event)
+
+    def _on_list_jump_unread(self, event):
+        self.reveal_open_conversation()
+        self._on_accel_jump_unread(event)
+
+    def _on_list_focus_messages(self, event):
+        self.reveal_open_conversation()
+        self._on_accel_focus_list(event)

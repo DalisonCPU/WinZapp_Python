@@ -7,6 +7,7 @@ import os
 import pyperclip
 import wx
 
+from core.conversation_view import mnemonic_letter
 from core.sound_system import load_sound
 from core.utils import (
     append_selected_marker,
@@ -449,8 +450,16 @@ class LockedConversationsPanel(ChatListSelectionMixin, wx.Panel):
         self.ID_BULK_UNLOCK_CHATS = wx.NewIdRef()
         self.ID_BULK_READ_CHATS = wx.NewIdRef()
         self.ID_BULK_UNREAD_CHATS = wx.NewIdRef()
+        # Alt+M: reveal the open conversation (a panel switch leaves it
+        # hidden), the same explicit ask the archived list answers.
+        self.ID_ALT_MESSAGES = wx.NewIdRef()
         CAS = wx.ACCEL_CTRL | wx.ACCEL_ALT | wx.ACCEL_SHIFT
+        messages_letter = mnemonic_letter(
+            self.main_window.i18n.t("messages"), "M")
+        self.Bind(wx.EVT_MENU, self.main_window._on_global_focus_messages,
+                  id=self.ID_ALT_MESSAGES)
         self.SetAcceleratorTable(wx.AcceleratorTable([
+            (wx.ACCEL_ALT, ord(messages_letter), self.ID_ALT_MESSAGES),
             (CAS, ord("T"), self.ID_BULK_UNLOCK_CHATS),
             (CAS, ord("R"), self.ID_BULK_READ_CHATS),
             (CAS, ord("U"), self.ID_BULK_UNREAD_CHATS),

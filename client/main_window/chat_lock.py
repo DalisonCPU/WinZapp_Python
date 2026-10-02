@@ -534,9 +534,6 @@ class ChatLockMixin:
             if self.is_chat_locked(cp.conversation.get("remoteJid", "")):
                 was_on_screen = was_on_screen or cp.IsShown()
                 cp.close_conversation_for_panel_switch()
-        if cp is not None:
-            # A locked chat set aside must not come back after the vault shut.
-            cp.forget_parked_conversation(LOCKED)
         if panel is not None:
             panel.set_all_chats([], [])
             panel.Hide()
