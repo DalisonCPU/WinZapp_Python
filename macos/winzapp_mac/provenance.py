@@ -60,6 +60,7 @@ What this does NOT prove
 
 import hashlib
 import json
+import os
 import re
 import time
 import urllib.error
@@ -77,6 +78,9 @@ MAX_API_BYTES = 256 * 1024
 TIMEOUT = 15                                   # per socket read
 DEADLINE = 30                                  # whole request, however slowly it trickles
 MAX_ARTIFACTS = 8
+MAX_ZIP_BYTES = 2 << 30                        # the app is well under 1 GB; more is not our build
+DOWNLOAD_DEADLINE = 30 * 60
+CHUNK = 16 * 1024                              # small, so the deadline is looked at often
 MAX_TAG_DEPTH = 4                              # annotated tag -> tag -> ... -> commit
 
 _KEYS = {"schema", "version", "source_repo", "source_commit", "artifacts"}
@@ -85,6 +89,9 @@ _KEYS = {"schema", "version", "source_repo", "source_commit", "artifacts"}
 _SHA1 = re.compile(r"[0-9a-f]{40}", re.ASCII)
 _SHA256 = re.compile(r"[0-9a-f]{64}", re.ASCII)
 _TAG = re.compile(r"v(\d{1,9})\.(\d{1,9})\.(\d{1,9})\.(\d{1,9})(alpha|beta)?", re.ASCII)
+# GitHub's charset: owner letters/digits/hyphens, no leading hyphen; name
+# letters/digits/._- with no leading dot and no "..".
+_REPO = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!\.)(?!.*\.\.)[A-Za-z0-9._-]{1,100}", re.ASCII)
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", re.ASCII)
 _PRE = {"alpha": 1, "beta": 2, "": 3}
 
@@ -97,6 +104,12 @@ def provenance_name(arch):
     """One file per architecture, so the two build jobs never have to merge
     or overwrite a shared one."""
     return f"WinZapp-macOS-provenance-{arch}.json"
+
+
+def valid_repo(value):
+    """True for an "owner/name" GitHub repository (the plist's
+    WinZappMacReleasesRepo), nothing looser."""
+    return isinstance(value, str) and bool(_REPO.fullmatch(value))
 
 
 def is_commit(value):
@@ -308,9 +321,36 @@ _ASSET_OPENER = urllib.request.build_opener(_HttpsRedirectOnly)
 UNREACHABLE = "GitHub unreachable or rate-limited, try again later"
 
 
+def _limit_wait(resp, remaining):
+    """Shrink the socket timeout of *resp* to what is left of the budget, so
+    one stalled read cannot outlive it. Best effort: a response without a
+    reachable socket (a test fake) keeps the timeout it was opened with."""
+    try:
+        resp.fp.raw._sock.settimeout(max(0.05, min(TIMEOUT, remaining)))
+    except Exception:
+        pass
+
+
+def _chunks(resp, deadline_at, size=CHUNK):
+    """The body of *resp* in small chunks, within the deadline: each read
+    gets at most the time that is left (a server sending a byte every few
+    seconds cannot hold one read open past it), and read1 returns whatever has
+    arrived instead of waiting to fill the chunk."""
+    read = getattr(resp, "read1", resp.read)
+    while True:
+        remaining = deadline_at - time.monotonic()
+        if remaining <= 0:
+            raise ProvenanceError(UNREACHABLE)
+        _limit_wait(resp, remaining)
+        data = read(size)
+        if not data:
+            return
+        yield data
+
+
 def _read(opener, url, limit, headers):
     req = urllib.request.Request(url, headers=dict(headers, **{"User-Agent": "WinZapp-macOS"}))
-    deadline = time.monotonic() + DEADLINE
+    deadline_at = time.monotonic() + DEADLINE
     try:
         with opener.open(req, timeout=TIMEOUT) as resp:
             if resp.status != 200:
@@ -320,14 +360,11 @@ def _read(opener, url, limit, headers):
             if not final.lower().startswith("https://"):
                 raise ProvenanceError("answer did not come over HTTPS")
             chunks, size = [], 0
-            while size <= limit:
-                if time.monotonic() > deadline:
-                    raise ProvenanceError(UNREACHABLE)
-                chunk = resp.read(min(65536, limit + 1 - size))
-                if not chunk:
-                    break
+            for chunk in _chunks(resp, deadline_at):
                 chunks.append(chunk)
                 size += len(chunk)
+                if size > limit:
+                    raise ProvenanceError("answer is too large")
     except ProvenanceError:
         raise
     except urllib.error.HTTPError as exc:
@@ -336,9 +373,44 @@ def _read(opener, url, limit, headers):
                               else f"HTTP {exc.code}")
     except Exception:
         raise ProvenanceError(UNREACHABLE)
-    if size > limit:
-        raise ProvenanceError("answer is too large")
     return b"".join(chunks), final
+
+
+def download_file(url, dest, progress=None, opener=None, limit=MAX_ZIP_BYTES,
+                  deadline=DOWNLOAD_DEADLINE):
+    """Download *url* (https, redirects to https only) to *dest* within *limit*
+    bytes and *deadline* seconds in total. On any failure the partial file is
+    deleted before the error goes on. *progress* gets 0-100 when the size is
+    known."""
+    if not url.startswith("https://"):
+        raise ProvenanceError("downloads are https only")
+    deadline_at = time.monotonic() + deadline
+    req = urllib.request.Request(url, headers={"User-Agent": "WinZapp-macOS"})
+    try:
+        with (opener or _ASSET_OPENER).open(req, timeout=TIMEOUT) as resp:
+            if resp.status != 200 or not resp.geturl().lower().startswith("https://"):
+                raise ProvenanceError(f"download refused (HTTP {resp.status})")
+            try:
+                total = int(resp.headers.get("content-length") or 0)
+            except ValueError:
+                total = 0
+            if total > limit:
+                raise ProvenanceError("the download is larger than any WinZapp build")
+            done = 0
+            with open(dest, "wb") as fh:
+                for chunk in _chunks(resp, deadline_at, 1 << 16):
+                    done += len(chunk)
+                    if done > limit:
+                        raise ProvenanceError("the download is larger than any WinZapp build")
+                    fh.write(chunk)
+                    if total and progress:
+                        progress(min(100, int(done * 100 / total)))
+    except BaseException:
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        raise
 
 
 def fetch_official(url):

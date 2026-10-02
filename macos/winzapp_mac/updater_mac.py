@@ -35,7 +35,6 @@ import logging
 import os
 import platform
 import plistlib
-import re
 import shutil
 import subprocess
 import sys
@@ -62,14 +61,11 @@ def _info():
         return {}
 
 
-_REPO = re.compile(r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$")
-
-
 def releases_repo(info):
     """The owner/name the Mac releases come from, or "" when the build
     names none (or something that is not a GitHub repository)."""
     repo = info.get("WinZappMacReleasesRepo")
-    return repo if isinstance(repo, str) and _REPO.match(repo) else ""
+    return repo if provenance.valid_repo(repo) else ""
 
 
 def enabled():
@@ -132,28 +128,10 @@ open "$3"
 """
 
 
-MAX_ZIP_BYTES = 2 << 30         # the app is well under 1 GB; more is not our build
-DOWNLOAD_DEADLINE = 30 * 60
-
-
 def _download(url, dest, progress):
-    import time
-    import requests
-    deadline = time.monotonic() + DOWNLOAD_DEADLINE
-    with requests.get(url, stream=True, timeout=60) as resp:
-        resp.raise_for_status()
-        total = int(resp.headers.get("content-length") or 0)
-        if total > MAX_ZIP_BYTES:
-            raise RuntimeError("the download is larger than any WinZapp build")
-        done = 0
-        with open(dest, "wb") as fh:
-            for chunk in resp.iter_content(1 << 20):
-                fh.write(chunk)
-                done += len(chunk)
-                if done > MAX_ZIP_BYTES or time.monotonic() > deadline:
-                    raise RuntimeError("the download is too large or too slow")
-                if total:
-                    progress(int(done * 100 / total))
+    """Size- and time-capped (provenance.download_file), partial file removed
+    on failure."""
+    provenance.download_file(url, dest, progress)
 
 
 class MacUpdateProgress(wx.Dialog):
@@ -224,6 +202,7 @@ class MacUpdateProgress(wx.Dialog):
     def _work(self):
         from updater import _verify_sha256sums
         work = tempfile.mkdtemp(prefix="winzapp-update-")
+        handed_over = False        # swap.sh lives in work until it has run
         try:
             zpath = os.path.join(work, asset_name())
             raw, detail = self._provenance()
@@ -254,10 +233,14 @@ class MacUpdateProgress(wx.Dialog):
             subprocess.Popen([script, str(os.getpid()), staged, running],
                              start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            handed_over = True
             self.installed = True
             wx.CallAfter(self.EndModal, wx.ID_OK)
         except Exception as exc:
             self._fail(str(exc))
+        finally:
+            if not handed_over:
+                shutil.rmtree(work, ignore_errors=True)
 
 
 def _do_install(self, new_version, zip_url, sha256sums_url="", signature_url="", is_alpha=False):

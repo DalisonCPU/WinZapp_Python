@@ -109,7 +109,9 @@ than the stable of the same number; an equal tag is not newer.
 clean 200, is a refusal: nothing is installed. Offline, a timeout, an HTTP
 403/429 or 5xx all say "GitHub unreachable or rate-limited, try again later"
 and the next update check retries. Every request has a per-read timeout of
-15 s and a total deadline of 30 s.
+15 s and a total deadline of 30 s; each read is made in small chunks and
+waits at most for what is left of the deadline, so a server trickling bytes
+cannot hold a request open past it.
 
 1. The release has `WinZapp-macOS-provenance-<arch>.json` (fetched from the
    releases repository by tag; untrusted content, at most 16 KB, https). It
@@ -128,7 +130,8 @@ and the next update check retries. Every request has a per-read timeout of
    unauthenticated, no redirects, 256 KB cap: `git/ref/tags/<tag>` exists,
    and, peeled through annotated tag objects (`git/tags/<sha>`, whose
    answer must be for the object asked), is exactly `source_commit`.
-4. The downloaded zip (at most 2 GB, 30 minutes) has the sha256 the
+4. The downloaded zip (at most 2 GB and 30 minutes in total; the partial
+   file and the temporary folder are deleted on any failure) has the sha256 the
    provenance lists, and the release's `SHA256SUMS.txt` entry.
 5. As before: the app inside has the running app's Apple Team ID, passes
    `codesign --verify --deep --strict`, and `spctl` (notarized).

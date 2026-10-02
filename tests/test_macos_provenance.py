@@ -514,3 +514,137 @@ def test_the_running_version_comes_from_the_plist_not_from_version_py():
     assert "running_release_tag" in updater
     assert "WinZappReleaseTag" in build and "WinZappSourceCommit" in build
     assert P.RELEASE_TAG_KEY == "WinZappReleaseTag"
+
+
+# -- the budgets are real -------------------------------------------------------
+
+class _Sock:
+    def __init__(self):
+        self.timeouts = []
+
+    def settimeout(self, value):
+        self.timeouts.append(value)
+
+
+class _Raw:
+    def __init__(self, sock):
+        self._sock = sock
+
+
+class _Fp:
+    def __init__(self, sock):
+        self.raw = _Raw(sock)
+
+
+class SlowResponse(FakeResponse):
+    """Every read1 takes *step* seconds of a fake clock and returns a byte."""
+
+    def __init__(self, clock, step, body=b"x" * 100000, headers=None):
+        super().__init__(body)
+        self.clock, self.step = clock, step
+        self.sock = _Sock()
+        self.fp = _Fp(self.sock)
+        self.headers = headers or {}
+        self.status = 200
+
+    def read1(self, n=-1):
+        self.clock[0] += self.step
+        return super().read(1)
+
+
+def _fake_clock(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(P.time, "monotonic", lambda: clock[0])
+    return clock
+
+
+def test_a_read_that_outlives_the_deadline_aborts_and_each_read_gets_only_what_is_left(monkeypatch):
+    clock = _fake_clock(monkeypatch)
+    resp = SlowResponse(clock, step=14)
+    monkeypatch.setattr(P, "_API_OPENER", FakeOpener(resp))
+    with pytest.raises(P.ProvenanceError, match="try again later"):
+        P.fetch_official(GOOD_URL)
+    # 30 s budget, 14 s per byte: the second read may wait 16 s at most, never the full 15 s
+    assert resp.sock.timeouts and all(t <= P.TIMEOUT for t in resp.sock.timeouts)
+    assert resp.sock.timeouts[1] == pytest.approx(16) or resp.sock.timeouts[1] <= 16
+
+
+def test_download_aborts_at_the_size_cap_and_leaves_no_partial_file(monkeypatch, tmp_path):
+    clock = _fake_clock(monkeypatch)
+    dest = tmp_path / ZIP
+    monkeypatch.setattr(P, "_ASSET_OPENER", FakeOpener(SlowResponse(clock, step=0, body=b"x" * 5000)))
+    with pytest.raises(P.ProvenanceError, match="larger"):
+        P.download_file("https://github.com/o/r/releases/download/v1/z.zip", str(dest), limit=1000)
+    assert not dest.exists()
+
+
+def test_download_refuses_a_declared_size_over_the_cap(monkeypatch, tmp_path):
+    clock = _fake_clock(monkeypatch)
+    dest = tmp_path / ZIP
+    resp = SlowResponse(clock, step=0, headers={"content-length": "5000"})
+    monkeypatch.setattr(P, "_ASSET_OPENER", FakeOpener(resp))
+    with pytest.raises(P.ProvenanceError, match="larger"):
+        P.download_file("https://github.com/o/r/z.zip", str(dest), limit=1000)
+    assert not dest.exists()
+
+
+def test_download_aborts_at_the_deadline_and_leaves_no_partial_file(monkeypatch, tmp_path):
+    clock = _fake_clock(monkeypatch)
+    dest = tmp_path / ZIP
+    monkeypatch.setattr(P, "_ASSET_OPENER", FakeOpener(SlowResponse(clock, step=50)))
+    with pytest.raises(P.ProvenanceError, match="try again later"):
+        P.download_file("https://github.com/o/r/z.zip", str(dest), deadline=120)
+    assert not dest.exists()
+
+
+def test_download_removes_the_partial_file_on_any_error(monkeypatch, tmp_path):
+    clock = _fake_clock(monkeypatch)
+    dest = tmp_path / ZIP
+
+    class Dies(SlowResponse):
+        def read1(self, n=-1):
+            if self.tell():
+                raise ConnectionResetError("gone")
+            return super().read(10)
+    monkeypatch.setattr(P, "_ASSET_OPENER", FakeOpener(Dies(clock, 0)))
+    with pytest.raises(ConnectionResetError):
+        P.download_file("https://github.com/o/r/z.zip", str(dest))
+    assert not dest.exists()
+
+
+def test_download_writes_the_file_and_reports_progress(monkeypatch, tmp_path):
+    clock = _fake_clock(monkeypatch)
+    dest = tmp_path / ZIP
+    seen = []
+    resp = SlowResponse(clock, step=0, body=b"y" * 50, headers={"content-length": "50"})
+    monkeypatch.setattr(P, "_ASSET_OPENER", FakeOpener(resp))
+    P.download_file("https://github.com/o/r/z.zip", str(dest), seen.append)
+    assert dest.read_bytes() == b"y" * 50 and seen[-1] == 100
+
+
+def test_download_is_https_only(tmp_path):
+    with pytest.raises(P.ProvenanceError):
+        P.download_file("http://github.com/o/r/z.zip", str(tmp_path / "z"))
+
+
+def test_updater_downloads_through_the_capped_function_and_cleans_its_work_dir():
+    src = (_ROOT / "macos" / "winzapp_mac" / "updater_mac.py").read_text(encoding="utf-8")
+    assert "provenance.download_file(" in src and "requests" not in src
+    assert "shutil.rmtree(work, ignore_errors=True)" in src and "handed_over" in src
+
+
+# -- the releases repository name -------------------------------------------------
+
+@pytest.mark.parametrize("value", ["gabrielhhaber/WinZapp_Python", "rocco-labs/WinZapp_Python",
+                                   "a/b", "owner/name.with.dots", "o/_x-1"])
+def test_valid_repositories(value):
+    assert P.valid_repo(value)
+
+
+@pytest.mark.parametrize("value", [
+    "owner/name\n", "owner/name ", "../name", "owner/..", "owner/.hidden", "owner/a..b",
+    "ow..ner/name", ".owner/name", "-owner/name", "owner/name/extra", "owner", "", "/name",
+    "owner/", "٣wner/name", "owner/näme", None, 5, "o" * 40 + "/name",
+])
+def test_invalid_repositories(value):
+    assert not P.valid_repo(value)
