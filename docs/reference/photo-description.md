@@ -415,6 +415,20 @@ photo page's appended index and translated title alongside totals of 16/15.
 No production behavior or window safety gate was changed. These native cases
 are verified only by the subsequent CI run, never by a local GUI opt-in.
 
+Run `37074231066` at `c6a8f0cf` then completed successfully: **11,623 passed,
+87 skipped** in 440.79 seconds, including the seven photo native cases and
+all settings-file tab cases. Windows installer/portable ZIP build, ZIP content
+verification, checksums and artifact upload also succeeded. Its artifact is
+tied to that exact commit, not to later branch changes.
+
+During that run official main advanced to `e46e8347` with only the uninstaller
+language correction, its shared installer language helper, tests and changelogs.
+Because this affects the installer artifact, it was also integrated without
+text conflicts. Five explicitly selected, window-free checks passed **1,310
+tests / two compiler cases skipped** in 5.42 seconds; no local compiler was
+available for those two syntax-only cases. This last integration requires its
+own fresh full CI/build result before its artifact is treated as verified.
+
 Window-free tests use generated photos, temporary encrypted credentials, fake
 HTTP responses and unbound GUI methods against plain stubs. Native control
 tests are marked `wxgui`, for CI only. **Never** run the full suite or opt into
