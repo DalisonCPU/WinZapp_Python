@@ -34,6 +34,14 @@ you open a matching file; the reasoning is in `docs/traps/` and
    is a plain function with a direct test. A feature over ~150 lines is its
    own module. Delete dead helpers with the feature. Size budgets
    (`tests/test_god_file_split_structure.py`): split, don't raise.
+7. **One agent at a time, one test run at a time.** Agents run on the
+   maintainer's own machine next to a live WinZapp (Chrome + Node). Several
+   agents, or any agent running `pytest -n auto`, froze it (68 orphan xdist
+   workers, 2026-10-02). Start the next agent only when the previous one is
+   done; agents use the repo's `.venv` (no `uv sync`/new `.venv` in a
+   worktree), run only the touched test files serially plus at most one serial
+   full run, leave no background process, and commit WIP early. After an
+   interruption look for stray `python.exe` under `.claude\worktrees\`.
 
 ## What this is
 
