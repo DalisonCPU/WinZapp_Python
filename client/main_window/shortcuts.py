@@ -86,17 +86,14 @@ class ShortcutsMixin:
             self.navigation_panel.nav_list.SetFocus()
 
     def _ensure_conversations_panel_visible(self):
-        """Bring conversations_panel to the front if some other top-level
-        panel (archived/status/settings) is currently showing instead.
+        """Show the open conversation, in the panel it belongs to, for an
+        explicit ask (Alt+2, Alt+3, Alt+M from any panel).
 
-        _on_global_alt2/_on_global_alt3 act on whichever conversation is
-        open regardless of which panel currently has focus — but a
-        conversation staying "open" (self.conversations_panel.conversation
-        still set) after the user switched to, say, the Status tab used to
-        mean Alt+2/Alt+3 jumped focus inside a conversations_panel that
-        stayed hidden: nothing visibly happened, reported live as "doesn't
-        switch to the right panel" when called from anywhere but the
-        conversations/archived panels.
+        A plain panel switch leaves the conversation open but hidden, so
+        these shortcuts would otherwise jump focus inside a hidden pane and
+        nothing would visibly happen. This reveals it first
+        (ConversationsPanel.reveal_open_conversation) and moves no focus: the
+        caller puts it on the messages.
         """
         # A plain panel switch leaves the open conversation hidden, so this
         # explicit ask is what shows it, in the panel it belongs to. The

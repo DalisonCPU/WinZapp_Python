@@ -4,7 +4,7 @@ A plain panel switch (Alt+1, Alt+4, the navigation list, the locked-chats
 panel) must never make an open conversation visible and never load anything:
 showing it again on every Alt+1 <-> Alt+4 was a perceptible delay (#339 showed
 it again on return, #346 only made that cheaper). The conversation stays open
-but hidden; only an explicit ask (Alt+M, Alt+2, Alt+3, the composer's letter)
+but hidden; only an explicit ask (Alt+M, Alt+2, Alt+3)
 or opening a chat brings it back, in the panel it belongs to.
 
 The real MainWindow / NavigationPanel / ConversationsPanel methods run against
@@ -229,8 +229,8 @@ class _Panel(ConversationPanelVisibilityMixin):
     def _backfill_reactions_for_open_conversation(self):
         self.counts["backfill"] += 1
 
-    # What Alt+2 / Alt+3 / Alt+M / the composer letter do once the pane is
-    # shown: put focus in the messages (or the composer).
+    # What Alt+2 / Alt+3 / Alt+M do once the pane is shown: put focus in the
+    # messages.
     def _no_conversation_open_announced(self):
         return self.conversation is None
 
@@ -240,9 +240,6 @@ class _Panel(ConversationPanelVisibilityMixin):
 
     _on_accel_jump_unread = _on_accel_jump_last
     _on_accel_focus_list = _on_accel_jump_last
-
-    def _on_accel_focus_field(self, event):
-        self.message_field.SetFocus()
 
     def _focused_msg_id(self):
         return "msg-4"
@@ -461,7 +458,6 @@ EXPLICIT = {
     "list_alt_m": lambda mw: mw.conversations_panel._on_list_focus_messages(None),
     "list_alt_2": lambda mw: mw.conversations_panel._on_list_jump_last(None),
     "list_alt_3": lambda mw: mw.conversations_panel._on_list_jump_unread(None),
-    "list_field": lambda mw: mw.conversations_panel._on_list_focus_field(None),
 }
 
 
@@ -477,8 +473,7 @@ class TestExplicitRevealsShowTheConversationInItsOwnPanel:
         EXPLICIT[command](world)
 
         _on_screen_for(world, origin)
-        target = "message_field" if command == "list_field" else "messages_list"
-        assert _focus_calls(world)[-1] == target
+        assert _focus_calls(world)[-1] == "messages_list"
         # revealing costs Show/Hide only: nothing is reloaded or requested
         assert _work(world) == before
 

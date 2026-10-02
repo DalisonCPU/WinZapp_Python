@@ -123,7 +123,7 @@ class ConversationPanelVisibilityMixin:
         self.show_chat_panel(origin, focus=False, reveal=True)
 
     # The chat list's own explicit asks for the open conversation (Alt+2,
-    # Alt+3, Alt+M, the composer's letter): reveal it, then do what the
+    # Alt+3, Alt+M): reveal it, then do what the
     # shortcut does inside the conversation. With none open the handler says so.
     def _on_list_jump_last(self, event):
         self.reveal_open_conversation()
@@ -136,9 +136,3 @@ class ConversationPanelVisibilityMixin:
     def _on_list_focus_messages(self, event):
         self.reveal_open_conversation()
         self._on_accel_focus_list(event)
-
-    def _on_list_focus_field(self, event):
-        if self._no_conversation_open_announced():
-            return
-        self.reveal_open_conversation()
-        self._on_accel_focus_field(event)

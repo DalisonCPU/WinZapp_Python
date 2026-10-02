@@ -49,17 +49,17 @@ pane visible and never loads anything.**
   `wx.CallAfter`. Do not add one: that is the delay.
 - **Explicit reveal.** The conversation comes back only on an explicit ask:
   Alt+M, Alt+2, Alt+3 (frame-level `_on_global_*`, the chat list's
-  `_on_list_*` handlers, the archived and locked lists' Alt+M) and the
-  composer's letter from the main list, all through
+  `_on_list_*` handlers, the archived and locked lists' Alt+M), all through
   `reveal_open_conversation()` -> `show_chat_panel(origin, focus=False,
   reveal=True)`. It shows the pane in the panel the conversation **belongs
   to** (`_conversation_origin`), so Alt+M on Alt+4 with a main chat open goes to
   the main panel; an archived chat's explicit reveal switches to the archived
   panel, list and pane together. The handler then moves focus itself. Opening a
   chat from a list (Enter, notification, tray, open-by-JID) is a fresh open and
-  composes its own Show/Hide as before. The native mnemonics of the labels
-  inside the hidden pane cannot do this, which is why the list tables bind
-  these letters explicitly.
+  composes its own Show/Hide as before. The native mnemonic of the messages
+  label inside the hidden pane cannot do this, which is why the main, archived
+  and locked list tables bind Alt+M explicitly
+  (`tests/test_alt_m_reveal_accelerators.py`).
 - **No parked conversations.** The `_parked_by_origin` / `_finish_panel_reopen`
   / `resume=True` machinery existed only to bring a displaced conversation back
   on a switch. Nothing asks for the displaced one explicitly (an explicit
