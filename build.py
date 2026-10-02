@@ -349,6 +349,7 @@ API_EXCLUDE_SUB_DIRS = {"tests", "types"}
 API_CUSTOM_SRC_FILES = [
     "src/config.ts",
     "src/util/callMediaBridge.ts",
+    "src/util/forwardRuntime.ts",
     "src/util/createSessionUtil.ts",
     "src/util/functions.ts",
     "src/util/logger.ts",

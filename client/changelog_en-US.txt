@@ -72,6 +72,8 @@ IMPROVEMENTS
 
 FIXES
 
+- Forwarding messages no longer fails on recent WhatsApp Web versions, where every forward was refused with the error “forwardMessages function is not available”.
+
 - Starting a voice message with recording announcements silenced no longer lets the screen reader begin saying “Send” before being cut off. WinZapp now avoids the automatic focus move that caused the clipped announcement while keeping Ctrl+R, Ctrl+Shift+P and Ctrl+Shift+D available.
 
 - Messages you had selected in a conversation stayed selected after you closed it, and came back selected when you opened it again. The selection now ends with the conversation.
