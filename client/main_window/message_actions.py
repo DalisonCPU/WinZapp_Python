@@ -314,8 +314,8 @@ class MessageActionsMixin:
     def forward_message(self, source_jid: str, msg_key: dict, target_jid: str,
                         source_msg: dict = None) -> bool:
         """Forward a message of any type (text, media, document, …) via
-        POST /api/session/forward-messages, which wraps WPP.chat.forwardMessagesV2
-        — the real WhatsApp forward, so it carries over media/captions/etc.
+        POST /api/session/forward-messages, which calls WhatsApp's own
+        forwardMessages (client/api_patches/src/util/forwardRuntime.ts) — the real WhatsApp forward, so it carries over media/captions/etc.
         without WinZapp having to re-extract and re-send content itself.
         """
         lid_jid = getattr(self, "_phone_to_lid", {}).get(source_jid, "")

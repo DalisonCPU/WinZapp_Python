@@ -72,6 +72,8 @@ MELHORIAS
 
 CORREÇÕES
 
+- Encaminhar mensagens não falha mais nas versões recentes do WhatsApp Web, em que todo encaminhamento era recusado com o erro “forwardMessages function is not available”.
+
 - Ao iniciar uma mensagem de voz com os anúncios da gravação silenciados, o leitor de tela não começa mais a dizer “Enviar” antes de ser interrompido. O WinZapp agora evita a mudança automática de foco que causava esse fragmento, mantendo Ctrl+R, Ctrl+Shift+P e Ctrl+Shift+D disponíveis.
 
 - As mensagens marcadas em uma conversa continuavam marcadas depois de fechá-la, e reapareciam marcadas ao abri-la de novo. Agora a seleção termina junto com a conversa.
