@@ -42,7 +42,7 @@ NOUTĂȚI
 
 - Esc deselectează înainte de a închide. Cu mesaje selectate, primul Esc doar le deselectează pe toate și abia al doilea închide conversația. Și acest comportament poate fi dezactivat în Setări, Interfață utilizator.
 
-- Mesaje vocale stereo. Cu un microfon care înregistrează cu adevărat în stereo, un mesaj vocal poate păstra sunetul ambelor părți. Bifați „Înregistrați implicit mesajele vocale în stereo” în fila Dispozitive audio din Setări sau folosiți noul buton de sub „Înregistrați mesajul vocal” (Ctrl+Shift+G) pentru a înregistra un singur mesaj în celălalt mod: stereo când implicit este mono și mono când implicit este stereo. Deoarece iPhone nu redă mesaje vocale stereo, înregistrarea stereo este trimisă ca audio, iar WinZapp vă anunță acest lucru mai întâi, cu opțiunea „Nu mai afișați”; pentru a fi avertizat din nou, folosiți opțiunea corespunzătoare din fila Interfață utilizator. Dacă microfonul nu oferă două canale, mesajul este înregistrat în mono și WinZapp vă anunță.
+- Mesaje vocale stereo. Cu un microfon care înregistrează cu adevărat în stereo, un mesaj vocal poate păstra sunetul ambelor părți. Bifați „Înregistrați implicit mesajele vocale în stereo” în fila Dispozitive audio din Setări sau folosiți noul buton de sub „Înregistrați mesajul vocal” (Ctrl+Shift+G) pentru a înregistra un singur mesaj în celălalt mod: stereo când implicit este mono și mono când implicit este stereo. Înregistrarea stereo este trimisă ca mesaj audio, nu ca mesaj vocal, așa că se redă și pe iPhone. Dacă microfonul nu oferă două canale, mesajul este înregistrat în mono și WinZapp vă anunță.
 
 - Resincronizarea doar a conversației deschise cu Shift+F5, și din meniul Sincronizare. Spre deosebire de F5, care șterge și descarcă din nou toate conversațiile, Shift+F5 preia din nou de la WhatsApp mesajele conversației deschise, pune la locul potrivit mesajele care lipseau și le elimină pe cele care nu mai există acolo, fără să atingă istoricul mai vechi. F5 și Shift+F5 cer acum confirmare, cu Nu ca răspuns implicit și opțiunea „Nu mai afișați”; pentru a fi întrebat din nou, folosiți opțiunile corespunzătoare din fila Interfață utilizator a Setărilor. Când conversația este deja actualizată sau WhatsApp nu are mesaje din ea, Shift+F5 spune acest lucru, în loc să spună că nu a putut resincroniza.
 
@@ -75,6 +75,8 @@ NOUTĂȚI
 - Când un apel nu poate începe pentru că versiunea WhatsApp Web folosită nu acceptă apeluri, WinZapp spune acum acest lucru și ce se poate încerca (repornirea WinZapp sau alegerea opțiunii „Forțați reinstalarea WPPConnect” din meniul Ajutor), în loc să citească un cod de eroare.
 
 CORECTĂRI
+
+- Redirecționarea mesajelor nu mai eșuează pe versiunile recente de WhatsApp Web, unde orice redirecționare era refuzată cu eroarea “forwardMessages function is not available”.
 
 - Când porneați un mesaj vocal cu anunțurile înregistrării dezactivate, cititorul de ecran nu mai începe să spună „Trimiteți” înainte de a fi întrerupt. WinZapp evită acum mutarea automată a focalizării care provoca acest fragment, păstrând disponibile Ctrl+R, Ctrl+Shift+P și Ctrl+Shift+D.
 
@@ -128,7 +130,7 @@ CORECTĂRI
 
 - În conversațiile arhivate, Alt+M nu ducea la lista de mesaje a conversației deschise, așa cum face în conversațiile principale. Acum funcționează de oriunde din panou.
 
-- O conversație deschisă apare acum pe ecran doar cât timp te afli în lista din care a fost deschisă: conversațiile principale (Alt+1), conversațiile arhivate (Alt+4) sau conversațiile blocate. La trecerea la alta dintre ele, conversația dispare de pe ecran, iar la întoarcere reapare cu lista de mesaje exact unde citeai. Aceasta corectează și o conversație arhivată care rămânea pe ecran în conversațiile principale. O conversație deschisă din cele principale le aparține, chiar și una arhivată găsită cu câmpul de căutare, iar deschiderea unei conversații în altă listă nu mai duce la pierderea celei deschise acolo: revine când te întorci.
+- O conversație deschisă într-o listă este acum ascunsă când treci la alta: conversațiile principale (Alt+1), conversațiile arhivate (Alt+4) sau conversațiile blocate. Trecerea schimbă doar lista și te lasă în ea; nu afișează și nu reîncarcă conversația deschisă. Conversația rămâne deschisă, iar o aduci înapoi cu Alt+M, Alt+2 sau Alt+3, ori deschizând-o din nou; apare atunci în lista din care a fost deschisă. Aceasta corectează și o conversație arhivată care rămânea pe ecran în conversațiile principale. O conversație deschisă din cele principale le aparține, chiar și una arhivată găsită cu câmpul de căutare.
 
 - Același lucru este valabil pentru orice alt panou, precum Stare sau Apeluri: cu o conversație lăsată deschisă în spatele lui, mesajele ei noi sunt anunțate ca ale oricărei alte conversații și nu sunt marcate ca citite. Mesajele conversațiilor arhivate sunt anunțate doar cât timp lista celor arhivate este pe ecran.
 

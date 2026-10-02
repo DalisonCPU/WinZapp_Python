@@ -5,7 +5,6 @@ from core.chat_lock_vault import AUTO_LOCK_MINUTE_OPTIONS
 from core.i18n import LANGUAGE_NAMES
 from core.combo_search import bind_incremental_search
 from core.alert_tones import CUSTOM_PATH_CHECK_DELAY_MS, alert_tone_previewable
-from ui.dialogs.stereo_voice_warning import ask_stereo_voice
 from core.sound_system import (
     SOUND_EVENTS, discover_alert_tone_choices, resolve_alert_tone_path,
     DEFAULT_PACK_ID, import_soundpack, AlertPreviewController,
@@ -580,15 +579,6 @@ class SettingsDialog(wx.Dialog):
         ui_sizer.Add(
             self._confirm_resync_conversation_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
         )
-        # Mirrors user_interface.warn_stereo_voice_iphone, which the stereo
-        # warning's own "don't show again" box clears.
-        self._warn_stereo_voice_cb = wx.CheckBox(
-            self._ui_page, label=i18n.t("ui_warn_stereo_voice_iphone")
-        )
-        ui_sizer.Add(
-            self._warn_stereo_voice_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
-        )
-
         self._warn_system_audio_cb = wx.CheckBox(
             self._ui_page, label=i18n.t("ui_warn_system_audio_recording")
         )
@@ -1657,10 +1647,6 @@ class SettingsDialog(wx.Dialog):
         )
         self._confirm_resync_conversation_cb.SetValue(bool(confirm_resync_conversation))
 
-        warn_stereo_voice = self.main_window.settings.get("user_interface", {}).get(
-            "warn_stereo_voice_iphone", True
-        )
-        self._warn_stereo_voice_cb.SetValue(bool(warn_stereo_voice))
         self._warn_system_audio_cb.SetValue(bool(
             self.main_window.settings.get("user_interface", {}).get(
                 "warn_system_audio_recording", True)))
@@ -2316,22 +2302,6 @@ class SettingsDialog(wx.Dialog):
 
         self._update_alert_preview_visibility()
         self._alert_page.Layout()
-
-    def _confirm_stereo_voice_if_newly_enabled(self):
-        """Ask before stereo voice messages are turned on in this save."""
-        if not self._voice_stereo_check.GetValue():
-            return
-        if self.main_window.settings.get("general", {}).get("voice_message_stereo", False):
-            return  # already on: nothing new to warn about
-        if not self._warn_stereo_voice_cb.GetValue():
-            return
-        confirmed, dont_ask_again = ask_stereo_voice(self, self.main_window.i18n)
-        if not confirmed:
-            self._voice_stereo_check.SetValue(False)
-        elif dont_ask_again:
-            self._warn_stereo_voice_cb.SetValue(False)
-            self.main_window.settings.setdefault("user_interface", {})[
-                "warn_stereo_voice_iphone"] = False
 
     def _update_alert_preview_visibility(self):
         """Show each preview button only when there is a sound to play.
@@ -2999,9 +2969,6 @@ class SettingsDialog(wx.Dialog):
             "confirm_resync_conversation"
         ] = self._confirm_resync_conversation_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
-            "warn_stereo_voice_iphone"
-        ] = self._warn_stereo_voice_cb.GetValue()
-        self.main_window.settings.setdefault("user_interface", {})[
             "warn_system_audio_recording"
         ] = self._warn_system_audio_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
@@ -3148,12 +3115,6 @@ class SettingsDialog(wx.Dialog):
             self._noise_reduction_check.GetValue()
         )
 
-        # Turning stereo voice messages on says first that they go out as audio
-        # messages (ui/dialogs/stereo_voice_warning.py). Read from this dialog's own
-        # box, not from settings: it may have been unticked in this same save.
-        # No leaves stereo off; "don't show again" unticks the box here too, so
-        # a later Apply cannot write it back on.
-        self._confirm_stereo_voice_if_newly_enabled()
         self.main_window.settings.setdefault("general", {})["voice_message_stereo"] = (
             self._voice_stereo_check.GetValue()
         )
@@ -3556,7 +3517,6 @@ class SettingsDialog(wx.Dialog):
         self._confirm_mark_all_read_cb.SetLabel(i18n.t("ui_confirm_mark_all_read"))
         self._confirm_resync_all_cb.SetLabel(i18n.t("ui_confirm_resync_all"))
         self._confirm_resync_conversation_cb.SetLabel(i18n.t("ui_confirm_resync_conversation"))
-        self._warn_stereo_voice_cb.SetLabel(i18n.t("ui_warn_stereo_voice_iphone"))
         self._warn_system_audio_cb.SetLabel(i18n.t("ui_warn_system_audio_recording"))
         self._space_selects_cb.SetLabel(i18n.t("ui_space_selects_in_selection_mode"))
         self._escape_clears_selection_cb.SetLabel(i18n.t("ui_escape_clears_selection"))

@@ -1074,8 +1074,6 @@ DEFAULT_SETTINGS = {
         # confirmations' own "don't show again" boxes clear these.
         "confirm_resync_all": True,
         "confirm_resync_conversation": True,
-        # Warn before a stereo voice message (ui/dialogs/stereo_voice_warning.py).
-        "warn_stereo_voice_iphone": True,
         "warn_system_audio_recording": True,
         "system_audio_consent_revision": 0,
         # Once a selection exists, plain Space keeps selecting instead of

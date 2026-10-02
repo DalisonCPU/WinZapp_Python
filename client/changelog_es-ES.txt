@@ -42,7 +42,7 @@ NOVEDADES
 
 - Esc desmarca antes de cerrar. Con mensajes marcados, el primer Esc solo los desmarca todos y únicamente el segundo cierra la conversación. También se puede desactivar en Configuración, Interfaz de usuario.
 
-- Mensajes de voz en estéreo. Con un micrófono que graba en estéreo de verdad, el mensaje de voz puede conservar el sonido de ambos lados. Marca "Grabar los mensajes de voz en estéreo de forma predeterminada" en la pestaña Dispositivos de audio de Configuración, o usa el nuevo botón debajo de "Grabar mensaje de voz" (Ctrl+Shift+G) para grabar solo un mensaje en el otro modo: en estéreo cuando el predeterminado es mono, y en mono cuando es estéreo. Como el iPhone no reproduce mensajes de voz en estéreo, la grabación en estéreo se envía como audio, y WinZapp lo avisa antes, con la opción "No volver a mostrar"; para que vuelva a avisar, usa la opción correspondiente en la pestaña Interfaz de usuario. Si el micrófono no ofrece dos canales, el mensaje se graba en mono y WinZapp lo avisa.
+- Mensajes de voz en estéreo. Con un micrófono que graba en estéreo de verdad, el mensaje de voz puede conservar el sonido de ambos lados. Marca "Grabar los mensajes de voz en estéreo de forma predeterminada" en la pestaña Dispositivos de audio de Configuración, o usa el nuevo botón debajo de "Grabar mensaje de voz" (Ctrl+Shift+G) para grabar solo un mensaje en el otro modo: en estéreo cuando el predeterminado es mono, y en mono cuando es estéreo. La grabación en estéreo se envía como mensaje de audio, y no como mensaje de voz, así que también se reproduce en iPhone. Si el micrófono no ofrece dos canales, el mensaje se graba en mono y WinZapp lo avisa.
 
 - Resincronizar solo la conversación abierta con Shift+F5, también en el menú Sincronización. A diferencia de F5, que borra y vuelve a descargar todas las conversaciones, Shift+F5 vuelve a obtener de WhatsApp los mensajes de la conversación abierta, coloca en su sitio los que faltaban y elimina los que ya no existen allí, sin tocar el historial más antiguo. F5 y Shift+F5 ahora piden confirmación, con No como predeterminado y la opción "No volver a mostrar"; para que vuelva a preguntar, usa las opciones correspondientes en la pestaña Interfaz de usuario de Configuración. Cuando la conversación ya está al día, o cuando WhatsApp no tiene mensajes de ella, Shift+F5 lo dice, en lugar de decir que no se pudo resincronizar.
 
@@ -75,6 +75,8 @@ MEJORAS
 - Cuando una llamada no puede iniciarse porque la versión de WhatsApp Web en uso no admite llamadas, WinZapp ahora lo dice y explica qué probar (reiniciar WinZapp o elegir "Forzar reinstalación de WPPConnect" en el menú Ayuda), en lugar de leer un código de error.
 
 CORRECCIONES
+
+- Reenviar mensajes ya no falla en las versiones recientes de WhatsApp Web, donde todos los reenvíos se rechazaban con el error “forwardMessages function is not available”.
 
 - Al iniciar un mensaje de voz con los anuncios de grabación silenciados, el lector de pantalla ya no empieza a decir “Enviar” antes de ser interrumpido. WinZapp ahora evita el cambio automático de foco que causaba ese fragmento y mantiene disponibles Ctrl+R, Ctrl+Shift+P y Ctrl+Shift+D.
 
@@ -128,7 +130,7 @@ CORRECCIONES
 
 - En las conversaciones archivadas, Alt+M no llevaba a la lista de mensajes de la conversación abierta, como hace en las conversaciones principales. Ahora funciona desde cualquier lugar del panel.
 
-- Una conversación abierta ahora solo aparece en pantalla mientras estás en la lista desde la que se abrió: las conversaciones principales (Alt+1), las conversaciones archivadas (Alt+4) o los chats bloqueados. Al cambiar a otra de ellas, la conversación desaparece de la pantalla, y al volver reaparece con la lista de mensajes exactamente donde estabas leyendo. Esto también corrige una conversación archivada que seguía en pantalla en las conversaciones principales. Una conversación abierta desde las principales les pertenece, incluso una archivada encontrada con el campo de búsqueda, y abrir una conversación en otra lista ya no hace perder la que tenías abierta allí: vuelve cuando regresas.
+- Una conversación abierta en una lista ahora se oculta al cambiar a otra: las conversaciones principales (Alt+1), las archivadas (Alt+4) o los chats bloqueados. Cambiar solo cambia la lista y te deja en ella; no muestra ni vuelve a cargar la conversación abierta. La conversación sigue abierta, y la recuperas con Alt+M, Alt+2 o Alt+3, o abriéndola de nuevo; entonces aparece en la lista desde la que se abrió. Esto también corrige una conversación archivada que seguía en pantalla en las conversaciones principales. Una conversación abierta desde las principales les pertenece, incluso una archivada encontrada con el campo de búsqueda.
 
 - Lo mismo ocurre con cualquier otro panel, como Estado o Llamadas: con una conversación abierta detrás, sus mensajes nuevos se anuncian como los de cualquier otra conversación y no se marcan como leídos. Los mensajes de conversaciones archivadas solo se anuncian mientras la lista de archivadas está en pantalla.
 

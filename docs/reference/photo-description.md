@@ -385,7 +385,26 @@ passed / five GUI cases deselected**, in 17.86 seconds. `git diff --check` and
 an offline `uv lock --check` passed. This was not the full suite. That initial
 automated verification opened no application windows and made no provider
 calls. Later manual application checks are described separately above.
-No commits, pushes or pull requests have been made for this feature.
+No commits, pushes or pull requests had been made at that initial stage.
+
+### Upstream integration (2026-10-03)
+
+After explicit user approval for commit, fork feature-branch push and Branch
+test build, the feature was preserved in local commit `9d06cf53`. The official
+main tip `858f891a` (the source of `v2.0.0.3924alpha`) was then integrated without
+text conflicts. The overlapping navigation, accelerator, vault, settings,
+build and locale changes were inspected relative to that new upstream tree:
+its panel/audio/forwarding changes remain intact alongside the photo feature.
+No version bump or alpha release was requested for this feature.
+
+The subsequent serial, explicitly selected **32-file** check passed **2,133
+tests / seven native GUI cases deselected** in 26.22 seconds. It extended the
+previous selection with window-free panel-switch/visibility/mnemonic, vault
+settings and settings wiring/buildability checks. This was not the full suite;
+no GUI opt-in, xdist workers, real provider requests or audio devices were used.
+Full GitHub CI and test artifact generation are still pending at this point.
+Only the fork's feature/photo-description branch is authorized for push; its
+main branch is not being updated, avoiding an unintended alpha publication.
 
 Window-free tests use generated photos, temporary encrypted credentials, fake
 HTTP responses and unbound GUI methods against plain stubs. Native control

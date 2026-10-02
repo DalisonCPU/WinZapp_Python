@@ -31,7 +31,6 @@ from core.voice_stereo import (
     alternate_mode_is_stereo, alternate_record_label_key, encode_as_stereo,
     fell_back_to_mono,
 )
-from ui.dialogs.stereo_voice_warning import ask_stereo_voice, stereo_warning_enabled
 from core.quote_recovery import RECOVERED_FROM_QUOTE
 from core.audio_transcode import transcode_audio_to_wav
 from core.attachment_types import classify_attachment_media_type

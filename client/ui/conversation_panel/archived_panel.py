@@ -12,7 +12,7 @@ from ui.accessible import (
     AccessibleSearchConversations,
 )
 from ui.dialogs.clear_chat_confirm import confirm_clear_chat
-from core.conversation_view import ARCHIVED
+from core.conversation_view import ARCHIVED, mnemonic_letter
 from core.utils import format_number
 from ui.conversation_panel.chat_menu import ChatMenuMixin
 from ui.conversation_panel.chat_list_selection import ChatListSelectionMixin
@@ -175,11 +175,8 @@ class ArchivedConversationsPanel(ChatListSelectionMixin, wx.Panel):
         # that mnemonic lives in ConversationsPanel, so the native redirect
         # never reaches it from here — an explicit accelerator, on the same
         # letter the i18n label uses (cf. create_accel_conversation).
-        messages_letter = "M"
-        label = self.main_window.i18n.t("messages")
-        amp = label.find("&")
-        if 0 <= amp < len(label) - 1 and label[amp + 1].isalpha():
-            messages_letter = label[amp + 1].upper()
+        messages_letter = mnemonic_letter(
+            self.main_window.i18n.t("messages"), "M")
         CS = wx.ACCEL_CTRL | wx.ACCEL_SHIFT
         AS = wx.ACCEL_ALT | wx.ACCEL_SHIFT
         CAS = wx.ACCEL_CTRL | wx.ACCEL_ALT | wx.ACCEL_SHIFT
