@@ -54,6 +54,10 @@ WHAT'S NEW
 
 - Transcribe and describe media with AI. The new "Transcriptions and Descriptions" tab in Settings turns the AI features on (they start off) and takes the API key of one or more providers — Gemini, OpenAI, Claude, Groq and OpenRouter — which are tried in the order you set, so when one fails or runs out of quota the next one answers. In a message's context menu, or with Ctrl+Shift+I, "Transcribe" turns a voice message into text, "Describe" describes a photo or a video, "Describe sticker" describes a sticker and "Convert to accessible text" turns a PDF into plain, readable text. The result opens in a window with the text, and for photos and videos you can ask follow-up questions in it. WinZapp asks before sending media to a provider and asks again every time for locked chats; your keys are encrypted on your computer and are sent only to the provider they belong to. A waiting sound plays while the provider works, and answers can be read aloud automatically. The text follows the language of the app.
 
+- Return to the search results when closing a chat. With "Keep the chat search when opening a chat" ticked in the User Interface tab of Settings, the chat search stays active when you open a chat it found, and Esc puts the focus back on that chat among the results instead of on the full list. The option is off by default.
+
+- Forward voice messages as voice messages. WhatsApp turns every forwarded voice message into a plain audio, which takes it out of the sequential playback of voice messages in the destination chat. With "Forward voice messages as voice messages instead of audio" ticked in the User Interface tab of Settings, the copy arrives as a voice message and is still marked as forwarded. The option is off by default.
+
 IMPROVEMENTS
 
 - Spell checking: the error sound now also plays when you type punctuation (comma, full stop, question mark and so on) right after a misspelled word, not only a space, and when the cursor arrives at a misspelled word with the arrow keys, Ctrl+arrows, Home, End or the mouse.
@@ -81,6 +85,8 @@ IMPROVEMENTS
 - The WhatsApp library WinZapp uses was updated. Its developers' notes list fixes for creating groups, getting and resetting group invite links, editing group descriptions, changing your profile name and uploading media on recent WhatsApp Web versions. If WinZapp offers to update WPPConnect when it starts, accept it so the new library is installed.
 
 - Conversation search with F3 and Shift+F3. You can now jump to the next result with F3 and the previous one with Shift+F3 from anywhere in the open conversation, including the messages list, without going back to the search field; focus follows the result and the screen reader announces its position. Enter and Shift+Enter still work as an alternative, but only inside the search field, because in the messages list they already do other things. The "Previous result" and "Next result" buttons now announce Shift+F3 and F3, and the shortcuts help was updated.
+
+- Forwarding now confirms when it worked. Before, only a failure was announced; now a box appears at the end saying "Message forwarded." or how many messages were forwarded.
 
 FIXES
 
