@@ -1439,6 +1439,7 @@
     "ai_error_request": "Dostawca odrzucił żądanie. Sprawdź identyfikator modelu i ustawienia.",
     "ai_error_refusal": "Dostawca odmówił przetworzenia tego pliku lub odpowiedzi na pytanie.",
     "ai_error_response": "Nie otrzymano użytecznej odpowiedzi od dostawcy.",
+    "ai_error_output_limit": "Odpowiedź przekracza obsługiwany limit tekstu transkrypcji lub pliku PDF. Nie wyświetlono niepełnego wyniku i nie wypróbowano automatycznie innego dostawcy. Spróbuj użyć krótszego pliku.",
     "ai_error_network": "Nie można połączyć się z dostawcą. Sprawdź połączenie; nie ponowiono próby automatycznie.",
     "ai_error_timeout": "Upłynął czas żądania. Nie powtórzono go; otrzymane żądanie nadal może być płatne.",
     "ai_error_cancelled": "Żądanie zostało anulowane.",

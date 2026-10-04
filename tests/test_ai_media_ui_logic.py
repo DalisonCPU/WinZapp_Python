@@ -832,6 +832,69 @@ def test_declining_the_reset_confirmation_changes_nothing(tmp_path, monkeypatch)
     assert not page._reset and not page._deleted and not page.dirty
 
 
+@pytest.mark.parametrize("provider", list(ai_config.PROVIDERS))
+@pytest.mark.parametrize("ending", ["apply", "cancel"])
+def test_reset_then_configure_new_key_revokes_old_consent_only_on_apply(
+        tmp_path, monkeypatch, dialog, provider, ending):
+    import ui.dialogs.ai_settings_page as settings_module
+    import ui.dialogs.ai_result_dialog as result_module
+    page = PageStub(tmp_path)
+    page.store.set(provider, "synthetic-old-key")
+    old_consents = list(ai_config.PROVIDERS)
+    page.app.set("ai_media", {"consented": old_consents})
+    page.providers.selection = page._order.index(provider)
+    monkeypatch.setattr(settings_module.wx, "MessageBox", lambda *args: wx.YES)
+
+    class ProviderStub:
+        def __init__(self, *args):
+            pass
+        def ShowModal(self):
+            return wx.ID_OK
+        def values(self):
+            return {"key": "synthetic-new-key", "deleted": False,
+                    "model": ai_config.PROVIDERS[provider].model, "enabled": True}
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(settings_module, "AIProviderDialog", ProviderStub)
+    page._reset_keys(None)
+    page._configure(None)
+    assert page.store.get(provider) == "synthetic-old-key"
+    assert page.app.get("ai_media")["consented"] == old_consents
+    if ending == "cancel":
+        page._destroyed(SimpleNamespace(GetEventObject=lambda: page, Skip=lambda: None))
+        assert page.store.get(provider) == "synthetic-old-key"
+        assert page.app.get("ai_media")["consented"] == old_consents
+        return
+    assert page.apply()
+    assert page.store.get(provider) == "synthetic-new-key"
+    assert page.app.get("ai_media")["consented"] == []
+    asked = []
+
+    class ConsentStub:
+        remember = Control(False)
+        def __init__(self, parent, i18n, providers, kind, locked):
+            asked.append(list(providers))
+        def ShowModal(self):
+            return wx.ID_CANCEL
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(result_module, "AIConsentDialog", ConsentStub)
+    dialog.config = ai_config.preferences(page.app)
+    assert AIResultDialog._consent(dialog, [provider]) is False
+    assert asked == [[provider]]
+
+
+def test_output_limit_is_announced_as_error_without_publishing_partial_text(dialog):
+    generation, _ = dialog.session.begin("convert")
+    dialog._complete(generation, "convert", True, None, "ai_error_output_limit")
+    assert dialog.status.value == "ai_error_output_limit"
+    assert dialog.spoken == ["ai_error_output_limit"]
+    assert dialog.result.value == "" and dialog._latest == ""
+    assert dialog.session.history == [] and dialog.session.active is None
+
+
 def test_an_invalid_model_blocks_apply_and_names_the_problem(tmp_path):
     page = PageStub(tmp_path)
     page._models["groq"] = "../escape"

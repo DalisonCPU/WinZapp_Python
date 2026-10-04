@@ -80,6 +80,8 @@ MEJORAS
 
 CORRECCIONES
 
+- Contenido con IA: restablecer todas las claves también borra los consentimientos de envío recordados, incluso al introducir una nueva clave antes de aplicar. Las transcripciones y los textos de PDF largos ahora indican un error de límite de texto en vez de perder el final sin avisar; no se prueba otro proveedor automáticamente por este límite.
+
 - El desinstalador ahora sigue el idioma de visualización de Windows, igual que el instalador, en lugar de aparecer siempre en portugués.
 
 - Reenviar mensajes ya no falla en las versiones recientes de WhatsApp Web, donde todos los reenvíos se rechazaban con el error “forwardMessages function is not available”.

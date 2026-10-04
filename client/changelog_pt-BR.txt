@@ -80,6 +80,8 @@ MELHORIAS
 
 CORREÇÕES
 
+- Mídia com IA: redefinir todas as chaves também limpa as autorizações de envio lembradas, mesmo ao inserir uma nova chave antes de aplicar. Transcrições e textos de PDF longos agora informam um erro de limite de texto, em vez de perder o final silenciosamente; outro provedor não é tentado automaticamente por esse limite.
+
 - O desinstalador agora segue o idioma de exibição do Windows, como o instalador, em vez de aparecer sempre em português.
 
 - Encaminhar mensagens não falha mais nas versões recentes do WhatsApp Web, em que todo encaminhamento era recusado com o erro “forwardMessages function is not available”.

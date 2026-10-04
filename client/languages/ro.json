@@ -1439,6 +1439,7 @@
     "ai_error_request": "Furnizorul a respins cererea. Verifică identificatorul modelului și setările.",
     "ai_error_refusal": "Furnizorul a refuzat să proceseze conținutul sau să răspundă.",
     "ai_error_response": "Nu s-a primit un răspuns utilizabil de la furnizor.",
+    "ai_error_output_limit": "Răspunsul depășește limita de text acceptată pentru o transcriere sau un PDF. Nu s-a afișat un rezultat incomplet și nu s-a încercat automat alt furnizor. Încearcă un fișier mai scurt.",
     "ai_error_network": "Nu se poate conecta la furnizor. Verifică conexiunea; nu s-a reîncercat automat.",
     "ai_error_timeout": "Cererea a expirat. Nu a fost repetată; dacă a fost primită, poate fi totuși taxată.",
     "ai_error_cancelled": "Cererea a fost anulată.",

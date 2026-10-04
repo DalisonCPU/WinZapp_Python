@@ -64,11 +64,24 @@ when it holds a saved key.
   is what fits Gemini's 20 MB inline request once base64 has added a third.
   Each provider gets one attempt of 60 s (photos) to 150 s (PDF); one action
   gets two and a half attempts' worth in total (`service.ATTEMPT_SECONDS`).
+- **Complete text.** Audio transcripts and converted PDFs above their character
+  limits (50,000 and 100,000 respectively) fail with `output_limit`; their endings
+  are never silently dropped and reported as a complete result. This local limit
+  ends the action without trying another provider automatically.
+- A provider's own output cutoff (`MAX_TOKENS`, `max_tokens`, `length` or
+  OpenAI's incomplete status) is different: the parser rejects the partial
+  answer as `response`, so the next configured provider may still be tried.
+  A shorter answer alone does not prove that a transcript or PDF is complete.
 - **The fallback chain.** On authentication, quota, server, request, refusal,
   response, network or per-attempt timeout errors the next provider is tried.
   Bad media, a cancel and the overall deadline end the action at once: they
   would fail identically anywhere. When every provider fails the window lists
   who failed how (`service.ChainFailed`).
+- Each provider gets one attempt with its configured model (or its dedicated
+  audio transcription model); the chain does not choose arbitrary new models
+  or retry the same provider. Unreadable or missing keys skip that provider.
+  Switching providers after a timeout may incur usage for both attempts if
+  the first request already reached its provider.
 - **Language.** The reply language is an instruction in the system prompt
   (`prompts.instructions`), taken from the current application language each
   time; the prompts themselves are English. Audio is transcribed in the
@@ -83,6 +96,9 @@ when it holds a saved key.
   opens and cannot be remembered; locking the vault, leaving the chat, hiding
   or closing the app and deleting the message all close the window and drop its
   media and answers (`close_ai_media`).
+- Resetting all keys also revokes every remembered provider consent on Apply/OK,
+  even if a replacement key is entered before applying. Cancel keeps the saved
+  keys and consents unchanged.
 - Photos and stickers are re-encoded (metadata removed); video, voice messages and
   PDFs go out exactly as they are, and the consent text says so.
 - View-once media, documents that are not PDFs and statuses are never offered.

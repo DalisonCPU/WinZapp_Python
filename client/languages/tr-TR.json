@@ -1439,6 +1439,7 @@
   "ai_error_request": "Sağlayıcı isteği reddetti. Model kimliğini ve ayarları denetleyin.",
   "ai_error_refusal": "Sağlayıcı bu dosyayı işlemeyi veya soruyu yanıtlamayı reddetti.",
   "ai_error_response": "Sağlayıcıdan kullanılabilir bir yanıt alınamadı.",
+  "ai_error_output_limit": "Yanıt, ses dökümü veya PDF metni için desteklenen metin sınırını aştı. Eksik bir sonuç gösterilmedi ve başka bir sağlayıcı otomatik olarak denenmedi. Daha kısa bir dosyayla deneyin.",
   "ai_error_network": "Sağlayıcıya bağlanılamadı. Bağlantınızı denetleyin; otomatik yeniden deneme yapılmadı.",
   "ai_error_timeout": "İstek zaman aşımına uğradı. Yinelenmedi; sağlayıcıya ulaşmış bir istek yine de ücretlendirilebilir.",
   "ai_error_cancelled": "İstek iptal edildi.",

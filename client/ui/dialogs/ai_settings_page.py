@@ -436,7 +436,9 @@ class AISettingsPage(ScrolledPanel):
             changes.update(self._drafts)
             if changes or self._reset:
                 self.store.apply(changes, reset=self._reset)
-            removed = set(self._deleted)
+            # Re-entering a key removes it from _deleted, but must not undo
+            # the consent revocation requested by an install-wide reset.
+            removed = set(PROVIDERS) if self._reset else set(self._deleted)
 
             def merge(old):
                 value = dict(old) if isinstance(old, dict) else {}

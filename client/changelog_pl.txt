@@ -80,6 +80,8 @@ ULEPSZENIA
 
 POPRAWKI
 
+- Treści AI: resetowanie wszystkich kluczy usuwa też zapamiętane zgody na wysyłanie, nawet po wpisaniu nowego klucza przed zastosowaniem zmian. Długie transkrypcje i teksty PDF zgłaszają teraz błąd limitu tekstu zamiast tracić końcówkę bez ostrzeżenia; ten limit nie powoduje automatycznej próby u innego dostawcy.
+
 - Program odinstalowujący używa teraz języka wyświetlania systemu Windows, tak jak instalator, zamiast zawsze pojawiać się po portugalsku.
 
 - Przekazywanie wiadomości nie kończy się już błędem w najnowszych wersjach WhatsApp Web, w których każde przekazanie było odrzucane z komunikatem “forwardMessages function is not available”.

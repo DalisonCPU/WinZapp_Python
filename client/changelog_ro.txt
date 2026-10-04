@@ -80,6 +80,8 @@ NOUTĂȚI
 
 CORECTĂRI
 
+- Conținut AI: resetarea tuturor cheilor șterge și acordurile de trimitere memorate, chiar dacă introduci o cheie nouă înainte de aplicare. Transcrierile și textele PDF lungi afișează acum o eroare de limită de text în loc să piardă finalul fără avertizare; nu se încearcă automat alt furnizor pentru această limită.
+
 - Programul de dezinstalare urmează acum limba de afișare a Windows, la fel ca programul de instalare, în loc să apară mereu în portugheză.
 
 - Redirecționarea mesajelor nu mai eșuează pe versiunile recente de WhatsApp Web, unde orice redirecționare era refuzată cu eroarea “forwardMessages function is not available”.

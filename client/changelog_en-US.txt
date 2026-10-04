@@ -80,6 +80,8 @@ IMPROVEMENTS
 
 FIXES
 
+- AI media: resetting all keys also clears remembered sending consent, even when a new key is entered before applying. Long transcripts and PDF text now report a text-limit error instead of silently losing their endings; another provider is not tried automatically for this limit.
+
 - The uninstaller now follows the Windows display language like the installer does, instead of always appearing in Portuguese.
 
 - Forwarding messages no longer fails on recent WhatsApp Web versions, where every forward was refused with the error “forwardMessages function is not available”.

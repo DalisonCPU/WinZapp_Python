@@ -1439,6 +1439,7 @@
     "ai_error_request": "El proveedor rechazó la petición. Revisa el identificador del modelo y los ajustes.",
     "ai_error_refusal": "El proveedor se negó a procesar este contenido o responder a la pregunta.",
     "ai_error_response": "No se recibió una respuesta utilizable del proveedor.",
+    "ai_error_output_limit": "La respuesta supera el límite de texto admitido para una transcripción o PDF. No se mostró un resultado incompleto ni se probó otro proveedor automáticamente. Prueba con un archivo más corto.",
     "ai_error_network": "No se pudo conectar al proveedor. Revisa la conexión; no se reintentó automáticamente.",
     "ai_error_timeout": "La petición agotó el tiempo de espera. No se repitió; si ya se recibió, aún puede cobrarse.",
     "ai_error_cancelled": "La petición se canceló.",

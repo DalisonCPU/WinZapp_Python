@@ -80,6 +80,8 @@ YENİLİKLER
 
 DÜZELTMELER
 
+- Yapay zekâ işlemleri: tüm anahtarlar sıfırlandığında, kaydetmeden önce yeni bir anahtar girilse de hatırlanmış gönderim onayları temizlenir. Uzun ses dökümleri ve PDF metinleri artık sonları sessizce kesilmek yerine metin sınırı hatası verir; bu sınır için başka bir sağlayıcı otomatik olarak denenmez.
+
 - Kaldırma programı artık her zaman Portekizce görünmek yerine, kurulum programı gibi Windows görüntüleme dilini izliyor.
 
 - Mesajları iletme, her iletimin “forwardMessages function is not available” hatasıyla reddedildiği son WhatsApp Web sürümlerinde artık başarısız olmuyor.
