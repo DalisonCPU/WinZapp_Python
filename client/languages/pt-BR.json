@@ -1440,6 +1440,7 @@
     "ai_error_request": "O provedor recusou a solicitação. Confira o identificador do modelo e as configurações.",
     "ai_error_refusal": "O provedor recusou processar esta mídia ou responder à pergunta.",
     "ai_error_response": "Não foi recebida uma resposta utilizável do provedor.",
+    "ai_error_output_limit": "A resposta excede o limite de texto aceito para uma transcrição ou PDF. Nenhum resultado incompleto foi mostrado e nenhum outro provedor foi tentado automaticamente. Tente um arquivo mais curto.",
     "ai_error_network": "Não foi possível conectar ao provedor. Confira a conexão; não houve tentativa automática.",
     "ai_error_timeout": "A solicitação excedeu o tempo limite. Não foi repetida; se já recebida, ainda pode ser cobrada.",
     "ai_error_cancelled": "A solicitação foi cancelada.",

@@ -1440,6 +1440,7 @@
     "ai_error_request": "O fornecedor recusou o pedido. Verifique o identificador do modelo e as definições.",
     "ai_error_refusal": "O fornecedor recusou processar este conteúdo ou responder à pergunta.",
     "ai_error_response": "Não foi recebida uma resposta utilizável do fornecedor.",
+    "ai_error_output_limit": "A resposta excede o limite de texto suportado para uma transcrição ou PDF. Não foi mostrado um resultado incompleto nem foi tentado outro fornecedor automaticamente. Experimente um ficheiro mais curto.",
     "ai_error_network": "Não foi possível ligar ao fornecedor. Verifique a ligação; não houve repetição automática.",
     "ai_error_timeout": "O pedido excedeu o tempo limite. Não foi repetido; se já recebido, ainda pode ser cobrado.",
     "ai_error_cancelled": "O pedido foi cancelado.",

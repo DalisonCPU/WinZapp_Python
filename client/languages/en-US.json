@@ -1440,6 +1440,7 @@
     "ai_error_request": "The provider rejected the request. Check the model identifier and settings.",
     "ai_error_refusal": "The provider declined to process this media or answer the question.",
     "ai_error_response": "No usable answer was received from the provider.",
+    "ai_error_output_limit": "The response exceeds the supported text limit for a transcript or PDF. No partial result was shown and no other provider was tried automatically. Try a shorter file.",
     "ai_error_network": "Could not connect to the provider. Check your connection; no automatic retry was made.",
     "ai_error_timeout": "The request timed out. It was not retried; a request already received may still be charged.",
     "ai_error_cancelled": "The request was cancelled.",
