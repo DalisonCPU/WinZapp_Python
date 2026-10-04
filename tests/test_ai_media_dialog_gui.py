@@ -73,7 +73,8 @@ def test_audio_and_pdf_are_converted_in_one_go_without_a_question_box(context, k
     _, dialog = result_window(frame, kind)
     try:
         assert dialog.question is None and dialog.ask is None
-        assert dialog.regenerate.IsEnabled() is False  # busy until the worker answers
+        # The first request is deferred with wx.CallAfter (patched out here), so the window is idle.
+        assert dialog.regenerate.IsEnabled() and not dialog.cancel.IsEnabled()
     finally:
         dialog.Destroy()
 
