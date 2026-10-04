@@ -7,8 +7,8 @@ import wx
 from app_settings import AppSettings
 from core.i18n import LANGUAGE_NAMES
 from core.ai_credentials import CredentialStore
-from core.image_description.session import PhotoSession
-from core.image_description.image_input import ImageInput
+from core.ai_media.session import PhotoSession
+from core.ai_media.image_input import ImageInput
 from ui.dialogs.image_description_dialog import ImageDescriptionDialog
 from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
 from ui.conversation_panel.image_description import ImageDescriptionMixin
@@ -413,8 +413,8 @@ def _prepare_start(dialog, monkeypatch):
 @pytest.mark.parametrize("regenerate", [False, True])
 def test_photo_requests_follow_current_application_language(dialog, monkeypatch, language, provider, regenerate):
     from core.i18n import I18n
-    from core.image_description.config import PROVIDERS
-    from core.image_description.providers import build_request
+    from core.ai_media.config import PROVIDERS
+    from core.ai_media.providers import build_request
     module = _prepare_start(dialog, monkeypatch)
     dialog.main_window.settings = {"general": {"language": language}}
     dialog.i18n = I18n(dialog.main_window)
@@ -502,8 +502,8 @@ def test_start_arms_watchdog_before_dispatch_and_recovers_without_completion(dia
 
 
 def test_real_worker_error_reaches_gui_queue_and_is_announced(dialog, monkeypatch):
-    from core.image_description import service
-    from core.image_description.errors import DescriptionError
+    from core.ai_media import service
+    from core.ai_media.errors import DescriptionError
     module = _prepare_start(dialog, monkeypatch)
     future = []
     callbacks = []
@@ -754,7 +754,7 @@ def test_shortcut_does_nothing_outside_message_list(monkeypatch):
 @pytest.mark.parametrize("cached", [True, False])
 def test_entrypoint_reads_original_encrypted_photo_and_uses_bounded_download(tmp_path, monkeypatch, cached):
     from cryptography.fernet import Fernet
-    from core.image_description.service import RequestToken
+    from core.ai_media.service import RequestToken
     import ui.conversation_panel.image_description as module
     import ui.dialogs.image_description_dialog as dialog_module
     data, downloaded, focused = [], [], []

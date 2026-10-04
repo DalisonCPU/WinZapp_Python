@@ -566,7 +566,7 @@ class MediaMixin:
             # Opt-in bounded path shares all the existing message/key/JID
             # preparation, but never buffers an unlimited body or retries a
             # cancelled photo operation. Ordinary media behaviour is unchanged.
-            from core.image_description.media_input import fetch_bounded_media
+            from core.ai_media.media_input import fetch_bounded_media
             return fetch_bounded_media(url, headers, body_data, max_bytes, cancel_check,
                                        timeout=min(timeout, 15), post=api_post)
 

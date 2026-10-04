@@ -16,17 +16,20 @@ class ImageInput:
     height: int
 
 
-def prepare_image(data, profile="balanced"):
-    if not data or len(data) > MAX_SOURCE_BYTES:
-        raise DescriptionError("image_size")
+def prepare_image(data, profile="balanced", *, first_frame=False):
+    """``first_frame`` accepts an animated image (a sticker) and describes its
+    first frame; anything else must be a single still."""
+    if not data or len(data) > MAX_SOURCE_BYTES["image"]:
+        raise DescriptionError("media_size")
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(BytesIO(data)) as source:
-                if source.format not in ("JPEG", "PNG", "WEBP") or getattr(source, "n_frames", 1) != 1:
-                    raise DescriptionError("image_format")
+                if source.format not in ("JPEG", "PNG", "WEBP") or (
+                        getattr(source, "n_frames", 1) != 1 and not first_frame):
+                    raise DescriptionError("media_format")
                 if source.width * source.height > MAX_PIXELS:
-                    raise DescriptionError("image_size")
+                    raise DescriptionError("media_size")
                 source.verify()
             with Image.open(BytesIO(data)) as source:
                 oriented = ImageOps.exif_transpose(source)
@@ -39,11 +42,11 @@ def prepare_image(data, profile="balanced"):
                 result.save(output, format="JPEG", quality=92, subsampling=0)
                 encoded = output.getvalue()
                 if len(encoded) > 8 * 1024 * 1024:
-                    raise DescriptionError("image_size")
+                    raise DescriptionError("media_size")
                 return ImageInput(encoded, "image/jpeg", *result.size)
     except DescriptionError:
         raise
     except (Image.DecompressionBombError, Image.DecompressionBombWarning):
-        raise DescriptionError("image_size") from None
+        raise DescriptionError("media_size") from None
     except (OSError, ValueError, UnidentifiedImageError):
-        raise DescriptionError("image_format") from None
+        raise DescriptionError("media_format") from None

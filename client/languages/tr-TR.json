@@ -1421,7 +1421,7 @@
   "openrouter_model_help_label": "Otomatik, WinZapp'ın OpenRouter için önerdiği en güncel modeli kullanır. Yalnızca sabitlemek istiyorsanız belirli bir model seçin. Model görselleri (ve PDF'leri dönüştürmek için PDF'leri) kabul etmelidir.",
   "openrouter_model_label": "OpenRouter modeli",
   "tab_ai_accessibility": "Yazıya Dökme ve Betimleme",
-  "sound_event_photo_describing": "Fotoğraf betimleme sürüyor",
+  "sound_event_ai_processing": "Fotoğraf betimleme sürüyor",
   "ai_title": "Fotoğraf betimleme",
   "ai_enabled": "İsteğe bağlı fotoğraf betimlemeyi etkinleştir (tüm hesaplarda ortak)",
   "ai_provider": "Sağlayıcı",

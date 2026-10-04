@@ -2,9 +2,9 @@
 import wx
 
 from core.ai_credentials import CredentialError
-from core.image_description.errors import DescriptionError
-from core.image_description.model_catalog import fetch_models
-from core.image_description.service import RequestToken, submit
+from core.ai_media.errors import DescriptionError
+from core.ai_media.model_catalog import fetch_models
+from core.ai_media.service import RequestToken, submit
 
 
 class ModelSelectionMixin:

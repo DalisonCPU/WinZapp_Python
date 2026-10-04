@@ -25,10 +25,10 @@ def fetch_bounded_media(url, headers, message, max_bytes, cancel_check, timeout,
             encoded = json.loads(body).get("base64", "")
             body = base64.b64decode(encoded, validate=True)
         if len(body) > max_bytes:
-            raise DescriptionError("image_size")
+            raise DescriptionError("media_size")
         return body
     except BodyTooLarge:
-        raise DescriptionError("image_size") from None
+        raise DescriptionError("media_size") from None
     except DescriptionError:
         raise
     except (requests.RequestException, HTTPError, TimeoutError, ValueError, TypeError, AttributeError):

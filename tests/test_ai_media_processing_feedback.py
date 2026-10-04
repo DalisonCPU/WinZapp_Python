@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.image_description.feedback import ProcessingCue
-from core.image_description.transcript import render_history, spoken_answer
+from core.ai_media.feedback import ProcessingCue
+from core.ai_media.transcript import render_history, spoken_answer
 from core import sound_system
 
 
@@ -44,7 +44,7 @@ def test_waiting_audio_has_an_owned_loop_and_stops_then_frees_once(monkeypatch):
     events = _fake_audio(monkeypatch)
     cue = ProcessingCue(_window())
     cue.start()
-    assert events == [("load", "synthetic.ogg", {"event_key": "photo_describing", "pack_id": "custom",
+    assert events == [("load", "synthetic.ogg", {"event_key": "ai_processing", "pack_id": "custom",
                                                 "looping": True, "allow_device_recovery": False}), "play"]
     cue.stop()
     cue.stop()
@@ -70,7 +70,7 @@ def test_disabled_or_missing_audio_never_opens_a_stream(monkeypatch, disabled):
     elif disabled == "system":
         window.sound_system.enabled = False
     elif disabled == "event":
-        window.settings = {"sound_events": {"custom": {"photo_describing": {"enabled": False}}}}
+        window.settings = {"sound_events": {"custom": {"ai_processing": {"enabled": False}}}}
     elif disabled == "missing-system":
         window.sound_system = None
     else:
@@ -84,7 +84,7 @@ def test_disabled_or_missing_audio_never_opens_a_stream(monkeypatch, disabled):
 def test_custom_sound_path_uses_the_existing_pack_resolver(monkeypatch):
     events = _fake_audio(monkeypatch)
     window = _window()
-    window.settings = {"sound_events": {"custom": {"photo_describing": {"path": "chosen.ogg"}}}}
+    window.settings = {"sound_events": {"custom": {"ai_processing": {"path": "chosen.ogg"}}}}
     resolved = []
     def resolve(*args):
         resolved.append(args)
@@ -93,7 +93,7 @@ def test_custom_sound_path_uses_the_existing_pack_resolver(monkeypatch):
     cue = ProcessingCue(window)
     cue.start()
     cue.stop()
-    assert resolved == [({"id": "custom"}, {"id": "default"}, "photo_describing", "chosen.ogg")]
+    assert resolved == [({"id": "custom"}, {"id": "default"}, "ai_processing", "chosen.ogg")]
     assert events[0][1] == "resolved.ogg"
 
 
@@ -135,7 +135,7 @@ def test_request_owned_sound_cannot_create_an_unstoppable_device_fallback(monkey
 @pytest.mark.parametrize("regenerate", [True, False])
 def test_dialog_releases_the_real_cue_controller_before_auto_reading(monkeypatch, answer, spoken, regenerate):
     from tests.test_image_description_ui_logic import DialogStub
-    from core.image_description.image_input import ImageInput
+    from core.ai_media.image_input import ImageInput
     import ui.dialogs.image_description_dialog as dialog_module
     monkeypatch.setattr(dialog_module, "active_account_id", lambda: "a")
     events = _fake_audio(monkeypatch)
@@ -164,19 +164,19 @@ def test_load_sound_passes_request_ownership_without_changing_default_recovery(m
 
 def test_processing_event_resolves_to_a_bundled_asset_and_has_all_locale_labels():
     root = Path(__file__).resolve().parents[1]
-    assert ("photo_describing", "dijital-imza.wav") in sound_system.SOUND_EVENTS
+    assert ("ai_processing", "ai_processing.wav") in sound_system.SOUND_EVENTS
     folder = root / "client" / "sounds" / "default"
     manifest = json.loads((folder / "default.pack.json").read_text(encoding="utf-8"))
-    assert manifest["events"]["photo_describing"] == "dijital-imza.wav"
-    assert (folder / manifest["events"]["photo_describing"]).is_file()
+    assert manifest["events"]["ai_processing"] == "ai_processing.wav"
+    assert (folder / manifest["events"]["ai_processing"]).is_file()
     languages = root / "client" / "languages"
     for locale in json.loads((languages / "language_map.json").read_text(encoding="utf-8")):
         values = json.loads((languages / f"{locale}.json").read_text(encoding="utf-8"))
-        assert values["sound_event_photo_describing"]
+        assert values["sound_event_ai_processing"]
 
 
 def test_digital_signature_is_a_complete_five_second_pcm_wave():
-    path = Path(__file__).resolve().parents[1] / "client" / "sounds" / "default" / "dijital-imza.wav"
+    path = Path(__file__).resolve().parents[1] / "client" / "sounds" / "default" / "ai_processing.wav"
     with wave.open(str(path), "rb") as audio:
         assert audio.getcomptype() == "NONE"
         assert (audio.getnchannels(), audio.getsampwidth(), audio.getframerate()) == (1, 2, 44100)
@@ -188,9 +188,9 @@ def test_digital_signature_is_a_complete_five_second_pcm_wave():
 
 
 @pytest.mark.parametrize("selection,expected", [
-    ("default", "dijital-imza.wav"),
-    ("older_pack", "dijital-imza.wav"),
-    ("stale_override", "dijital-imza.wav"),
+    ("default", "ai_processing.wav"),
+    ("older_pack", "ai_processing.wav"),
+    ("stale_override", "ai_processing.wav"),
     ("custom_pack", "synchronizing.ogg"),
     ("custom_override", "synchronizing.ogg"),
 ])
@@ -205,10 +205,10 @@ def test_processing_event_resolver_preserves_pack_and_user_choices(selection, ex
         override = str(folder / "missing-photo-cue.wav")
     elif selection == "custom_pack":
         active = {"id": "custom", "dir": str(folder),
-                  "events": {"photo_describing": "synchronizing.ogg"}}
+                  "events": {"ai_processing": "synchronizing.ogg"}}
     elif selection == "custom_override":
         override = str(folder / "synchronizing.ogg")
-    resolved = sound_system.resolve_sound_event_path(active, default, "photo_describing", override)
+    resolved = sound_system.resolve_sound_event_path(active, default, "ai_processing", override)
     assert Path(resolved) == folder / expected
     assert Path(resolved).is_file()
     # The independent synchronization event keeps its existing sound.

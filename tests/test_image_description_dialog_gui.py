@@ -103,7 +103,7 @@ def test_optional_technical_help_has_native_readable_text_and_close_button(conte
 
 
 def test_model_list_is_a_named_native_choice_and_selection_is_explicit(context, monkeypatch):
-    from core.image_description.model_catalog import ModelOption
+    from core.ai_media.model_catalog import ModelOption
     import ui.dialogs.image_description_models as module
     frame, path = context
     CredentialStore(path).set("openai", "synthetic-key")

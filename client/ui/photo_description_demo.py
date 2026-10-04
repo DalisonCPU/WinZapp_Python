@@ -14,8 +14,8 @@ from app_settings import AppSettings
 from core.accessible_speech import AccessibleSpeechOutput
 from core.i18n import I18n
 from core.sound_system import SoundSystem, discover_sound_packs, DEFAULT_PACK_ID
-from core.image_description.demo_fixture import DEMO_PHOTO_ID, demo_messages, make_demo_photo
-from core.image_description.errors import DescriptionError
+from core.ai_media.demo_fixture import DEMO_PHOTO_ID, demo_messages, make_demo_photo
+from core.ai_media.errors import DescriptionError
 from ui.conversation_panel.image_description import ImageDescriptionMixin
 from ui.conversation_panel.media_paths import cached_media_path
 from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage

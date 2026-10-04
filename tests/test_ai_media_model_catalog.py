@@ -4,14 +4,14 @@ import json
 import pytest
 import requests
 
-from core.image_description.errors import DescriptionError
-from core.image_description.service import RequestToken
-from tests.test_image_description_core import FakeHTTP, FakeResponse
+from core.ai_media.errors import DescriptionError
+from core.ai_media.service import RequestToken
+from tests.test_ai_media_core import FakeHTTP, FakeResponse
 
 
 @pytest.fixture
 def catalog():
-    from core.image_description import model_catalog
+    from core.ai_media import model_catalog
     return model_catalog
 
 
@@ -36,21 +36,34 @@ def test_only_known_photo_to_text_models_are_listed(catalog, provider, body, exp
     assert [m.id for m in catalog.compatible_models(provider, body)] == expected
 
 
+def _listing(provider, ids):
+    if provider == "gemini":
+        return {"models": [{"name": "models/" + key, "displayName": "untrusted text",
+                            "supportedGenerationMethods": ["generateContent"]} for key in ids]}
+    return {"data": [{"id": key, "display_name": "untrusted text"} for key in ids]}
+
+
+@pytest.mark.parametrize("provider", ["claude", "groq", "openrouter"])
+def test_other_providers_list_their_models_under_data_and_are_filtered_the_same_way(catalog, provider):
+    known = next(iter(catalog.COMPATIBLE_MODELS[provider]))
+    body = _listing(provider, [known, "unreviewed-model", "../" + known])
+    assert [m.id for m in catalog.compatible_models(provider, body)] == [known]
+
+
 def test_catalog_has_real_alternatives_and_uses_trusted_names(catalog):
+    from core.ai_media.config import PROVIDERS
+    assert set(catalog.COMPATIBLE_MODELS) == set(PROVIDERS)
     for provider, rows in catalog.COMPATIBLE_MODELS.items():
-        assert len(rows) >= 2
-        body = ({"data": [{"id": key, "displayName": "untrusted text"} for key in rows]}
-                if provider == "openai" else {"models": [
-                    {"name": "models/" + key, "displayName": "untrusted text",
-                     "supportedGenerationMethods": ["generateContent"]} for key in rows]})
+        assert PROVIDERS[provider].model in rows  # the default is always offered
+        body = _listing(provider, rows)
         result = catalog.compatible_models(provider, body)
         assert set(m.id for m in result) == set(rows)
         assert all("untrusted" not in m.label for m in result)
 
 
-@pytest.mark.parametrize("provider", ["openai", "gemini"])
+@pytest.mark.parametrize("provider", ["openai", "gemini", "claude", "groq", "openrouter"])
 def test_listing_has_auth_headers_no_photo_no_generation_or_redirects(catalog, provider):
-    body = {"data": []} if provider == "openai" else {"models": []}
+    body = {"models": []} if provider == "gemini" else {"data": []}
     http = FakeHTTP(response(body))
     assert catalog.fetch_models(provider, "synthetic-secret", RequestToken(seconds=20),
                                 session_factory=lambda: http) == ()
@@ -59,8 +72,11 @@ def test_listing_has_auth_headers_no_photo_no_generation_or_redirects(catalog, p
     assert "json" not in kwargs and kwargs["allow_redirects"] is False
     assert kwargs["stream"] is True
     auth = kwargs["headers"]
-    assert auth == ({"Authorization": "Bearer synthetic-secret"} if provider == "openai"
-                    else {"x-goog-api-key": "synthetic-secret"})
+    assert auth == {"openai": {"Authorization": "Bearer synthetic-secret"},
+                    "groq": {"Authorization": "Bearer synthetic-secret"},
+                    "openrouter": {"Authorization": "Bearer synthetic-secret"},
+                    "gemini": {"x-goog-api-key": "synthetic-secret"},
+                    "claude": {"x-api-key": "synthetic-secret", "anthropic-version": "2023-06-01"}}[provider]
     assert kwargs["timeout"].total <= 20 and http.response.closed
 
 

@@ -3,15 +3,15 @@ import wx
 
 from app_paths import active_account_id, global_dir
 from core.ai_credentials import CredentialStore, CredentialError
-from core.image_description.config import MAX_QUESTION_CHARS, PROVIDERS
-from core.image_description.errors import DescriptionError
-from core.image_description.image_input import prepare_image
-from core.image_description.prompts import instructions
-from core.image_description.service import request_answer, submit
-from core.image_description.session import PhotoSession
-from core.image_description.diagnostics import record
-from core.image_description.feedback import ProcessingCue
-from core.image_description.transcript import render_history, spoken_answer
+from core.ai_media.config import MAX_QUESTION_CHARS, PROVIDERS
+from core.ai_media.errors import DescriptionError
+from core.ai_media.image_input import prepare_image
+from core.ai_media.prompts import instructions
+from core.ai_media.service import request_answer, submit
+from core.ai_media.session import PhotoSession
+from core.ai_media.diagnostics import record
+from core.ai_media.feedback import ProcessingCue
+from core.ai_media.transcript import render_history, spoken_answer
 
 
 class PhotoConsentDialog(wx.Dialog):
@@ -192,9 +192,9 @@ class ImageDescriptionDialog(wx.Dialog):
             loader = self.loader
             def work():
                 token.check()
-                record("image_load_started", generation=generation)
+                record("media_load_started", generation=generation)
                 prepared = image or prepare_image(loader(token), config["profile"])
-                record("image_ready", generation=generation)
+                record("media_ready", generation=generation)
                 token.check()
                 answer = request_answer(config["provider"], config["model"], key, prepared,
                                         history, question, instructions(language, config["profile"]),

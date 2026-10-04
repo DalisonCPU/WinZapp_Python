@@ -1421,7 +1421,7 @@
     "openrouter_model_help_label": "Automático usa siempre el modelo más reciente recomendado por WinZapp para OpenRouter. Elige un modelo específico solo si quieres fijarlo. El modelo debe aceptar imágenes (y PDF, para convertir PDF).",
     "openrouter_model_label": "Modelo de OpenRouter",
     "tab_ai_accessibility": "Transcripciones y Descripciones",
-    "sound_event_photo_describing": "Descripción de foto en curso",
+    "sound_event_ai_processing": "Descripción de foto en curso",
     "ai_title": "Descripción de fotos",
     "ai_enabled": "Activar descripción de fotos bajo demanda (compartida entre cuentas)",
     "ai_provider": "Proveedor",

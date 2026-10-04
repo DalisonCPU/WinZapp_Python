@@ -1,14 +1,15 @@
 """RAM-only dialog session, immutable identity and generation-gated callbacks."""
 from .config import MAX_QUESTION_CHARS, MAX_TURNS, MAX_REQUESTS
 from .errors import DescriptionError
-from .service import RequestToken
+from .service import Operation
 
 
-class PhotoSession:
-    def __init__(self, account, chat, message, locked=False):
+class MediaSession:
+    def __init__(self, account, chat, message, kind, locked=False):
         self.identity = (account, chat, message)
+        self.kind = kind
         self.locked = locked
-        self.image = None
+        self.media = None
         self.history = []
         self.requests = 0
         self.generation = 0
@@ -24,7 +25,7 @@ class PhotoSession:
             raise DescriptionError("limit")
         self.requests += 1
         self.generation += 1
-        self.active = RequestToken()
+        self.active = Operation(self.kind)
         return self.generation, self.active
 
     def accept(self, generation, question, answer):
@@ -44,5 +45,5 @@ class PhotoSession:
     def close(self):
         self.closed = True
         self.cancel()
-        self.image = None
+        self.media = None
         self.history.clear()

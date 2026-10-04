@@ -6,8 +6,8 @@ from cryptography.fernet import InvalidToken
 
 from app_paths import active_account_id, global_dir
 from app_settings import AppSettings
-from core.image_description.config import MAX_SOURCE_BYTES, eligible_photo, preferences
-from core.image_description.errors import DescriptionError
+from core.ai_media.config import MAX_SOURCE_BYTES, eligible_photo, preferences
+from core.ai_media.errors import DescriptionError
 from core.utils import decrypt_bytes
 from ui.conversation_panel.media_paths import cached_media_path
 
@@ -48,7 +48,7 @@ class ImageDescriptionMixin:
             except (TypeError, ValueError):
                 size = 0
             if size > MAX_SOURCE_BYTES:
-                raise DescriptionError("image_size")
+                raise DescriptionError("media_size")
             if not os.path.isfile(path):
                 mw.handle_media_message(snapshot, timeout=15, max_bytes=MAX_SOURCE_BYTES,
                                         cancel_check=token.check)
@@ -62,7 +62,7 @@ class ImageDescriptionMixin:
                 with open(path, "rb") as stream:
                     encrypted = stream.read(limit + 1)
                 if len(encrypted) > limit:
-                    raise DescriptionError("image_size")
+                    raise DescriptionError("media_size")
                 return decrypt_bytes(encrypted, key)
             except (OSError, InvalidToken, ValueError, TypeError):
                 raise DescriptionError("media") from None

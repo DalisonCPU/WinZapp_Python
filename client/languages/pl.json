@@ -1421,7 +1421,7 @@
     "openrouter_model_help_label": "Opcja automatyczna zawsze używa najnowszego modelu zalecanego przez WinZapp dla OpenRouter. Wybierz konkretny model tylko wtedy, gdy chcesz go zablokować. Model musi akceptować obrazy (i PDF, aby konwertować pliki PDF).",
     "openrouter_model_label": "Model OpenRouter",
     "tab_ai_accessibility": "Transkrypcje i opisy",
-    "sound_event_photo_describing": "Opisywanie zdjęcia w toku",
+    "sound_event_ai_processing": "Opisywanie zdjęcia w toku",
     "ai_title": "Opisy zdjęć",
     "ai_enabled": "Włącz opisy zdjęć na żądanie (wspólne dla wszystkich kont)",
     "ai_provider": "Dostawca",

@@ -16,16 +16,16 @@ class ProcessingCue:
             from core.sound_system import DEFAULT_PACK_ID, load_sound, resolve_sound_event_path
             active = window.get_active_sound_pack()
             pack_id = active.get("id") if active else DEFAULT_PACK_ID
-            config = window.settings.get("sound_events", {}).get(pack_id, {}).get("photo_describing", {})
+            config = window.settings.get("sound_events", {}).get(pack_id, {}).get("ai_processing", {})
             if not config.get("enabled", True):
                 return
             path = resolve_sound_event_path(active, window._default_sound_pack,
-                                            "photo_describing", config.get("path", ""))
+                                            "ai_processing", config.get("path", ""))
             if not path:
                 return
             # A private looping stream must not trigger global BASS reinit or
             # create an unowned fallback stream which could outlive this job.
-            self._sound = load_sound(system, path, event_key="photo_describing", pack_id=pack_id,
+            self._sound = load_sound(system, path, event_key="ai_processing", pack_id=pack_id,
                                      looping=True, allow_device_recovery=False)
             self._sound.play()
         except Exception:

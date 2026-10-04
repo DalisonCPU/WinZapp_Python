@@ -1,17 +1,17 @@
 """Operational logs must not accept content, credentials or response bodies."""
 import logging
 
-from core.image_description.diagnostics import record
+from core.ai_media.diagnostics import record
 
 
 def test_allowlisted_diagnostics_only_record_operational_fields(caplog):
-    with caplog.at_level(logging.INFO, logger="winzapp.photo_description"):
+    with caplog.at_level(logging.INFO, logger="winzapp.ai_media"):
         record("response_headers", status=429, generation=2, category="quota")
     assert "response_headers http=429 generation=2 category=quota" in caplog.text
 
 
 def test_private_strings_and_unknown_fields_cannot_enter_log(caplog):
-    with caplog.at_level(logging.INFO, logger="winzapp.photo_description"):
+    with caplog.at_level(logging.INFO, logger="winzapp.ai_media"):
         record("private-key-secret")
         record("worker_finished", status="private-key-secret", generation="private-question",
                category="private-answer", exception_type="private-response-body")

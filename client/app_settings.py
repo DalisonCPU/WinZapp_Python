@@ -33,7 +33,7 @@ _FILE = "app.json"
 _DEFAULTS: dict[str, Any] = {
     "language": "",
     # Only preferences and consent; credentials have a separate encrypted store.
-    "image_description": {},
+    "ai_media": {},
     "updates_enabled": True,
     # Opt-in to the alpha channel (one build per commit landed on main, see
     # .github/workflows/alpha-release.yml). Global rather than per-account for

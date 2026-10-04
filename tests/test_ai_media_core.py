@@ -1,4 +1,4 @@
-"""Photo processing and REST contracts, with synthetic images and no GUI/network."""
+"""Credentials, preferences, media preparation, sessions and transport, with synthetic data and no GUI/network."""
 import base64
 from io import BytesIO
 import json
@@ -11,12 +11,11 @@ import requests
 
 from app_settings import AppSettings
 from core.ai_credentials import CredentialStore, CredentialError
-from core.image_description import config, image_input, service
-from core.image_description.errors import DescriptionError
-from core.image_description.image_input import ImageInput, prepare_image
-from core.image_description.prompts import instructions
-from core.image_description.providers import build_request, parse_answer
-from core.image_description.session import PhotoSession
+from core.ai_media import config, image_input, service
+from core.ai_media.errors import DescriptionError
+from core.ai_media.image_input import prepare_image
+from core.ai_media.payload import Media
+from core.ai_media.session import MediaSession
 
 
 def photo(size=(20, 30), format="PNG", exif=None):
@@ -89,7 +88,7 @@ def test_cross_instance_writes_preserve_other_provider(tmp_path):
             CredentialStore(tmp_path).set(provider, provider + "-secret")
         except Exception as exc:
             errors.append(exc)
-    threads = [threading.Thread(target=save, args=(p,)) for p in ("openai", "gemini")]
+    threads = [threading.Thread(target=save, args=(p,)) for p in config.PROVIDERS]
     for thread in threads:
         thread.start()
     for thread in threads:
@@ -97,8 +96,19 @@ def test_cross_instance_writes_preserve_other_provider(tmp_path):
         assert not thread.is_alive()
     assert not errors
     store = CredentialStore(tmp_path)
-    assert store.get("openai") == "openai-secret"
-    assert store.get("gemini") == "gemini-secret"
+    for provider in config.PROVIDERS:
+        assert store.get(provider) == provider + "-secret"
+
+
+def test_every_provider_has_a_slot_and_unknown_ones_are_refused(tmp_path):
+    store = CredentialStore(tmp_path)
+    for provider in config.PROVIDERS:
+        store.set(provider, "secret-" + provider)
+    assert [bool(store.get(p)) for p in config.PROVIDERS] == [True] * len(config.PROVIDERS)
+    for blob in (b"secret-claude", b"secret-groq", b"secret-openrouter"):
+        assert blob not in store.data_path.read_bytes()
+    with pytest.raises(CredentialError):
+        store.set("unknown", "secret")
 
 
 @pytest.mark.parametrize("value", ["bad key", "x" * 4097, "line\nbreak"])
@@ -108,32 +118,64 @@ def test_invalid_key_is_not_written(tmp_path, value):
     assert not (tmp_path / "ai_credentials.enc").exists()
 
 
-def test_global_preferences_are_opt_in_and_provider_scoped(tmp_path):
+def test_global_preferences_are_opt_in_and_defaults_are_complete(tmp_path):
+    p = config.preferences(AppSettings(str(tmp_path)))
+    assert p["enabled"] is False
+    assert p["order"] == list(config.PROVIDERS) and p["disabled"] == []
+    assert p["consented"] == [] and all(p["kinds"].values())
+    assert p["models"] == {name: spec.model for name, spec in config.PROVIDERS.items()}
+
+
+def test_order_disabled_and_consent_are_validated_and_persisted(tmp_path):
     app = AppSettings(str(tmp_path))
-    assert not config.preferences(app)["enabled"]
-    app.set("image_description", {"enabled": True, "provider": "gemini", "consented": ["openai"],
-                                  "models": {"openai": "gpt-4.1-mini"}})
+    app.set("ai_media", {"enabled": True, "order": ["groq", "bogus", "gemini", "groq"],
+                         "disabled": ["openai", "bogus"], "consented": ["openai", "bogus"],
+                         "kinds": {"audio": False, "video": "yes"},
+                         "models": {"openai": "gpt-4o", "groq": "../escape"}})
     p = config.preferences(app)
-    assert p["provider"] == "gemini" and not p["consented"]
-    assert p["model"] == config.PROVIDERS["gemini"].model
-    app.update("image_description", lambda old: {**old, "consented": ["openai", "gemini"]})
-    assert config.preferences(AppSettings(str(tmp_path)))["consented"]
+    assert p["order"][:2] == ["groq", "gemini"]  # unknown and repeated ids dropped
+    assert set(p["order"]) == set(config.PROVIDERS)  # newcomers appended
+    assert p["disabled"] == ["openai"] and p["consented"] == ["openai"]
+    assert p["kinds"]["audio"] is False and p["kinds"]["video"] is True
+    assert p["models"]["openai"] == "gpt-4o"
+    assert p["models"]["groq"] == config.PROVIDERS["groq"].model
+    app.update("ai_media", lambda old: {**old, "consented": ["openai", "gemini"]})
+    assert config.preferences(AppSettings(str(tmp_path)))["consented"] == ["gemini", "openai"]
 
 
-@pytest.mark.parametrize("raw", [None, [], "broken", {"provider": [], "profile": [], "models": 7}])
+@pytest.mark.parametrize("raw", [None, [], "broken", {"order": 3, "disabled": "x", "models": 7, "kinds": []}])
 def test_corrupt_preferences_fall_back_safely(tmp_path, raw):
     app = AppSettings(str(tmp_path))
-    app.set("image_description", raw)
-    assert config.preferences(app)["provider"] == "openai"
+    app.set("ai_media", raw)
+    p = config.preferences(app)
+    assert p["enabled"] is False and p["order"] == list(config.PROVIDERS)
 
 
 def test_automatic_reading_defaults_on_without_overriding_a_saved_choice(tmp_path):
     app = AppSettings(str(tmp_path))
     assert config.preferences(app)["read_answers"] is True
-    app.set("image_description", {"read_answers": False})
+    app.set("ai_media", {"read_answers": False})
     assert config.preferences(app)["read_answers"] is False
-    app.set("image_description", {"read_answers": True})
+    app.set("ai_media", {"read_answers": True})
     assert config.preferences(app)["read_answers"] is True
+
+
+def test_the_chain_follows_the_order_skips_what_cannot_serve_and_prefers_the_first_answerer():
+    saved = {"order": ["groq", "claude", "gemini", "openai"], "disabled": ["claude"]}
+    p = config.preferences(type("App", (), {"get": staticmethod(lambda key: saved)})())
+    has_key = lambda provider: provider in ("groq", "gemini", "claude")  # a key is saved for these only
+    assert config.chain(p, "image", has_key) == ["groq", "gemini"]
+    assert config.chain(p, "audio", has_key) == ["groq", "gemini"]  # claude cannot hear anyway
+    assert config.chain(p, "video", has_key) == ["gemini"]  # only Gemini takes video
+    assert config.chain(p, "pdf", has_key) == ["gemini"]  # Groq takes no PDF
+    assert config.chain(p, "image", has_key, prefer="gemini") == ["gemini", "groq"]
+    assert config.chain(p, "image", lambda provider: False) == []
+
+
+def test_every_kind_has_a_provider_and_only_pictures_and_videos_take_questions():
+    for kind in config.KINDS:
+        assert any(config.supports(name, kind) for name in config.PROVIDERS)
+    assert [k for k in config.KINDS if config.asks_questions(k)] == ["image", "sticker", "video"]
 
 
 def test_exif_orientation_is_applied_and_metadata_removed():
@@ -165,69 +207,28 @@ def test_invalid_input_is_refused(data):
 
 def test_pixel_and_byte_limits_are_checked_before_decode(monkeypatch):
     monkeypatch.setattr(image_input, "MAX_PIXELS", 100)
-    with pytest.raises(DescriptionError, match="ai_error_image_size"):
+    with pytest.raises(DescriptionError, match="ai_error_media_size"):
         prepare_image(photo())
-    monkeypatch.setattr(image_input, "MAX_SOURCE_BYTES", 1)
-    with pytest.raises(DescriptionError, match="ai_error_image_size"):
+    monkeypatch.setattr(image_input, "MAX_SOURCE_BYTES", {"image": 1})
+    with pytest.raises(DescriptionError, match="ai_error_media_size"):
         prepare_image(b"too big")
 
 
-def test_animation_is_not_silently_described_as_a_photo():
+def _animation():
     data = BytesIO()
     first = Image.new("RGB", (10, 10), "red")
     first.save(data, format="PNG", save_all=True, append_images=[Image.new("RGB", (10, 10), "blue")])
-    with pytest.raises(DescriptionError, match="ai_error_image_format"):
-        prepare_image(data.getvalue())
+    return data.getvalue()
 
 
-@pytest.mark.parametrize("provider", ["openai", "gemini"])
-def test_each_followup_resends_inline_photo_without_chat_context(provider):
-    image = ImageInput(b"photo", "image/jpeg", 20, 30)
-    url, headers, body = build_request(provider, config.PROVIDERS[provider].model, "private-key", image,
-                                       (("user", "describe"), ("assistant", "red car")),
-                                       "Read the sign", instructions("tr-TR", "balanced"), "balanced")
-    assert "private-key" not in url and "private-key" not in json.dumps(body)
-    assert base64.b64encode(image.data).decode() in json.dumps(body)
-    assert "Read the sign" in json.dumps(body)
-    if provider == "openai":
-        assert body["store"] is False
-        assert headers == {"Authorization": "Bearer private-key"}
-        assert "previous_response_id" not in body and "tools" not in body
-    else:
-        assert headers == {"x-goog-api-key": "private-key"}
-        assert body["contents"][1]["role"] == "model"
+def test_animation_is_not_silently_described_as_a_photo():
+    with pytest.raises(DescriptionError, match="ai_error_media_format"):
+        prepare_image(_animation())
 
 
-@pytest.mark.parametrize("model", ["../escape", "model?key=secret", "https://evil.test", "", "x y"])
-def test_model_id_cannot_change_the_endpoint(model):
-    with pytest.raises(DescriptionError):
-        build_request("gemini", model, "secret", ImageInput(b"x", "image/jpeg", 1, 1), (), "x", "x", "fast")
-
-
-def test_response_parsing_filters_thoughts_and_refusals():
-    assert parse_answer("openai", {"output": [{"type": "message", "content": [
-        {"type": "output_text", "text": "A red car"}]}]}) == "A red car"
-    assert parse_answer("gemini", {"candidates": [{"content": {"parts": [
-        {"text": "thinking", "thought": True}, {"text": "A red car"}]}}]}) == "A red car"
-    with pytest.raises(DescriptionError, match="ai_error_refusal"):
-        parse_answer("openai", {"output": [{"type": "message", "content": [{"type": "refusal"}]}]})
-    with pytest.raises(DescriptionError, match="ai_error_refusal"):
-        parse_answer("gemini", {"promptFeedback": {"blockReason": "SAFETY"}})
-
-
-@pytest.mark.parametrize("provider,body", [
-    ("openai", {"status": "incomplete", "output": []}),
-    ("gemini", {"candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "partial"}]}}]}),
-])
-def test_incomplete_answer_is_not_announced_as_ready(provider, body):
-    with pytest.raises(DescriptionError, match="ai_error_response"):
-        parse_answer(provider, body)
-
-
-@pytest.mark.parametrize("body", [None, {}, {"output": None}, {"output": [3]}])
-def test_malformed_response_is_a_safe_error(body):
-    with pytest.raises(DescriptionError, match="ai_error_response"):
-        parse_answer("openai", body)
+def test_a_sticker_is_described_from_its_first_frame():
+    prepared = prepare_image(_animation(), first_frame=True)
+    assert (prepared.width, prepared.height) == (10, 10)
 
 
 class FakeResponse:
@@ -282,7 +283,7 @@ class FakeHTTP:
 
 
 def request(http, token=None):
-    return service.request_answer("openai", "gpt-4.1-mini", "secret", ImageInput(b"photo", "image/jpeg", 1, 1),
+    return service.request_answer("openai", "gpt-4.1-mini", "secret", Media("image", b"photo", "image/jpeg", "image.jpg"),
                                   (), "question", "instructions", "balanced", token or service.RequestToken(),
                                   session_factory=lambda: http)
 
@@ -339,21 +340,27 @@ def test_deadline_during_read_discards_response():
 
 def test_oversized_response_is_bounded():
     with pytest.raises(DescriptionError, match="ai_error_response"):
-        request(FakeHTTP(FakeResponse(data=b"x" * (256 * 1024 + 1))))
+        request(FakeHTTP(FakeResponse(data=b"x" * (config.MAX_RESPONSE_BYTES + 1))))
 
 
-@pytest.mark.parametrize("provider", ["openai", "gemini"])
-def test_connection_test_sends_no_photo_and_no_generation(provider):
+@pytest.mark.parametrize("provider", list(config.PROVIDERS))
+def test_connection_test_sends_no_media_and_no_generation(provider):
     http = FakeHTTP()
     assert service.probe_connection(provider, config.PROVIDERS[provider].model, "secret",
                                     service.RequestToken(), session_factory=lambda: http)
-    assert "models/" in http.calls[0][0]
-    assert "secret" not in http.calls[0][0]
-    assert "json" not in http.calls[0][1]
+    url, kwargs = http.calls[0]
+    assert "secret" not in url and "json" not in kwargs and "data" not in kwargs
+
+
+def test_connection_test_refuses_a_missing_key_and_a_model_that_is_an_endpoint():
+    for model, key in (("../x", "secret"), (config.PROVIDERS["openai"].model, "")):
+        with pytest.raises(DescriptionError):
+            service.probe_connection("openai", model, key, service.RequestToken(),
+                                     session_factory=lambda: FakeHTTP())
 
 
 def test_session_rejects_duplicate_and_stale_completions_and_clears_data():
-    s = PhotoSession("account", "chat", "message", locked=True)
+    s = MediaSession("account", "chat", "message", "image", locked=True)
     generation, token = s.begin("question")
     with pytest.raises(DescriptionError, match="ai_error_busy"):
         s.begin("duplicate")
@@ -362,14 +369,14 @@ def test_session_rejects_duplicate_and_stale_completions_and_clears_data():
     assert not s.accept(generation, "question", "late")
     new, _ = s.begin("second")
     assert s.accept(new, "second", "answer")
-    s.image = ImageInput(b"private", "image/jpeg", 1, 1)
+    s.media = Media("image", b"private", "image/jpeg", "image.jpg")
     s.close()
-    assert s.image is None and s.history == []
+    assert s.media is None and s.history == []
     assert not s.accept(new, "second", "late")
 
 
 def test_session_limits_cannot_be_bypassed_by_cancelling():
-    s = PhotoSession("a", "c", "m")
+    s = MediaSession("a", "c", "m", "image")
     for _ in range(config.MAX_REQUESTS):
         s.begin("question")
         s.cancel()
@@ -378,26 +385,41 @@ def test_session_limits_cannot_be_bypassed_by_cancelling():
 
 
 def test_private_results_do_not_mix_between_accounts():
-    first = PhotoSession("first", "chat", "message")
-    second = PhotoSession("second", "chat", "message")
+    first = MediaSession("first", "chat", "message", "image")
+    second = MediaSession("second", "chat", "message", "image")
     generation, _ = first.begin("question")
     first.accept(generation, "question", "private answer")
     assert not second.history and first.identity != second.identity
 
 
-@pytest.mark.parametrize("kind,view_once,expected", [("imageMessage", False, True),
-                                                   ("imageMessage", True, False),
-                                                   ("videoMessage", False, False),
-                                                   ("viewOnceUnavailableMessage", False, False)])
-def test_only_ordinary_photos_are_eligible(kind, view_once, expected):
-    assert config.eligible_photo({"messageType": kind, "key": {"id": "message"},
-                                 "message": {"imageMessage": {"viewOnce": view_once}}}) is expected
+def message(kind, **inner):
+    return {"messageType": kind, "key": {"id": "message"}, "message": {kind: inner}}
 
 
-@pytest.mark.parametrize("msg_id", ["../outside", "dir\\file", "\x00bad", 123, None])
-def test_photo_identity_cannot_escape_media_cache(msg_id):
-    assert not config.eligible_photo({"messageType": "imageMessage", "key": {"id": msg_id},
-                                      "message": {"imageMessage": {}}})
+@pytest.mark.parametrize("kind,expected", [("imageMessage", "image"), ("stickerMessage", "sticker"),
+                                           ("videoMessage", "video"), ("audioMessage", "audio"),
+                                           ("viewOnceUnavailableMessage", None), ("conversation", None)])
+def test_each_message_type_maps_to_one_kind(kind, expected):
+    assert config.eligible_kind(message(kind)) == expected
+
+
+@pytest.mark.parametrize("kind", ["imageMessage", "videoMessage", "audioMessage"])
+def test_view_once_media_is_never_offered(kind):
+    assert config.eligible_kind(message(kind, viewOnce=True)) is None
+    assert config.eligible_kind(message(kind, isViewOnce=True)) is None
+
+
+@pytest.mark.parametrize("mime,expected", [("application/pdf", "pdf"), ("application/pdf; x=1", "pdf"),
+                                           ("APPLICATION/PDF", "pdf"), ("application/zip", None), ("", None)])
+def test_only_pdf_documents_are_offered(mime, expected):
+    assert config.eligible_kind(message("documentMessage", mimetype=mime)) == expected
+
+
+@pytest.mark.parametrize("msg_id", ["../outside", "dir\\file", "\x00bad", 123, None, ""])
+def test_media_identity_cannot_escape_media_cache(msg_id):
+    msg = message("imageMessage")
+    msg["key"]["id"] = msg_id
+    assert config.eligible_kind(msg) is None
 
 
 def test_worker_queue_is_bounded_and_slot_is_released_on_completion(monkeypatch):
@@ -436,7 +458,7 @@ def test_cancel_shuts_down_socket_off_caller_thread():
 
 @pytest.mark.parametrize("json_body", [False, True])
 def test_bounded_media_works_with_both_server_versions(json_body):
-    from core.image_description.media_input import fetch_bounded_media
+    from core.ai_media.media_input import fetch_bounded_media
     body = json.dumps({"base64": base64.b64encode(b"photo").decode()}).encode() if json_body else b"photo"
     response = FakeResponse(data=body)
     response.headers["Content-Type"] = "application/json" if json_body else "application/octet-stream"
@@ -450,16 +472,16 @@ def test_bounded_media_works_with_both_server_versions(json_body):
 
 
 def test_media_limit_applies_even_when_metadata_and_headers_understate_size():
-    from core.image_description.media_input import fetch_bounded_media
+    from core.ai_media.media_input import fetch_bounded_media
     response = FakeResponse(data=b"oversized")
     response.headers = {"Content-Type": "image/jpeg", "Content-Length": "1"}
-    with pytest.raises(DescriptionError, match="ai_error_image_size"):
+    with pytest.raises(DescriptionError, match="ai_error_media_size"):
         fetch_bounded_media("url", {}, {}, 3, None, 15, lambda *a, **kw: response)
     assert response.closed
 
 
 def test_cancelled_media_does_not_download():
-    from core.image_description.media_input import fetch_bounded_media
+    from core.ai_media.media_input import fetch_bounded_media
     token = service.RequestToken()
     token.cancel()
     calls = []

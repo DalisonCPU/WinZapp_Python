@@ -6,15 +6,15 @@ import pytest
 import requests
 from urllib3.util import Timeout
 
-from core.image_description import service
-from core.image_description.errors import DescriptionError
-from core.image_description.image_input import ImageInput
-from tests.test_image_description_core import FakeHTTP, FakeResponse
+from core.ai_media import service
+from core.ai_media.errors import DescriptionError
+from core.ai_media.payload import Media
+from tests.test_ai_media_core import FakeHTTP, FakeResponse
 
 
 def _generate(http, token):
     return service.request_answer("gemini", "gemini-3.8-flash", "synthetic-key",
-                                  ImageInput(b"synthetic photo", "image/jpeg", 1, 1),
+                                  Media("image", b"synthetic photo", "image/jpeg", "image.jpg"),
                                   (), "describe", "instructions", "balanced", token,
                                   session_factory=lambda: http)
 
@@ -76,7 +76,7 @@ def test_real_requests_adapter_accepts_total_timeout_without_opening_socket(monk
     monkeypatch.setattr(adapter, "get_connection_with_tls_context", lambda *args, **kwargs: PoolStub())
     monkeypatch.setattr(adapter, "cert_verify", lambda *args, **kwargs: None)
     answer = service.request_answer("gemini", "gemini-3.8-flash", "synthetic-key",
-                                    ImageInput(b"synthetic", "image/jpeg", 1, 1), (), "describe",
+                                    Media("image", b"synthetic", "image/jpeg", "image.jpg"), (), "describe",
                                     "instructions", "balanced", service.RequestToken(),
                                     session_factory=lambda: session)
     assert answer == "answer" and len(calls) == 1
@@ -85,7 +85,7 @@ def test_real_requests_adapter_accepts_total_timeout_without_opening_socket(monk
 @pytest.mark.parametrize("error", [requests.ConnectTimeout, requests.ReadTimeout])
 def test_timeout_diagnostics_record_class_without_secret_or_retry(error, caplog):
     http = FakeHTTP(error=error("private-key-or-response"))
-    with caplog.at_level(logging.INFO, logger="winzapp.photo_description"):
+    with caplog.at_level(logging.INFO, logger="winzapp.ai_media"):
         with pytest.raises(DescriptionError, match="^ai_error_timeout$"):
             _generate(http, service.RequestToken())
     assert f"exception={error.__name__}" in caplog.text

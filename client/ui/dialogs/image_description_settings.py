@@ -5,9 +5,9 @@ from wx.lib.scrolledpanel import ScrolledPanel
 from app_paths import global_dir
 from app_settings import AppSettings
 from core.ai_credentials import CredentialStore, CredentialError
-from core.image_description.config import PROVIDERS, PROFILES, preferences, valid_model
-from core.image_description.errors import DescriptionError
-from core.image_description.service import RequestToken, probe_connection, submit
+from core.ai_media.config import PROVIDERS, PROFILES, preferences, valid_model
+from core.ai_media.errors import DescriptionError
+from core.ai_media.service import RequestToken, probe_connection, submit
 from .image_description_models import ModelSelectionMixin
 
 

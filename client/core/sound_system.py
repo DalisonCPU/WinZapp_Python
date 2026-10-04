@@ -533,7 +533,7 @@ SOUND_EVENTS: list[tuple[str, str]] = [
     ("pairing_code_updated", "pairing_code_updated.ogg"),
     ("connected", "connected.ogg"),
     ("synchronizing", "synchronizing.ogg"),
-    ("photo_describing", "dijital-imza.wav"),
+    ("ai_processing", "ai_processing.wav"),
     ("sync_complete", "sync_complete.ogg"),
     ("offline_mode", "offline_mode.ogg"),
     ("voicemsg_startrecording", "voicemsg_startrecording.ogg"),

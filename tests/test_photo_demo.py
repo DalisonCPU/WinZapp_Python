@@ -6,10 +6,10 @@ from types import SimpleNamespace
 from PIL import Image
 import pytest
 
-from core.image_description.config import eligible_photo
-from core.image_description.demo_fixture import demo_directory, demo_messages, make_demo_photo
-from core.image_description.errors import DescriptionError
-from core.image_description.image_input import prepare_image
+from core.ai_media.config import eligible_photo
+from core.ai_media.demo_fixture import demo_directory, demo_messages, make_demo_photo
+from core.ai_media.errors import DescriptionError
+from core.ai_media.image_input import prepare_image
 
 
 def test_demo_data_is_outside_checkout():

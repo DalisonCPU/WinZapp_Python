@@ -13,6 +13,7 @@ import uuid
 
 from cryptography.fernet import Fernet, InvalidToken
 from coord_locks import app_settings_lock
+from core.ai_media.config import PROVIDERS
 
 
 class CredentialError(RuntimeError):
@@ -38,7 +39,7 @@ class CredentialStore:
             return {}
         value = json.loads(self._cipher().decrypt(self.data_path.read_bytes()))
         if not isinstance(value, dict) or any(
-            k not in ("openai", "gemini") or not isinstance(v, str)
+            k not in PROVIDERS or not isinstance(v, str)
             for k, v in value.items()
         ):
             raise CredentialError()
@@ -46,7 +47,7 @@ class CredentialStore:
 
     @staticmethod
     def _provider(provider):
-        if provider not in ("openai", "gemini"):
+        if provider not in PROVIDERS:
             raise CredentialError()
 
     def get(self, provider):
@@ -72,7 +73,7 @@ class CredentialStore:
         self.apply({provider: None})
 
     def reset(self):
-        """Explicitly discard both keys, including an unreadable store.
+        """Explicitly discard every key, including an unreadable store.
 
         UI requires separate confirmation. Removing encrypted data BEFORE the
         key means an interrupted reset cannot strand data under a new key.
@@ -85,7 +86,7 @@ class CredentialStore:
             raise CredentialError() from None
 
     def apply(self, changes, *, reset=False):
-        """Validate all drafts first, then atomically write both providers."""
+        """Validate all drafts first, then atomically write every provider."""
         for provider, value in changes.items():
             self._provider(provider)
             if value and (not isinstance(value, str) or len(value) > 4096 or any(c.isspace() for c in value)):

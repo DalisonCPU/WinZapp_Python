@@ -6,7 +6,7 @@ This is a manual application entry point, never invoked by pytest or on import.
 import os
 
 from app_paths import set_active_account
-from core.image_description.demo_fixture import DEMO_ACCOUNT, demo_directory
+from core.ai_media.demo_fixture import DEMO_ACCOUNT, demo_directory
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     from autostart import acquire_single_instance_mutex
     if not acquire_single_instance_mutex():
         return
-    from core.image_description.diagnostics import configure_demo_log
+    from core.ai_media.diagnostics import configure_demo_log
     configure_demo_log(runtime / "photo-diagnostics.log")
     import wx
     from ui.photo_description_demo import PhotoDemoFrame

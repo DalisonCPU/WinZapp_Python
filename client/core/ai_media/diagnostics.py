@@ -2,18 +2,18 @@
 import logging
 
 
-LOGGER = logging.getLogger("winzapp.photo_description")
+LOGGER = logging.getLogger("winzapp.ai_media")
 _STAGES = frozenset({
     "worker_started", "worker_finished", "worker_dispatched", "worker_dispatch_failed",
-    "image_load_started", "image_ready", "request_started", "response_headers",
+    "media_load_started", "media_ready", "attempt_started", "request_started", "response_headers",
     "response_read", "response_parsed", "ui_start", "ui_waiting", "ui_completed",
     "ui_completion_ignored", "ui_error", "ui_watchdog", "ui_cancel", "ui_close",
     "ui_close_finished", "request_failed",
 })
 _CATEGORIES = frozenset({
-    "authentication", "quota", "server", "request", "image_size", "image_format",
+    "authentication", "quota", "server", "request", "media_size", "media_format",
     "refusal", "response", "network", "timeout", "cancelled", "busy", "question",
-    "limit", "media", "credentials",
+    "limit", "media", "credentials", "providers",
 })
 _EXCEPTION_TYPES = frozenset({
     "TypeError", "ValueError", "AttributeError", "RuntimeError", "OSError",

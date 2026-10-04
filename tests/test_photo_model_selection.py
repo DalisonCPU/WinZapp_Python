@@ -60,7 +60,7 @@ def page(monkeypatch):
 
 
 def choices():
-    from core.image_description.model_catalog import ModelOption
+    from core.ai_media.model_catalog import ModelOption
     return (ModelOption("gpt-4.1-mini", "GPT-4.1 Mini"), ModelOption("gpt-4.1", "GPT-4.1"))
 
 
@@ -153,7 +153,7 @@ def test_list_uses_draft_key_but_does_not_save_it(page, monkeypatch):
 
 
 def test_missing_key_and_dispatch_failure_restore_readable_status(page, monkeypatch):
-    from core.image_description.errors import DescriptionError
+    from core.ai_media.errors import DescriptionError
     page, module = page
     jobs = []
     monkeypatch.setattr(module, "submit", lambda *args: jobs.append(True))

@@ -21,8 +21,8 @@ class ModelOption:
 
 
 # Exact IDs, not prefix guesses: the list endpoints do not expose complete
-# image-input/endpoint capability metadata. Reviewed against official model
-# pages on 2026-10-03 (sources and maintenance policy in photo-description.md).
+# input-capability metadata. Reviewed against the providers' official model
+# pages (sources and maintenance policy in docs/reference/ai-media.md).
 # Unknown models remain usable through the explicit advanced model field.
 COMPATIBLE_MODELS = {
     "openai": {
@@ -32,28 +32,46 @@ COMPATIBLE_MODELS = {
         "gpt-4.1-2025-04-14": "GPT-4.1",
         "gpt-4o-mini": "GPT-4o Mini",
         "gpt-4o-mini-2024-07-18": "GPT-4o Mini",
+        "gpt-4o": "GPT-4o",
     },
     "gemini": {
         "gemini-3.8-flash": "Gemini 3.8 Flash",
+        "gemini-3.6-flash": "Gemini 3.6 Flash",
+        "gemini-3.5-flash": "Gemini 3.5 Flash",
         "gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
+    },
+    "claude": {
+        "claude-sonnet-5": "Claude Sonnet 5",
+        "claude-opus-5": "Claude Opus 5",
+        "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+    },
+    "groq": {
+        "qwen/qwen3.8-27b": "Qwen 3.8 27B",
+    },
+    "openrouter": {
+        "google/gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
+        "google/gemini-3.5-flash": "Gemini 3.5 Flash",
+        "anthropic/claude-sonnet-5": "Claude Sonnet 5",
+        "qwen/qwen3.8-27b:free": "Qwen 3.8 27B (free)",
     },
 }
 MAX_PAGES = 5
-MAX_PAGE_BYTES = 256 * 1024
-MAX_TOTAL_BYTES = 1024 * 1024
+# OpenRouter lists every model it routes to, with descriptions: hundreds of KB.
+MAX_PAGE_BYTES = 2 * 1024 * 1024
+MAX_TOTAL_BYTES = 4 * 1024 * 1024
 
 
 def compatible_models(provider, body):
     if provider not in COMPATIBLE_MODELS:
         raise DescriptionError("request")
-    rows = body.get("data" if provider == "openai" else "models") if isinstance(body, dict) else None
+    rows = body.get("models" if provider == "gemini" else "data") if isinstance(body, dict) else None
     if not isinstance(rows, list):
         raise DescriptionError("response")
     found = set()
     for row in rows:
         if not isinstance(row, dict):
             continue
-        identifier = row.get("id") if provider == "openai" else row.get("name")
+        identifier = row.get("name" if provider == "gemini" else "id")
         if not isinstance(identifier, str):
             continue
         if provider == "gemini":
@@ -69,6 +87,22 @@ def compatible_models(provider, body):
                  if identifier in found)
 
 
+def _list_request(provider, key):
+    """(url, headers, query) of the provider's model-list endpoint."""
+    bearer = {"Authorization": f"Bearer {key}"}
+    if provider == "gemini":
+        return ("https://generativelanguage.googleapis.com/v1beta/models",
+                {"x-goog-api-key": key}, {"pageSize": 1000})
+    if provider == "claude":
+        return ("https://api.anthropic.com/v1/models",
+                {"x-api-key": key, "anthropic-version": "2023-06-01"}, {"limit": 1000})
+    if provider == "groq":
+        return "https://api.groq.com/openai/v1/models", bearer, {}
+    if provider == "openrouter":
+        return "https://openrouter.ai/api/v1/models", bearer, {}
+    return "https://api.openai.com/v1/models", bearer, {}
+
+
 def fetch_models(provider, key, token, session_factory=requests.Session):
     """GET only; bounded pages/body/deadline, auth never in URLs, no retries."""
     if provider not in COMPATIBLE_MODELS:
@@ -76,9 +110,7 @@ def fetch_models(provider, key, token, session_factory=requests.Session):
     if not key:
         raise DescriptionError("credentials")
     token.check()
-    url = ("https://api.openai.com/v1/models" if provider == "openai" else
-           "https://generativelanguage.googleapis.com/v1beta/models")
-    headers = {"Authorization": f"Bearer {key}"} if provider == "openai" else {"x-goog-api-key": key}
+    url, headers, extra = _list_request(provider, key)
     timer = threading.Timer(max(0, token.deadline - token.clock()), token.expire)
     timer.daemon = True
     timer.start()
@@ -88,7 +120,7 @@ def fetch_models(provider, key, token, session_factory=requests.Session):
             for _ in range(MAX_PAGES):
                 token.check()
                 remaining = token.deadline - token.clock()
-                params = {} if provider == "openai" else {"pageSize": 1000}
+                params = dict(extra)
                 if page_token:
                     params["pageToken"] = page_token
                 with session.get(url, headers=headers, params=params, allow_redirects=False, stream=True,
