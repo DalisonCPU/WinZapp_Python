@@ -76,6 +76,8 @@ ULEPSZENIA
 
 - Zaktualizowano bibliotekę WhatsApp, z której korzysta WinZapp. W informacjach od jej twórców znajdują się poprawki dotyczące tworzenia grup, pobierania i resetowania linków zaproszenia do grupy, edycji opisu grupy, zmiany nazwy profilu oraz wysyłania mediów w nowszych wersjach WhatsApp Web. Jeśli WinZapp po uruchomieniu zaproponuje aktualizację WPPConnect, zaakceptuj ją, aby zainstalować nową bibliotekę.
 
+- Czaty zablokowane na telefonie funkcją Chat Lock WhatsApp są teraz ukryte także w WinZapp. Znikają z listy rozmów i pojawiają się tylko w „Zablokowane czaty” (Alt+7), po podaniu kodu PIN WinZapp; jeśli nigdy go nie utworzono, WinZapp zaproponuje to za pierwszym razem. Odblokować je może tylko telefon, więc WinZapp nie oferuje „Odblokuj czat” dla tych czatów, a czat odblokowany na telefonie sam wraca na listę.
+
 POPRAWKI
 
 - Program odinstalowujący używa teraz języka wyświetlania systemu Windows, tak jak instalator, zamiast zawsze pojawiać się po portugalsku.

@@ -76,6 +76,8 @@ NOUTĂȚI
 
 - Biblioteca WhatsApp folosită de WinZapp a fost actualizată. Notele dezvoltatorilor ei enumeră corecții pentru crearea grupurilor, obținerea și resetarea linkurilor de invitație la grup, editarea descrierii grupului, schimbarea numelui de profil și trimiterea fișierelor media în versiunile recente ale WhatsApp Web. Dacă WinZapp vă propune actualizarea WPPConnect la pornire, acceptați-o pentru a instala noua bibliotecă.
 
+- Conversațiile pe care le blocați pe telefon cu Chat Lock din WhatsApp sunt acum ascunse și în WinZapp. Dispar din lista de conversații și apar doar în „Conversații blocate” (Alt+7), după PIN-ul WinZapp; dacă nu ați creat niciunul, WinZapp vă propune să îl creați prima dată. Doar telefonul le poate debloca, așa că WinZapp nu oferă „Deblocați conversația” pentru aceste conversații, iar o conversație pe care o deblocați pe telefon revine singură în listă.
+
 CORECTĂRI
 
 - Programul de dezinstalare urmează acum limba de afișare a Windows, la fel ca programul de instalare, în loc să apară mereu în portugheză.

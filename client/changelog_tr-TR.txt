@@ -76,6 +76,8 @@ YENİLİKLER
 
 - WinZapp'ın kullandığı WhatsApp kitaplığı güncellendi. Geliştiricilerinin notları, WhatsApp Web'in son sürümlerinde grup oluşturma, grup davet bağlantısını alma ve sıfırlama, grup açıklamasını düzenleme, profil adını değiştirme ve medya gönderme için düzeltmeler listeliyor. WinZapp başlangıçta WPPConnect'i güncellemeyi önerirse kabul edin; yeni kitaplık böylece kurulur.
 
+- Telefonunuzda WhatsApp Chat Lock ile kilitlediğiniz sohbetler artık WinZapp'ta da gizleniyor. Sohbet listesinden çıkar ve yalnızca WinZapp PIN'inizden sonra "Kilitli sohbetler" (Alt+7) bölümünde görünür; hiç PIN oluşturmadıysanız WinZapp ilk seferde oluşturmayı önerir. Kilidi yalnızca telefonunuz açabilir; bu yüzden WinZapp bu sohbetler için "Sohbetin kilidini kaldır" seçeneğini sunmaz ve telefonda kilidini açtığınız sohbet listeye kendiliğinden geri döner.
+
 DÜZELTMELER
 
 - Kaldırma programı artık her zaman Portekizce görünmek yerine, kurulum programı gibi Windows görüntüleme dilini izliyor.

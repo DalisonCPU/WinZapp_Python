@@ -76,6 +76,8 @@ MELHORIAS
 
 - A biblioteca do WhatsApp que o WinZapp usa foi atualizada. As notas dos desenvolvedores dela listam correções para criar grupos, obter e redefinir links de convite de grupo, editar a descrição do grupo, mudar seu nome de perfil e enviar mídia em versões recentes do WhatsApp Web. Se o WinZapp oferecer a atualização do WPPConnect ao iniciar, aceite para instalar a nova biblioteca.
 
+- As conversas que você tranca no celular com o Chat Lock do WhatsApp agora também ficam escondidas no WinZapp. Elas saem da lista de conversas e aparecem só em "Conversas trancadas" (Alt+7), depois do seu PIN do WinZapp; se você nunca criou um, o WinZapp oferece criar na primeira vez. Só o celular pode destrancá-las, então o WinZapp não oferece "Destrancar conversa" para essas conversas, e uma conversa que você destranca no celular volta sozinha para a lista.
+
 CORREÇÕES
 
 - O desinstalador agora segue o idioma de exibição do Windows, como o instalador, em vez de aparecer sempre em português.

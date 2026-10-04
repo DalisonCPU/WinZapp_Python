@@ -204,6 +204,7 @@ class ChatsStoreMixin:
             # which is the whole point of the flag (see the docstring above).
             self._deleted_chats = set()
             self._archived_chats = set()
+            self._phone_locked_chats = set()
             self._pinned_chats = set()
             self._muted_chats = {}
             self._blocked_contacts = set()
@@ -1155,6 +1156,7 @@ class ChatsStoreMixin:
                 now = int(time.time())
                 db_changed = False
                 archive_changed = False
+                phone_lock_changed = False
                 for chat in response_data:
                     if not isinstance(chat, dict):
                         continue
@@ -1219,6 +1221,13 @@ class ChatsStoreMixin:
                             if alt_jid and alt_jid in self._archived_chats:
                                 self._archived_chats.discard(alt_jid)
                                 archive_changed = True
+
+                    # WhatsApp Chat Lock set on the phone: the same two-way sync.
+                    # This poll is the only path that sees a lock or unlock made
+                    # on the phone during a session (normalize_chats() runs only
+                    # while (re)connecting).
+                    if self._sync_phone_chat_lock(chat, jid, chats):
+                        phone_lock_changed = True
 
                     # Check if the JID starts with "0@" (official WhatsApp/system account)
                     is_system = jid.startswith("0@")
@@ -1286,6 +1295,8 @@ class ChatsStoreMixin:
                     self.db.set_metadata_json("pinned_chats", list(self._pinned_chats))
                 if archive_changed and hasattr(self, "db") and self.db is not None:
                     self.db.set_metadata_json("archived_chats", list(self._archived_chats))
+                if phone_lock_changed:
+                    self._persist_phone_locked_chats()
 
                 perms_changed = False
                 groups_total = groups_with_metadata = 0
@@ -1402,6 +1413,7 @@ class ChatsStoreMixin:
 
     def normalize_chats(self, chats):
         db_changed = False
+        phone_lock_changed = False
         normalized = {}
         for key, chat in chats.items():
             if key.endswith("@newsletter") or chat.get("remoteJid", "").endswith("@newsletter"):
@@ -1421,9 +1433,13 @@ class ChatsStoreMixin:
                 # keeping the conversation stuck in the Archived tab forever.
                 self._archived_chats.discard(key)
                 db_changed = True
+            if self._sync_phone_chat_lock(chat, key, normalized):
+                phone_lock_changed = True
             normalized[key] = chat
         if db_changed and hasattr(self, "db") and self.db is not None:
             self.db.set_metadata_json("archived_chats", list(self._archived_chats))
+        if phone_lock_changed:
+            self._persist_phone_locked_chats()
         return normalized
 
     def deduplicate_chats(self, chats: dict) -> dict:

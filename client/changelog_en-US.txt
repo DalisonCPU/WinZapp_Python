@@ -76,6 +76,8 @@ IMPROVEMENTS
 
 - The WhatsApp library WinZapp uses was updated. Its developers' notes list fixes for creating groups, getting and resetting group invite links, editing group descriptions, changing your profile name and uploading media on recent WhatsApp Web versions. If WinZapp offers to update WPPConnect when it starts, accept it so the new library is installed.
 
+- Chats you lock with WhatsApp Chat Lock on your phone are now hidden in WinZapp too. They leave the conversation list and appear only under "Locked chats" (Alt+7), after your WinZapp PIN; if you never set one up, WinZapp offers to create it the first time. Only your phone can unlock them, so WinZapp does not offer "Unlock chat" for those chats, and a chat you unlock on the phone returns to the list on its own.
+
 FIXES
 
 - The uninstaller now follows the Windows display language like the installer does, instead of always appearing in Portuguese.
