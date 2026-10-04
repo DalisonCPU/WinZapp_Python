@@ -96,7 +96,7 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         assert dialog._notebook.FindPage(dialog._audio_page) == 10
         assert dialog._notebook.FindPage(dialog._calls_page) == 11
 
-    def test_the_profile_backup_tab_is_appended_last(self, make_dialog):
+    def test_the_profile_backup_tab_is_appended_after_calls(self, make_dialog):
         """Added after Calls so no earlier index moved; SetPageText(12) in
         _refresh_dialog_labels() relies on it being the thirteenth page."""
         dialog = make_dialog()

@@ -34,6 +34,7 @@ Where to look (and where new code goes):
     contact_messages         contact (vCard) and location messages
     media_files              opening/saving/downloading media, transfer progress
     ai_actions               AI transcription/description of a message's media
+    image_description        opt-in photo descriptions and account-owned Q&A
     audio_playback           voice/audio playback, chaining, speed, seek
     links                    links panel of the focused message
     mentions                 @mentions panel and suggestions
