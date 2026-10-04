@@ -1430,7 +1430,6 @@
     "ai_ready": "A resposta está pronta.",
     "ai_cancel_notice": "Cancelado localmente. Um pedido já recebido pelo fornecedor ainda pode ser cobrado.",
     "ai_disabled": "Primeiro ative as funcionalidades de IA, introduza a chave de um fornecedor e ative este tipo de conteúdo em Definições > Transcrições e Descrições.",
-    "ai_shortcut_help": "Ctrl+Shift+Y — Transcrever, descrever ou converter o conteúdo da mensagem em foco (apenas na lista de mensagens).",
     "ai_error_credentials": "Não foi possível ler ou guardar a chave de API. Introduza-a novamente; se o armazenamento estiver danificado, reponha explicitamente todas as chaves de IA primeiro.",
     "ai_error_authentication": "O fornecedor recusou a chave ou o acesso ao modelo. Verifique a chave e as permissões.",
     "ai_error_quota": "A quota ou limite de pedidos do fornecedor foi atingido. Verifique a utilização e faturação antes de tentar novamente.",
@@ -1448,7 +1447,7 @@
     "ai_reset_keys": "Repor todas as chaves de IA guardadas",
     "ai_reset_confirm": "Remover as chaves guardadas de todos os fornecedores de IA? Terá de as introduzir novamente. Isto também repara um armazenamento de chaves de IA danificado.",
     "ai_demo_title": "WinZapp — demonstração manual de fotografias (sem WhatsApp)",
-    "ai_demo_notice": "Conversa fictícia; sem ligação ao WhatsApp ou envio de mensagens. A imagem gerada contém WINZAPP DEMO 123, um retângulo azul, um círculo vermelho e um triângulo amarelo. Definições e chaves ficam separadas do WinZapp instalado. Abra Definições, foque a fotografia e prima Ctrl+Shift+Y. Respostas reais exigem a sua própria chave de API e podem ter custo; não há respostas simuladas.",
+    "ai_demo_notice": "Conversa fictícia; sem ligação ao WhatsApp ou envio de mensagens. A imagem gerada contém WINZAPP DEMO 123, um retângulo azul, um círculo vermelho e um triângulo amarelo. Definições e chaves ficam separadas do WinZapp instalado. Abra Definições, foque a fotografia e prima Ctrl+Shift+I. Respostas reais exigem a sua própria chave de API e podem ter custo; não há respostas simuladas.",
     "ai_demo_text": "Contacto de demonstração: Esta mensagem é fictícia; nada foi enviado.",
     "ai_demo_photo": "Contacto de demonstração: Imagem de teste gerada (sem dados pessoais)",
     "ai_demo_lock_test": "Tratar como conversa bloqueada e simular o bloqueio do cofre após 15 segundos",
@@ -1469,5 +1468,6 @@
     "ai_provider_supports": "Aceita: {kinds}.",
     "ai_result_description_title": "Descrição",
     "ai_send_media": "Enviar conteúdo",
-    "ai_metadata_notice": "Os vídeos, as mensagens de voz e os PDFs são enviados exatamente como estão, incluindo qualquer informação guardada no ficheiro, como autor ou localização."
+    "ai_metadata_notice": "Os vídeos, as mensagens de voz e os PDFs são enviados exatamente como estão, incluindo qualquer informação guardada no ficheiro, como autor ou localização.",
+    "shortcut_ctrl_shift_i_label": "Ctrl+Shift+I: transcrever, descrever ou converter o conteúdo da mensagem em foco"
 }

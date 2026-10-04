@@ -4,7 +4,7 @@ Transcribe a voice message, describe a photo, sticker or video, or turn a PDF
 into accessible text, with the AI providers the person set up in Settings.
 
 The single entry point is ``_on_ai_action``: the context-menu item and the
-Ctrl+Shift+Y accelerator both end there. Which provider answers, in which
+Ctrl+Shift+I accelerator both end there. Which provider answers, in which
 order and under which consent is core/ai_media's business; this file only
 drives message -> bounded download -> window.
 
@@ -57,7 +57,7 @@ class AIActionsMixin:
         return self._sorted_messages[index]
 
     def _on_ai_action(self, event=None, message=None):
-        """Menu item and Ctrl+Shift+Y: act on ``message``, or on the focused one."""
+        """Menu item and Ctrl+Shift+I: act on ``message``, or on the focused one."""
         if message is None:
             message = self._focused_message()
         kind = ai_config.eligible_kind(message)

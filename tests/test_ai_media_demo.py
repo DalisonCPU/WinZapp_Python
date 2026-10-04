@@ -72,7 +72,7 @@ def test_context_menu_does_not_require_unsupported_wx_context_manager(monkeypatc
                            messages_list=SimpleNamespace(GetFocusedItem=lambda: 1,
                                                          PopupMenu=lambda menu: calls.append("shown")))
     module.DemoConversationPanel._menu(stub, None)
-    assert calls == ["ai_describe_image_menu\tCtrl+Shift+Y", "shown", "destroyed"]
+    assert calls == ["ai_describe_image_menu\tCtrl+Shift+I", "shown", "destroyed"]
 
 
 def test_demo_initializes_its_own_existing_sound_system_without_account_runtime(monkeypatch):

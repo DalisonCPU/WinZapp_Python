@@ -1430,7 +1430,6 @@
     "ai_ready": "Odpowiedź jest gotowa.",
     "ai_cancel_notice": "Anulowano lokalnie. Żądanie już otrzymane przez dostawcę nadal może zostać naliczone.",
     "ai_disabled": "Najpierw włącz funkcje AI, dodaj klucz dostawcy i włącz ten rodzaj plików w Ustawienia > Transkrypcje i opisy.",
-    "ai_shortcut_help": "Ctrl+Shift+Y — Transkrybuj, opisz lub przekonwertuj plik wiadomości z fokusem (tylko na liście wiadomości).",
     "ai_error_credentials": "Nie można odczytać lub zapisać klucza API. Wprowadź go ponownie; jeśli magazyn jest uszkodzony, najpierw jawnie zresetuj wszystkie klucze AI.",
     "ai_error_authentication": "Dostawca odrzucił klucz lub dostęp do modelu. Sprawdź klucz i uprawnienia.",
     "ai_error_quota": "Osiągnięto limit użycia lub żądań dostawcy. Przed ponowną próbą sprawdź użycie i rozliczenia.",
@@ -1448,7 +1447,7 @@
     "ai_reset_keys": "Zresetuj wszystkie zapisane klucze AI",
     "ai_reset_confirm": "Usunąć zapisane klucze wszystkich dostawców AI? Trzeba będzie wprowadzić je ponownie. Naprawia to także uszkodzony magazyn kluczy AI.",
     "ai_demo_title": "WinZapp — ręczna próba zdjęć (bez WhatsApp)",
-    "ai_demo_notice": "Fikcyjny czat; bez połączenia z WhatsApp i wysyłania wiadomości. Wygenerowany obraz zawiera WINZAPP DEMO 123, niebieski prostokąt, czerwone koło i żółty trójkąt. Ustawienia i klucze są oddzielone od zainstalowanego WinZapp. Otwórz Ustawienia, ustaw fokus na zdjęciu i naciśnij Ctrl+Shift+Y. Prawdziwe odpowiedzi wymagają własnego klucza API i mogą być płatne; nie ma symulowanych odpowiedzi.",
+    "ai_demo_notice": "Fikcyjny czat; bez połączenia z WhatsApp i wysyłania wiadomości. Wygenerowany obraz zawiera WINZAPP DEMO 123, niebieski prostokąt, czerwone koło i żółty trójkąt. Ustawienia i klucze są oddzielone od zainstalowanego WinZapp. Otwórz Ustawienia, ustaw fokus na zdjęciu i naciśnij Ctrl+Shift+I. Prawdziwe odpowiedzi wymagają własnego klucza API i mogą być płatne; nie ma symulowanych odpowiedzi.",
     "ai_demo_text": "Kontakt demonstracyjny: Ta wiadomość jest fikcyjna; nic nie wysłano.",
     "ai_demo_photo": "Kontakt demonstracyjny: Wygenerowany obraz testowy (bez danych osobowych)",
     "ai_demo_lock_test": "Traktuj jako zablokowany czat i symuluj blokadę sejfu po 15 sekundach",
@@ -1469,5 +1468,6 @@
     "ai_provider_supports": "Obsługuje: {kinds}.",
     "ai_result_description_title": "Opis",
     "ai_send_media": "Wyślij plik",
-    "ai_metadata_notice": "Filmy, wiadomości głosowe i pliki PDF są wysyłane w niezmienionej postaci, razem z informacjami zapisanymi w pliku, takimi jak autor czy lokalizacja."
+    "ai_metadata_notice": "Filmy, wiadomości głosowe i pliki PDF są wysyłane w niezmienionej postaci, razem z informacjami zapisanymi w pliku, takimi jak autor czy lokalizacja.",
+    "shortcut_ctrl_shift_i_label": "Ctrl+Shift+I: transkrybuj, opisz lub przekonwertuj plik wiadomości z fokusem"
 }

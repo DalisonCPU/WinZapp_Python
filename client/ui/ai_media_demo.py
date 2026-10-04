@@ -73,7 +73,7 @@ class DemoConversationPanel(wx.Panel, AIActionsMixin):
         self.SetSizer(layout)
         describe_id = wx.NewIdRef()
         self.messages_list.SetAcceleratorTable(wx.AcceleratorTable([
-            (wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("Y"), describe_id),
+            (wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("I"), describe_id),
         ]))
         self.Bind(wx.EVT_MENU, self._describe, id=describe_id)
         self.messages_list.Bind(wx.EVT_CONTEXT_MENU, self._menu)
@@ -105,7 +105,7 @@ class DemoConversationPanel(wx.Panel, AIActionsMixin):
             return
         menu = wx.Menu()
         try:
-            item = menu.Append(wx.ID_ANY, self.main_window.i18n.t("ai_describe_image_menu") + "\tCtrl+Shift+Y")
+            item = menu.Append(wx.ID_ANY, self.main_window.i18n.t("ai_describe_image_menu") + "\tCtrl+Shift+I")
             menu.Bind(wx.EVT_MENU, lambda e: self._describe(message=self._sorted_messages[1]), id=item.GetId())
             self.messages_list.PopupMenu(menu)
         finally:

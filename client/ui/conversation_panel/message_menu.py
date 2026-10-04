@@ -355,10 +355,10 @@ class MessageMenuMixin:
 
         # AI transcription / description (ui/conversation_panel/ai_actions.py).
         # Offered only while the feature is on and a provider with a key takes
-        # this kind of media. Ctrl+Shift+Y is the accelerator of the same action.
+        # this kind of media. Ctrl+Shift+I is the accelerator of the same action.
         ai_label = self._ai_menu_label(msg, i18n)
         if ai_label:
-            ai_item = menu.Append(wx.ID_ANY, f"{ai_label}\tCtrl+Shift+Y")
+            ai_item = menu.Append(wx.ID_ANY, f"{ai_label}\tCtrl+Shift+I")
             self.Bind(
                 wx.EVT_MENU, lambda e, m=msg: self._on_ai_action(message=m), ai_item
             )

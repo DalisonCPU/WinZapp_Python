@@ -122,7 +122,7 @@ class AcceleratorsMixin:
         self.Bind(wx.EVT_MENU, self._on_accel_bulk_unread_chats,   id=self.ID_BULK_UNREAD_CHATS)
 
     def create_accel_conversation(self):
-        self.ID_AI_ACTION = wx.NewIdRef()  # transcribe/describe the focused media (Ctrl+Shift+Y)
+        self.ID_AI_ACTION = wx.NewIdRef()  # transcribe/describe the focused media (Ctrl+Shift+I)
         # ── Navigation / recording ──────────────────────────────────────────
         self.ID_CTRL_R          = wx.NewIdRef()  # record voice            (Ctrl+R)
         self.ID_CTRL_SHIFT_G    = wx.NewIdRef()  # record, other mode      (Ctrl+Shift+G)
@@ -229,7 +229,7 @@ class AcceleratorsMixin:
             self.main_window.i18n.t("messages"), "M")
 
         accel_tbl = wx.AcceleratorTable([
-            (CS,               ord("Y"),          self.ID_AI_ACTION),
+            (CS,               ord("I"),          self.ID_AI_ACTION),
             (wx.ACCEL_ALT,     ord(focus_field_letter), self.ID_ALT_FOCUS_FIELD),
             (wx.ACCEL_ALT,     ord(focus_list_letter),  self.ID_ALT_FOCUS_LIST),
             (wx.ACCEL_CTRL,    ord("R"),         self.ID_CTRL_R),

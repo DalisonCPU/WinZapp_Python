@@ -192,7 +192,7 @@ def eligible_kind(message):
 
 
 #: i18n key of the context-menu item (and of the focus-time announcement) for
-#: each kind: one verb per kind, shared by the menu and Ctrl+Shift+Y.
+#: each kind: one verb per kind, shared by the menu and Ctrl+Shift+I.
 MENU_KEY = {"image": "ai_describe_image_menu", "sticker": "ai_describe_sticker_menu",
             "video": "ai_describe_video_menu", "audio": "ai_transcribe_audio_menu",
             "pdf": "ai_pdf_accessible_menu"}

@@ -58,9 +58,10 @@ def test_the_menu_item_and_the_accelerator_end_in_the_same_handler():
     menu = read("ui", "conversation_panel", "message_menu.py")
     accelerators = read("ui", "conversation_panel", "accelerators.py")
     assert menu.count("_on_ai_action") == 1 and "_ai_menu_label(msg, i18n)" in menu
-    assert '\\tCtrl+Shift+Y' in menu
+    assert '\\tCtrl+Shift+I' in menu
     assert accelerators.count("self.ID_AI_ACTION") == 3
-    assert 'ord("Y")' in accelerators and accelerators.count('ord("Y")') == 1
+    # Ctrl+Shift+I: free before this feature (starring is Ctrl+Shift+O); keep it the only binding of "I".
+    assert accelerators.count('ord("I")') == 1 and 'ord("Y")' not in accelerators
     assert "self._on_ai_action" in accelerators
 
 
@@ -136,3 +137,12 @@ def test_the_dialogs_use_plain_wx_controls_only():
         text = read("ui", "dialogs", name)
         assert not re.search(r"wx\.(?:PaintDC|BufferedPaintDC|lib\.agw|StaticBitmap|html|HtmlWindow)", text), name
         assert "EVT_PAINT" not in text and "OwnerDrawn" not in text, name
+
+
+def test_the_f1_shortcuts_list_names_the_shortcut_in_every_locale():
+    import json
+    assert 'i18n.t("shortcut_ctrl_shift_i_label")' in read("ui", "dialogs", "shortcuts_dialog.py")
+    languages = CLIENT / "languages"
+    for name in json.loads((languages / "language_map.json").read_text(encoding="utf-8")):
+        label = json.loads((languages / f"{name}.json").read_text(encoding="utf-8"))["shortcut_ctrl_shift_i_label"]
+        assert label.startswith("Ctrl+Shift+I:"), name

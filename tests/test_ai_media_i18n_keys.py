@@ -118,10 +118,10 @@ def test_no_two_keys_say_the_same_thing():
 
 @pytest.mark.parametrize("name", LOCALES)
 def test_no_label_carries_a_shortcut_or_a_mnemonic(name):
-    """Shortcuts are announced by ui/accessible.py objects. Only the line of the
-    shortcuts list and the demo's explanatory note are allowed to name one."""
+    """Shortcuts are announced by ui/accessible.py objects. Only the demo's
+    explanatory note is allowed to name one (the F1 list line is not an ai_ key)."""
     for key, value in locale(name).items():
-        if OWNED.match(key) and key not in ("ai_shortcut_help", "ai_demo_notice"):
+        if OWNED.match(key) and key != "ai_demo_notice":
             assert "&" not in value.replace("&&", ""), key
             assert not re.search(r"\b(?:Ctrl|Alt|Shift)\+", value), key
 

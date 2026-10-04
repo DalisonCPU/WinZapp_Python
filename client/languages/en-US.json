@@ -1430,7 +1430,6 @@
     "ai_ready": "The answer is ready.",
     "ai_cancel_notice": "Cancelled locally. A request already received by the provider may still be charged.",
     "ai_disabled": "Turn on AI features, add a key for a provider and enable this kind of media in Settings > Transcriptions and Descriptions first.",
-    "ai_shortcut_help": "Ctrl+Shift+Y — Transcribe, describe or convert the media of the focused message (message list only).",
     "ai_error_credentials": "The API key cannot be read or saved. Re-enter it; for a damaged credential store, explicitly reset all AI keys first.",
     "ai_error_authentication": "The provider rejected the key or access to this model. Check the key and permissions.",
     "ai_error_quota": "The provider's quota or rate limit was reached. Check usage and billing before trying again.",
@@ -1448,7 +1447,7 @@
     "ai_reset_keys": "Reset all saved AI keys",
     "ai_reset_confirm": "Remove the saved keys of every AI provider? You will need to enter them again. This also repairs a damaged AI credential store.",
     "ai_demo_title": "WinZapp — manual photo demo (no WhatsApp)",
-    "ai_demo_notice": "Fictional chat; no WhatsApp connection or messages sent. The generated picture contains WINZAPP DEMO 123, a blue rectangle, a red circle and a yellow triangle. Settings and keys are separate from your installed WinZapp. Start with Settings, then focus the photo and press Ctrl+Shift+Y. Real AI answers require your own API key and may cost money; no simulated answers are supplied.",
+    "ai_demo_notice": "Fictional chat; no WhatsApp connection or messages sent. The generated picture contains WINZAPP DEMO 123, a blue rectangle, a red circle and a yellow triangle. Settings and keys are separate from your installed WinZapp. Start with Settings, then focus the photo and press Ctrl+Shift+I. Real AI answers require your own API key and may cost money; no simulated answers are supplied.",
     "ai_demo_text": "Demo contact: This is a fictional message; nothing was sent.",
     "ai_demo_photo": "Demo contact: Generated test picture (no personal information)",
     "ai_demo_lock_test": "Treat as a locked chat and simulate vault locking after 15 seconds",
@@ -1469,5 +1468,6 @@
     "ai_provider_supports": "Handles: {kinds}.",
     "ai_result_description_title": "Description",
     "ai_send_media": "Send media",
-    "ai_metadata_notice": "Videos, voice messages and PDFs are sent exactly as they are, including any information stored inside the file, such as author or location."
+    "ai_metadata_notice": "Videos, voice messages and PDFs are sent exactly as they are, including any information stored inside the file, such as author or location.",
+    "shortcut_ctrl_shift_i_label": "Ctrl+Shift+I: transcribe, describe or convert the media of the focused message"
 }

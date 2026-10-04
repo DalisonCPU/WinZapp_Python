@@ -1430,7 +1430,6 @@
     "ai_ready": "Răspunsul este gata.",
     "ai_cancel_notice": "Anulat local. O cerere deja primită de furnizor poate fi totuși taxată.",
     "ai_disabled": "Mai întâi activează funcțiile AI, introdu cheia unui furnizor și activează acest tip de conținut în Setări > Transcrieri și descrieri.",
-    "ai_shortcut_help": "Ctrl+Shift+Y — Transcrie, descrie sau convertește conținutul mesajului focalizat (doar în lista de mesaje).",
     "ai_error_credentials": "Cheia API nu poate fi citită sau salvată. Introdu-o din nou; dacă depozitul este deteriorat, resetează explicit mai întâi toate cheile AI.",
     "ai_error_authentication": "Furnizorul a respins cheia sau accesul la model. Verifică cheia și permisiunile.",
     "ai_error_quota": "S-a atins cota sau limita de cereri a furnizorului. Verifică utilizarea și facturarea înainte de a reîncerca.",
@@ -1448,7 +1447,7 @@
     "ai_reset_keys": "Resetează toate cheile AI salvate",
     "ai_reset_confirm": "Ștergi cheile salvate ale tuturor furnizorilor AI? Va trebui să le introduci din nou. Acest lucru repară și un depozit de chei AI deteriorat.",
     "ai_demo_title": "WinZapp — test manual de fotografii (fără WhatsApp)",
-    "ai_demo_notice": "Conversație fictivă; fără conectare la WhatsApp sau trimitere de mesaje. Imaginea generată conține WINZAPP DEMO 123, un dreptunghi albastru, un cerc roșu și un triunghi galben. Setările și cheile sunt separate de WinZapp instalat. Deschide Setări, focalizează fotografia și apasă Ctrl+Shift+Y. Răspunsurile reale necesită propria cheie API și pot costa bani; nu există răspunsuri simulate.",
+    "ai_demo_notice": "Conversație fictivă; fără conectare la WhatsApp sau trimitere de mesaje. Imaginea generată conține WINZAPP DEMO 123, un dreptunghi albastru, un cerc roșu și un triunghi galben. Setările și cheile sunt separate de WinZapp instalat. Deschide Setări, focalizează fotografia și apasă Ctrl+Shift+I. Răspunsurile reale necesită propria cheie API și pot costa bani; nu există răspunsuri simulate.",
     "ai_demo_text": "Contact demonstrativ: Acest mesaj este fictiv; nu s-a trimis nimic.",
     "ai_demo_photo": "Contact demonstrativ: Imagine de test generată (fără date personale)",
     "ai_demo_lock_test": "Tratează ca o conversație blocată și simulează blocarea seifului după 15 secunde",
@@ -1469,5 +1468,6 @@
     "ai_provider_supports": "Acceptă: {kinds}.",
     "ai_result_description_title": "Descriere",
     "ai_send_media": "Trimite conținutul",
-    "ai_metadata_notice": "Videoclipurile, mesajele vocale și PDF-urile sunt trimise exact cum sunt, inclusiv orice informație păstrată în fișier, precum autorul sau locația."
+    "ai_metadata_notice": "Videoclipurile, mesajele vocale și PDF-urile sunt trimise exact cum sunt, inclusiv orice informație păstrată în fișier, precum autorul sau locația.",
+    "shortcut_ctrl_shift_i_label": "Ctrl+Shift+I: transcrie, descrie sau convertește conținutul mesajului focalizat"
 }

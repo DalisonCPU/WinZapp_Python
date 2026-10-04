@@ -23,7 +23,7 @@ automatically for an incoming message.
 | The window's state, immune to late callbacks | `core/ai_media/session.py` |
 | The waiting sound | `core/ai_media/feedback.py` |
 | The API keys (install-wide, encrypted) | `client/core/ai_credentials.py` |
-| Menu item, Ctrl+Shift+Y, the bounded download, the window's lifecycle | `client/ui/conversation_panel/ai_actions.py` |
+| Menu item, Ctrl+Shift+I, the bounded download, the window's lifecycle | `client/ui/conversation_panel/ai_actions.py` |
 | Result window and consent | `client/ui/dialogs/ai_result_dialog.py` |
 | Settings page and the provider window | `client/ui/dialogs/ai_settings_page.py`, `ai_provider_models.py` |
 | Manual demo without WhatsApp | `client/ai_media_demo.py`, `client/ui/ai_media_demo.py` |
@@ -102,7 +102,7 @@ when it holds a saved key.
   `CheckListBox`, whose state NVDA does not reliably announce).
 - **No shortcut or mnemonic is written into a label or accessible name.**
   Ctrl+Enter (ask) is announced by `ui/accessible.AccessibleAskQuestion`;
-  Ctrl+Shift+Y is an accelerator whose menu item shows it the way every other
+  Ctrl+Shift+I is an accelerator whose menu item shows it the way every other
   message-menu item does. `tests/test_ai_media_i18n_keys.py` fails if a label
   carries one.
 - All speech goes through `MainWindow.output` (the `speak_output` gate). A
