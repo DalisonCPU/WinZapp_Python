@@ -1468,5 +1468,6 @@
     "ai_kind_video": "videoclipuri",
     "ai_provider_supports": "Acceptă: {kinds}.",
     "ai_result_description_title": "Descriere",
-    "ai_send_media": "Trimite conținutul"
+    "ai_send_media": "Trimite conținutul",
+    "ai_metadata_notice": "Videoclipurile, mesajele vocale și PDF-urile sunt trimise exact cum sunt, inclusiv orice informație păstrată în fișier, precum autorul sau locația."
 }

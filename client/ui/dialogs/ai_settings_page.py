@@ -424,6 +424,9 @@ class AISettingsPage(ScrolledPanel):
     def apply(self):
         """Save the keys and the preferences. False (and the reason in the
         status field) when something is invalid, so Settings stays open."""
+        for provider, model in self._models.items():
+            if not model.strip():
+                self._models[provider] = PROVIDERS[provider].model
         if any(not valid_model(model) for model in self._models.values()):
             self.status.ChangeValue(self._t("ai_error_request"))
             self.providers.SetFocus()
@@ -431,7 +434,8 @@ class AISettingsPage(ScrolledPanel):
         try:
             changes = {provider: None for provider in self._deleted}
             changes.update(self._drafts)
-            self.store.apply(changes, reset=self._reset)
+            if changes or self._reset:
+                self.store.apply(changes, reset=self._reset)
             removed = set(self._deleted)
 
             def merge(old):

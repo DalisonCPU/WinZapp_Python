@@ -49,6 +49,19 @@ def failure_text(i18n, error):
     return i18n.t(str(error))
 
 
+def consent_text(i18n, providers, kind, locked):
+    """What the person is told before media leaves the machine."""
+    message = i18n.t("ai_consent").format(providers=provider_names(providers))
+    if kind in ("video", "audio", "pdf"):
+        # Pictures are re-encoded (metadata removed); these go out untouched.
+        message += "\n\n" + i18n.t("ai_metadata_notice")
+    if "gemini" in providers:
+        message += "\n\n" + i18n.t("ai_gemini_notice")
+    if locked:
+        message += "\n\n" + i18n.t("ai_locked_consent")
+    return message
+
+
 class AIConsentDialog(wx.Dialog):
     """Asks before media leaves the machine; names every provider that may
     receive it, in the order they would be tried."""
@@ -56,12 +69,7 @@ class AIConsentDialog(wx.Dialog):
     def __init__(self, parent, i18n, providers, kind, locked):
         super().__init__(parent, title=i18n.t("ai_consent_title"))
         layout = wx.BoxSizer(wx.VERTICAL)
-        message = i18n.t("ai_consent").format(providers=provider_names(providers))
-        if "gemini" in providers:
-            message += "\n\n" + i18n.t("ai_gemini_notice")
-        if locked:
-            message += "\n\n" + i18n.t("ai_locked_consent")
-        text = wx.TextCtrl(self, value=message, style=wx.TE_MULTILINE | wx.TE_READONLY,
+        text = wx.TextCtrl(self, value=consent_text(i18n, providers, kind, locked), style=wx.TE_MULTILINE | wx.TE_READONLY,
                            size=(520, 220), name=i18n.t("ai_consent_title"))
         layout.Add(text, 1, wx.EXPAND | wx.ALL, 10)
         self.remember = wx.CheckBox(self, label=i18n.t("ai_remember_consent"))

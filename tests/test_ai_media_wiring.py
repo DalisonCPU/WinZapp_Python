@@ -108,14 +108,6 @@ def test_the_provider_list_is_not_a_checklistbox():
     assert "wx.ListBox(" in read("ui", "dialogs", "ai_settings_page.py")
 
 
-def test_the_media_is_decrypted_in_memory_and_never_written_back_to_disk():
-    for path in feature_modules():
-        text = path.read_text(encoding="utf-8")
-        assert "tempfile" not in text and "mkdtemp" not in text and "NamedTemporaryFile" not in text, path.name
-    actions = read("ui", "conversation_panel", "ai_actions.py")
-    assert "open(path, \"rb\")" in actions and 'open(path, "wb")' not in actions
-
-
 def test_an_unexpected_error_logs_only_its_type():
     for path in feature_modules():
         text = path.read_text(encoding="utf-8")

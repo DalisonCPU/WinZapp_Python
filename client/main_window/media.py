@@ -574,7 +574,7 @@ class MediaMixin:
             # cancelled photo operation. Ordinary media behaviour is unchanged.
             from core.ai_media.media_input import fetch_bounded_media
             return fetch_bounded_media(url, headers, body_data, max_bytes, cancel_check,
-                                       timeout=min(timeout, 15), post=api_post)
+                                       timeout=timeout, post=api_post)
 
         has_media_key = bool(body_data.get("mediaKey"))
         has_client_url = bool(body_data.get("clientUrl"))

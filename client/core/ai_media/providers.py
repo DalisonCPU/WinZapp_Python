@@ -19,6 +19,9 @@ class Request(NamedTuple):
     files: Optional[dict] = None   # file part of a multipart request
 
 
+#: Groq documents about 4 MB of base64 for an image in one request (not
+#: exercised live here); a larger photo skips Groq instead of failing late.
+GROQ_IMAGE_BASE64_LIMIT = 4_000_000
 _OPENAI = "https://api.openai.com/v1"
 _GEMINI = "https://generativelanguage.googleapis.com/v1beta"
 _CLAUDE = "https://api.anthropic.com/v1/messages"
@@ -78,6 +81,8 @@ def build_request(provider, model, key, media, history, question, instructions, 
         return Request(_CLAUDE, {"x-api-key": key, "anthropic-version": "2023-06-01"},
                        {"model": model, "max_tokens": tokens, "system": instructions,
                         "messages": messages})
+    if provider == "groq" and media.kind in ("image", "sticker") and len(_b64(media)) > GROQ_IMAGE_BASE64_LIMIT:
+        raise DescriptionError("request")  # this provider only: the chain moves on to the next
     # groq and openrouter speak the OpenAI chat-completions dialect.
     messages = [{"role": "system", "content": instructions}]
     messages += [{"role": role, "content": text} for role, text in history]

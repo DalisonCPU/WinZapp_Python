@@ -1121,7 +1121,7 @@ def test_loader_reads_the_original_through_the_bounded_download_of_its_kind(tmp_
     assert len(calls) == (0 if cached else 1)
     if calls:
         assert calls[0][1]["max_bytes"] == limit and callable(calls[0][1]["cancel_check"])
-        assert calls[0][1]["timeout"] == 15
+        assert "timeout" not in calls[0][1]  # the size-scaled default of the download applies
 
 
 def test_loader_refuses_oversized_media_by_metadata_and_by_actual_size(tmp_path):
@@ -1214,3 +1214,39 @@ def test_a_locked_chat_is_not_processed_until_the_vault_is_unlocked(ready, monke
     AIActionsMixin._on_ai_action(panel, message=message("imageMessage"))
     assert spoken == []
 
+
+
+def test_loading_media_leaves_no_plain_copy_anywhere_on_disk(tmp_path):
+    from cryptography.fernet import Fernet
+    from core.ai_media.service import Operation
+    key = Fernet.generate_key()
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    path = cache / "media.wzmedia"
+    path.write_bytes(Fernet(key).encrypt(b"PLAIN-MEDIA-BYTES"))
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    import tempfile
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    old = tempfile.tempdir
+    tempfile.tempdir = str(scratch)  # anything the loader parks in the temp folder lands here
+    try:
+        panel = SimpleNamespace(main_window=SimpleNamespace())
+        got = AIActionsMixin._ai_loader(panel, message("imageMessage"), "image", str(path), key)(Operation("image"))
+    finally:
+        tempfile.tempdir = old
+    after = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    assert got == b"PLAIN-MEDIA-BYTES" and after == before and not list(scratch.iterdir())
+    assert not any(b"PLAIN-MEDIA-BYTES" in data for data in after.values())
+
+
+def test_consent_text_names_providers_and_warns_about_metadata_only_where_it_is_not_stripped():
+    from ui.dialogs.ai_result_dialog import consent_text
+    i18n = SimpleNamespace(t=lambda key: key + " {providers}" if key == "ai_consent" else key)
+    for kind in ("video", "audio", "pdf"):
+        assert "ai_metadata_notice" in consent_text(i18n, ["openai"], kind, False)
+    for kind in ("image", "sticker"):
+        assert "ai_metadata_notice" not in consent_text(i18n, ["openai"], kind, False)
+    text = consent_text(i18n, ["gemini", "groq"], "image", True)
+    assert "Google Gemini, Groq" in text and "ai_gemini_notice" in text and "ai_locked_consent" in text
+    assert "ai_gemini_notice" not in consent_text(i18n, ["groq"], "image", False)

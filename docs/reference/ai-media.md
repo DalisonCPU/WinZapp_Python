@@ -83,6 +83,8 @@ when it holds a saved key.
   opens and cannot be remembered; locking the vault, leaving the chat, hiding
   or closing the app and deleting the message all close the window and drop its
   media and answers (`close_ai_media`).
+- Photos and stickers are re-encoded (metadata removed); video, voice messages and
+  PDFs go out exactly as they are, and the consent text says so.
 - View-once media, documents that are not PDFs and statuses are never offered.
 - Chat names, JIDs and captions are never sent. Answers and the question
   history live in memory only.

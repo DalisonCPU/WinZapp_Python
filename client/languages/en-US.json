@@ -1468,5 +1468,6 @@
     "ai_kind_video": "videos",
     "ai_provider_supports": "Handles: {kinds}.",
     "ai_result_description_title": "Description",
-    "ai_send_media": "Send media"
+    "ai_send_media": "Send media",
+    "ai_metadata_notice": "Videos, voice messages and PDFs are sent exactly as they are, including any information stored inside the file, such as author or location."
 }

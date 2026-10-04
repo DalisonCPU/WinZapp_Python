@@ -109,7 +109,7 @@ class AIActionsMixin:
                 raise DescriptionError("media_size")
             if not os.path.isfile(path):
                 fetch = mw.handle_audio_message if msg_type == "audioMessage" else mw.handle_media_message
-                fetch(snapshot, timeout=15, max_bytes=limit, cancel_check=token.check)
+                fetch(snapshot, max_bytes=limit, cancel_check=token.check)
             token.check()
             if not os.path.isfile(path):
                 raise DescriptionError("media")

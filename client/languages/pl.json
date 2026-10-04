@@ -1468,5 +1468,6 @@
     "ai_kind_video": "filmy",
     "ai_provider_supports": "Obsługuje: {kinds}.",
     "ai_result_description_title": "Opis",
-    "ai_send_media": "Wyślij plik"
+    "ai_send_media": "Wyślij plik",
+    "ai_metadata_notice": "Filmy, wiadomości głosowe i pliki PDF są wysyłane w niezmienionej postaci, razem z informacjami zapisanymi w pliku, takimi jak autor czy lokalizacja."
 }

@@ -100,6 +100,8 @@ class CredentialStore:
             self._provider(provider)
             if value and (not isinstance(value, str) or len(value) > 4096 or any(c.isspace() for c in value)):
                 raise CredentialError()
+        if not changes and not reset:
+            return  # nothing staged: an unreadable store must not block unrelated Settings
         try:
             self.directory.mkdir(parents=True, exist_ok=True)
             with app_settings_lock(str(self.directory)):
@@ -111,8 +113,6 @@ class CredentialStore:
                         data.pop(provider, None)
                     elif value:
                         data[provider] = value
-                if not changes and not reset:
-                    return
                 cipher = self._cipher(create=True)
                 self._atomic(self.data_path, cipher.encrypt(json.dumps(data).encode()))
         except (OSError, ValueError, TypeError, InvalidToken, RuntimeError):

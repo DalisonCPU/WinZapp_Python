@@ -488,3 +488,21 @@ def test_cancelled_media_does_not_download():
     with pytest.raises(DescriptionError, match="ai_error_cancelled"):
         fetch_bounded_media("url", {}, {}, 100, token.check, 15, lambda *a, **kw: calls.append(True))
     assert not calls
+
+
+def test_an_unreadable_store_never_blocks_a_save_that_stages_nothing(tmp_path):
+    store = CredentialStore(tmp_path)
+    store.set("openai", "x")
+    store.key_path.unlink()
+    store.apply({})  # no change, no reset: not even read
+    with pytest.raises(CredentialError):
+        store.apply({"gemini": "new"})
+
+
+def test_groq_skips_a_photo_over_its_documented_size_without_stopping_the_chain():
+    from core.ai_media.providers import GROQ_IMAGE_BASE64_LIMIT, build_request
+    big = Media("image", b"x" * (GROQ_IMAGE_BASE64_LIMIT * 3 // 4 + 10), "image/jpeg", "image.jpg")
+    with pytest.raises(DescriptionError) as raised:
+        build_request("groq", config.PROVIDERS["groq"].model, "k", big, (), "q", "i", "balanced")
+    assert raised.value.category == "request"  # a category the chain moves past
+    assert build_request("openrouter", config.PROVIDERS["openrouter"].model, "k", big, (), "q", "i", "balanced")

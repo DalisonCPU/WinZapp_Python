@@ -1468,5 +1468,6 @@
   "ai_kind_video": "videolar",
   "ai_provider_supports": "Desteklenenler: {kinds}.",
   "ai_result_description_title": "Betimleme",
-  "ai_send_media": "Dosyayı gönder"
+  "ai_send_media": "Dosyayı gönder",
+  "ai_metadata_notice": "Videolar, sesli mesajlar ve PDF'ler, dosyanın içinde saklanan yazar veya konum gibi bilgiler dahil, olduğu gibi gönderilir."
 }

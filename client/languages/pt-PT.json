@@ -1468,5 +1468,6 @@
     "ai_kind_video": "vídeos",
     "ai_provider_supports": "Aceita: {kinds}.",
     "ai_result_description_title": "Descrição",
-    "ai_send_media": "Enviar conteúdo"
+    "ai_send_media": "Enviar conteúdo",
+    "ai_metadata_notice": "Os vídeos, as mensagens de voz e os PDFs são enviados exatamente como estão, incluindo qualquer informação guardada no ficheiro, como autor ou localização."
 }
