@@ -1269,12 +1269,27 @@ def test_the_describe_button_follows_the_menu_rule(ready):
     assert shown == ["hide", "hide"]
 
 
-def test_the_describe_button_acts_on_the_selected_message():
+def test_the_shortcut_and_the_button_act_on_the_selected_message_while_the_button_has_focus(monkeypatch):
+    button, others = object(), object()
+    msgs = [{"id": 1}, {"id": 2}, {"id": 3}]
+    focus = {"now": button}
+    monkeypatch.setattr(wx.Window, "FindFocus", lambda: focus["now"])
     seen = []
-    msgs = [{"id": 1}, {"id": 2}]
-    panel = SimpleNamespace(messages_list=SimpleNamespace(GetFirstSelected=lambda: 1), _sorted_messages=msgs,
-                            _on_ai_action=lambda message: seen.append(message))
-    AIActionsMixin._on_ai_describe_button(panel)
-    panel.messages_list = SimpleNamespace(GetFirstSelected=lambda: -1)
-    AIActionsMixin._on_ai_describe_button(panel)
+    panel = SimpleNamespace(
+        messages_list=SimpleNamespace(GetFirstSelected=lambda: 1, GetFocusedItem=lambda: 2),
+        _action_describe_btn=button, _sorted_messages=msgs)
+    panel._focused_message = lambda: AIActionsMixin._focused_message(panel)
+    panel._on_ai_action = lambda message=None: seen.append(message)
+    AIActionsMixin._on_ai_describe_button(panel)            # button focused: the selected row
+    focus["now"] = panel.messages_list
+    assert AIActionsMixin._focused_message(panel) == {"id": 3}  # list focused: the focused row
+    focus["now"] = others
+    assert AIActionsMixin._focused_message(panel) is None
+    focus["now"] = None  # no focus at all must not be mistaken for the button
+    panel._action_describe_btn = None
+    assert AIActionsMixin._focused_message(panel) is None
+    panel._action_describe_btn = button
+    panel.messages_list = SimpleNamespace(GetFirstSelected=lambda: -1, GetFocusedItem=lambda: -1)
+    focus["now"] = button
+    assert AIActionsMixin._focused_message(panel) is None
     assert seen == [{"id": 2}]

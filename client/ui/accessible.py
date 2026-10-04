@@ -150,7 +150,7 @@ class AccessibleSaveAs(wx.Accessible):
 
 
 class AccessibleDescribeButton(wx.Accessible):
-    """Reports Ctrl+Shift+I as the shortcut for the Describe/Transcribe button."""
+    """Reports Ctrl+Shift+I as the shortcut for the AI action button."""
 
     def GetKeyboardShortcut(self, childId):
         return (wx.ACC_OK, "Ctrl+Shift+I")

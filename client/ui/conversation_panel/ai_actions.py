@@ -4,9 +4,9 @@ Transcribe a voice message, describe a photo, sticker or video, or turn a PDF
 into accessible text, with the AI providers the person set up in Settings.
 
 The single entry point is ``_on_ai_action``: the context-menu item, the
-Describe button and the Ctrl+Shift+I accelerator all end there. Which provider answers, in which
-order and under which consent is core/ai_media's business; this file only
-drives message -> bounded download -> window.
+Describe button and the Ctrl+Shift+I accelerator all end there. Which
+provider answers, in which order and under which consent is core/ai_media's
+business; this file only drives message -> bounded download -> window.
 
 Methods run with ``self`` bound to the ConversationsPanel instance.
 """
@@ -60,16 +60,19 @@ class AIActionsMixin:
 
     def _on_ai_describe_button(self, event=None):
         """The button acts on the selected message (focus is on the button)."""
-        index = self.messages_list.GetFirstSelected()
-        if index < 0 or index >= len(self._sorted_messages):
-            return
-        self._on_ai_action(message=self._sorted_messages[index])
+        self._on_ai_action(message=self._focused_message())
 
     def _focused_message(self):
-        """The message under focus in the message list, or None."""
-        if wx.Window.FindFocus() is not self.messages_list:
+        """The message under focus in the message list, or the selected one
+        while the Describe button has focus; None anywhere else."""
+        focus = wx.Window.FindFocus()
+        button = getattr(self, "_action_describe_btn", None)
+        if focus is not None and focus is button:
+            index = self.messages_list.GetFirstSelected()
+        elif focus is self.messages_list:
+            index = self.messages_list.GetFocusedItem()
+        else:
             return None
-        index = self.messages_list.GetFocusedItem()
         if index < 0 or index >= len(self._sorted_messages):
             return None
         return self._sorted_messages[index]
