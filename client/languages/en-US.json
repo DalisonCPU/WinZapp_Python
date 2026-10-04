@@ -1402,6 +1402,7 @@
     "ai_balanced": "Balanced",
     "ai_detailed": "Detailed",
     "ai_model": "Model identifier (advanced)",
+    "ai_model_automatic": "Automatic (recommended)",
     "ai_read_answers": "Read new answers aloud using WinZapp speech settings",
     "ai_test_connection": "Test connection without sending media",
     "ai_billing": "Usage and billing",

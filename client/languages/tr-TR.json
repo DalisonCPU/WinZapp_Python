@@ -1402,6 +1402,7 @@
   "ai_balanced": "Dengeli",
   "ai_detailed": "Ayrıntılı",
   "ai_model": "Model kimliği (gelişmiş)",
+  "ai_model_automatic": "Otomatik (önerilen)",
   "ai_read_answers": "Yeni yanıtları WinZapp konuşma ayarlarıyla seslendir",
   "ai_test_connection": "Dosya göndermeden bağlantıyı denetle",
   "ai_billing": "Kullanım ve faturalandırma",

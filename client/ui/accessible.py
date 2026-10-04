@@ -149,6 +149,13 @@ class AccessibleSaveAs(wx.Accessible):
         return (wx.ACC_OK, "Ctrl+Shift+S")
 
 
+class AccessibleDescribeButton(wx.Accessible):
+    """Reports Ctrl+Shift+I as the shortcut for the AI action button."""
+
+    def GetKeyboardShortcut(self, childId):
+        return (wx.ACC_OK, "Ctrl+Shift+I")
+
+
 class AccessibleShowInFolder(wx.Accessible):
     """Reports Ctrl+Enter as the shortcut for the Show-in-folder button."""
 

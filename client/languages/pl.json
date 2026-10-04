@@ -1402,6 +1402,7 @@
     "ai_balanced": "Zrównoważony",
     "ai_detailed": "Szczegółowy",
     "ai_model": "Identyfikator modelu (zaawansowane)",
+    "ai_model_automatic": "Automatycznie (zalecane)",
     "ai_read_answers": "Czytaj nowe odpowiedzi zgodnie z ustawieniami mowy WinZapp",
     "ai_test_connection": "Sprawdź połączenie bez wysyłania pliku",
     "ai_billing": "Użycie i rozliczenia",

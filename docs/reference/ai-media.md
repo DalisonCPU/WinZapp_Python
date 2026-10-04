@@ -23,7 +23,7 @@ automatically for an incoming message.
 | The window's state, immune to late callbacks | `core/ai_media/session.py` |
 | The waiting sound | `core/ai_media/feedback.py` |
 | The API keys (install-wide, encrypted) | `client/core/ai_credentials.py` |
-| Menu item, Ctrl+Shift+I, the bounded download, the window's lifecycle | `client/ui/conversation_panel/ai_actions.py` |
+| Menu item, Describe button, Ctrl+Shift+I, the bounded download, the window's lifecycle | `client/ui/conversation_panel/ai_actions.py` |
 | Result window and consent | `client/ui/dialogs/ai_result_dialog.py` |
 | Settings page and the provider window | `client/ui/dialogs/ai_settings_page.py`, `ai_provider_models.py` |
 | Manual demo without WhatsApp | `client/ai_media_demo.py`, `client/ui/ai_media_demo.py` |
@@ -119,7 +119,8 @@ when it holds a saved key.
 - **No shortcut or mnemonic is written into a label or accessible name.**
   Ctrl+Enter (ask) is announced by `ui/accessible.AccessibleAskQuestion`;
   Ctrl+Shift+I is an accelerator whose menu item shows it the way every other
-  message-menu item does. `tests/test_ai_media_i18n_keys.py` fails if a label
+  message-menu item does; the Describe button reports it through
+  `ui/accessible.AccessibleDescribeButton`. `tests/test_ai_media_i18n_keys.py` fails if a label
   carries one.
 - All speech goes through `MainWindow.output` (the `speak_output` gate). A
   request speaks its status once at the start; the waiting sound
@@ -131,6 +132,11 @@ when it holds a saved key.
   screen reader can read it back on request.
 
 ## The model catalogue
+
+"Automatic (recommended)" follows the provider model in `config.PROVIDERS`;
+it saves an empty model id and locks the model fields and "Get models".
+Unchecking it allows a fixed model id. This choice is preserved when keys
+are reset and re-entered; it does not change the sending-consent rules.
 
 `model_catalog.COMPATIBLE_MODELS` is a short list of exact model ids per
 provider, reviewed against the provider's own model pages. "Get models" intersects

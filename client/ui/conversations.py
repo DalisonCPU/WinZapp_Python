@@ -50,6 +50,7 @@ from ui.accessible import (
     AccessibleAudioSlider,
     AccessibleSaveAs,
     AccessibleShowInFolder,
+    AccessibleDescribeButton,
     AccessibleConversationDataButton,
     AccessibleVoiceCallButton,
     AccessibleVideoCallButton,
@@ -767,6 +768,16 @@ class ConversationsPanel(
         self._media_action_sizer.Add(self._action_save_as_btn, 0, wx.TOP, 2)
         self._action_save_as_btn.Hide()
 
+        # Describe / transcribe (Ctrl+Shift+I) sits right after Save as in the
+        # Tab order; ai_actions.py decides when it is shown and what it says.
+        self._action_describe_btn = wx.Button(
+            self._media_action_slot, label=i18n.t("ai_describe_image_menu")
+        )
+        self._action_describe_btn.SetAccessible(AccessibleDescribeButton())
+        self._action_describe_btn.Bind(wx.EVT_BUTTON, self._on_ai_describe_button)
+        self._media_action_sizer.Add(self._action_describe_btn, 0, wx.TOP, 2)
+        self._action_describe_btn.Hide()
+
         self._action_show_in_folder_btn = wx.Button(
             self._media_action_slot, label=i18n.t("show_in_folder")
         )
@@ -875,6 +886,7 @@ class ConversationsPanel(
         self.message_field.Bind(wx.EVT_TEXT,       self.on_change_message_field)
         self.message_field.Bind(wx.EVT_TEXT_ENTER, self.on_send_message)
         self.message_field.Bind(wx.EVT_KEY_DOWN,   self._on_message_field_key_down)
+        self.message_field.Bind(wx.EVT_LEFT_UP,    self._cue_spelling_at_caret_on_click)
         self.message_field.Bind(wx.EVT_CHAR,       self._on_message_field_char)
         self.message_field.Bind(wx.EVT_TEXT_PASTE, self._on_text_field_paste)
         conv_sizer.Add(self.message_field, 0, wx.EXPAND | wx.ALL, 5)
