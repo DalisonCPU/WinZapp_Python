@@ -160,6 +160,8 @@ FIXES
 
 - Update notices now also appear when WinZapp starts with Windows: neither WinZapp's own update nor the WPPConnect Server one was ever offered in that case. The WPPConnect Server notice also now offers a newer release than the one WinZapp was tested with, as a recommended update you can decline, instead of only when WinZapp itself raised the required version.
 
+- "Describe" button on media messages. On a photo, sticker or video (and on audio and PDFs too, when the AI features are on), a button appears right after "Save as", reachable with Tab, that does the same as the Ctrl+Shift+I shortcut; in the context menu the item now sits with the other media actions, also showing Ctrl+Shift+I. The button and the item only appear on messages that can be described.
+
 V1.1.1.0
 
 This release is about keeping your account connected. WinZapp now keeps a backup copy of the browser profile — which is where your WhatsApp connection actually lives — and restores it on its own when it stops being accepted, telling you what happened. Alongside it come fixes for the situations that broke the session and left the app asking you to pair again: shutting the computer down, suspending and resuming, and the app restarting the connection by itself. Spell checking in the message field and link actions arrived too.

@@ -160,6 +160,8 @@ POPRAWKI
 
 - Powiadomienia o aktualizacjach pojawiają się teraz także wtedy, gdy WinZapp uruchamia się razem z Windows: w takim przypadku nie była oferowana ani aktualizacja samego WinZapp, ani WPPConnect Server. Powiadomienie o WPPConnect Server oferuje też teraz nowszą wersję niż ta testowana z WinZapp, jako zalecaną aktualizację, którą można odrzucić, a nie tylko wtedy, gdy sam WinZapp podnosił wymaganą wersję.
 
+- Przycisk „Opisz” przy wiadomościach z multimediami. Przy zdjęciu, naklejce lub wideo (a także przy nagraniach audio i plikach PDF, gdy funkcje AI są włączone) zaraz po „Zapisz jako” pojawia się przycisk dostępny klawiszem Tab, który robi to samo co skrót Ctrl+Shift+I; w menu kontekstowym pozycja znajduje się teraz wśród pozostałych akcji multimediów i także pokazuje Ctrl+Shift+I. Przycisk i pozycja pojawiają się tylko przy wiadomościach, które można opisać.
+
 V1.1.1.0
 
 Ta wersja dotyczy utrzymania połączenia z Twoim kontem. WinZapp zapisuje teraz kopię zapasową profilu przeglądarki — to w nim faktycznie przechowywane jest Twoje połączenie z WhatsApp — i sam ją przywraca, gdy przestaje być akceptowana, informując o tym, co się stało. Razem z nią pojawiają się poprawki sytuacji, które przerywały sesję i zmuszały do ponownego parowania: wyłączenie komputera, wstrzymanie i wznowienie oraz samo ponowne uruchamianie połączenia przez program. Doszły również sprawdzanie pisowni w polu wiadomości i akcje na odnośnikach.

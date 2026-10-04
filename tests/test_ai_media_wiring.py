@@ -146,3 +146,12 @@ def test_the_f1_shortcuts_list_names_the_shortcut_in_every_locale():
     for name in json.loads((languages / "language_map.json").read_text(encoding="utf-8")):
         label = json.loads((languages / f"{name}.json").read_text(encoding="utf-8"))["shortcut_ctrl_shift_i_label"]
         assert label.startswith("Ctrl+Shift+I:"), name
+
+
+def test_the_describe_button_follows_save_as_with_the_ctrl_shift_i_accessible():
+    panel = read("ui", "conversations.py")
+    assert panel.index("self._action_save_as_btn =") < panel.index("self._action_describe_btn =") < panel.index("self._action_show_in_folder_btn =")
+    assert "self._action_describe_btn.SetAccessible(AccessibleDescribeButton())" in panel
+    assert "Ctrl+Shift+I" in read("ui", "accessible.py")
+    assert "_action_describe_btn" in read("ui", "conversation_panel", "media_files.py")
+    assert "_update_ai_describe_button(msg)" in read("ui", "conversation_panel", "message_list.py")

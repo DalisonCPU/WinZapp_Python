@@ -160,6 +160,8 @@ CORREÇÕES
 
 - Os avisos de atualização passam a aparecer também quando o WinZapp arranca com o Windows: nem a atualização do próprio WinZapp nem a do WPPConnect Server eram oferecidas nesse caso. O aviso do WPPConnect Server passa também a oferecer uma versão mais recente do que a testada com o WinZapp, como atualização recomendada que pode recusar, e não apenas quando o próprio WinZapp aumentava a versão exigida.
 
+- Botão "Descrever" nas mensagens com multimédia. Numa foto, autocolante ou vídeo (e também em áudios e PDFs, quando as funcionalidades de IA estão ativas), aparece um botão logo a seguir a "Guardar como", acessível com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de multimédia, também a mostrar Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
+
 V1.1.1.0
 
 Esta versão é sobre manter a sua conta ligada. O WinZapp passou a guardar uma cópia de segurança do perfil do navegador — que é onde a sua ligação ao WhatsApp fica realmente guardada — e a restaurá-la sozinho quando ela deixa de ser aceite, avisando o que aconteceu. Com ela vieram as correções das situações que quebravam a sessão e faziam o programa pedir para emparelhar de novo: desligar o computador, suspender e retomar, e o próprio programa a reiniciar a ligação. Chegaram também a verificação ortográfica no campo de mensagem e as ações sobre ligações.

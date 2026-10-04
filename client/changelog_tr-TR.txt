@@ -160,6 +160,8 @@ DÜZELTMELER
 
 - Güncelleme bildirimleri artık WinZapp Windows ile başladığında da görünüyor: bu durumda ne WinZapp'in kendi güncellemesi ne de WPPConnect Server güncellemesi sunuluyordu. WPPConnect Server bildirimi ayrıca artık WinZapp ile test edilenden daha yeni bir sürümü, reddedebileceğiniz önerilen bir güncelleme olarak sunuyor; önceden yalnızca WinZapp gereken sürümü yükselttiğinde sunuluyordu.
 
+- Medya mesajlarında "Betimle" düğmesi. Bir fotoğrafta, çıkartmada veya videoda (yapay zekâ özellikleri açıkken ses ve PDF'lerde de) "Farklı kaydet"in hemen ardından Tab ile ulaşılabilen ve Ctrl+Shift+I kısayoluyla aynı işi yapan bir düğme görünür; bağlam menüsünde öğe artık diğer medya eylemleriyle birlikte durur ve Ctrl+Shift+I kısayolunu gösterir. Düğme ve öğe yalnızca betimlenebilen mesajlarda görünür.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.

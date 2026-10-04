@@ -1250,3 +1250,31 @@ def test_consent_text_names_providers_and_warns_about_metadata_only_where_it_is_
     text = consent_text(i18n, ["gemini", "groq"], "image", True)
     assert "Google Gemini, Groq" in text and "ai_gemini_notice" in text and "ai_locked_consent" in text
     assert "ai_gemini_notice" not in consent_text(i18n, ["groq"], "image", False)
+
+
+def test_the_describe_button_follows_the_menu_rule(ready):
+    shown = []
+    button = SimpleNamespace(SetLabel=lambda text: shown.append(("label", text)),
+                             Show=lambda: shown.append("show"), Hide=lambda: shown.append("hide"))
+    module, app = ready
+    panel = SimpleNamespace(main_window=SimpleNamespace(app_settings=app, i18n=SimpleNamespace(t=lambda key: key)),
+                            _action_describe_btn=button)
+    panel._ai_settings = lambda: AIActionsMixin._ai_settings(panel)
+    panel._ai_menu_label = lambda msg, i18n: AIActionsMixin._ai_menu_label(panel, msg, i18n)
+    AIActionsMixin._update_ai_describe_button(panel, message("imageMessage"))
+    assert shown == [("label", "ai_describe_image_menu"), "show"]
+    shown.clear()
+    AIActionsMixin._update_ai_describe_button(panel, message("imageMessage", viewOnce=True))
+    AIActionsMixin._update_ai_describe_button(panel, {"messageType": "conversation", "key": {"id": "m"}})
+    assert shown == ["hide", "hide"]
+
+
+def test_the_describe_button_acts_on_the_selected_message():
+    seen = []
+    msgs = [{"id": 1}, {"id": 2}]
+    panel = SimpleNamespace(messages_list=SimpleNamespace(GetFirstSelected=lambda: 1), _sorted_messages=msgs,
+                            _on_ai_action=lambda message: seen.append(message))
+    AIActionsMixin._on_ai_describe_button(panel)
+    panel.messages_list = SimpleNamespace(GetFirstSelected=lambda: -1)
+    AIActionsMixin._on_ai_describe_button(panel)
+    assert seen == [{"id": 2}]

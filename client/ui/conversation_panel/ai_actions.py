@@ -3,8 +3,8 @@
 Transcribe a voice message, describe a photo, sticker or video, or turn a PDF
 into accessible text, with the AI providers the person set up in Settings.
 
-The single entry point is ``_on_ai_action``: the context-menu item and the
-Ctrl+Shift+I accelerator both end there. Which provider answers, in which
+The single entry point is ``_on_ai_action``: the context-menu item, the
+Describe button and the Ctrl+Shift+I accelerator all end there. Which provider answers, in which
 order and under which consent is core/ai_media's business; this file only
 drives message -> bounded download -> window.
 
@@ -46,6 +46,24 @@ class AIActionsMixin:
         app, config = self._ai_settings()
         kind = ai_config.offered_kind(msg, config, CredentialStore(global_dir()).saved())
         return i18n.t(MENU_KEY[kind]) if kind else ""
+
+    def _update_ai_describe_button(self, msg):
+        """Show the Describe/Transcribe button under the same rule as the
+        context-menu item: only on a message the feature offers an action for."""
+        button = self._action_describe_btn
+        label = self._ai_menu_label(msg, self.main_window.i18n)
+        if label:
+            button.SetLabel(label)
+            button.Show()
+        else:
+            button.Hide()
+
+    def _on_ai_describe_button(self, event=None):
+        """The button acts on the selected message (focus is on the button)."""
+        index = self.messages_list.GetFirstSelected()
+        if index < 0 or index >= len(self._sorted_messages):
+            return
+        self._on_ai_action(message=self._sorted_messages[index])
 
     def _focused_message(self):
         """The message under focus in the message list, or None."""

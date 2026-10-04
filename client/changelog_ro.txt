@@ -160,6 +160,8 @@ CORECTĂRI
 
 - Notificările de actualizare apar acum și când WinZapp pornește odată cu Windows: în acest caz nu se oferea nici actualizarea WinZapp, nici cea a WPPConnect Server. Notificarea WPPConnect Server oferă acum și o versiune mai nouă decât cea testată cu WinZapp, ca actualizare recomandată pe care o puteți refuza, nu doar atunci când WinZapp ridica versiunea necesară.
 
+- Buton „Descrieți” la mesajele cu conținut media. La o fotografie, un autocolant sau un videoclip (și la audio și PDF, când funcțiile AI sunt pornite) apare un buton chiar după „Salvați ca”, accesibil cu Tab, care face același lucru ca scurtătura Ctrl+Shift+I; în meniul contextual, elementul stă acum lângă celelalte acțiuni media și arată tot Ctrl+Shift+I. Butonul și elementul apar doar la mesajele care pot fi descrise.
+
 V1.1.1.0
 
 Această versiune se concentrează pe menținerea contului conectat. WinZapp păstrează acum o copie de siguranță a profilului browserului — locul în care se află de fapt conexiunea cu WhatsApp — și o restaurează singur atunci când nu mai este acceptată, spunându-vă ce s-a întâmplat. Împreună cu aceasta vin corecții pentru situațiile care stricau sesiunea și lăsau aplicația să ceară o nouă asociere: închiderea computerului, suspendarea și reluarea și repornirea conexiunii de către aplicație. Au sosit și verificarea ortografică în câmpul de mesaj și acțiunile pentru linkuri.
