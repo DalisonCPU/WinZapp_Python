@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 
-DEMO_ACCOUNT = "photo-description-demo"
+DEMO_ACCOUNT = "ai-media-demo"
 DEMO_PHOTO_ID = "demophoto"
 
 

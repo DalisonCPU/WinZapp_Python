@@ -96,7 +96,7 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         assert dialog._notebook.FindPage(dialog._audio_page) == 10
         assert dialog._notebook.FindPage(dialog._calls_page) == 11
 
-    def test_the_profile_backup_tab_is_appended_after_calls(self, make_dialog):
+    def test_the_profile_backup_tab_is_appended_last(self, make_dialog):
         """Added after Calls so no earlier index moved; SetPageText(12) in
         _refresh_dialog_labels() relies on it being the thirteenth page."""
         dialog = make_dialog()
@@ -107,15 +107,12 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         dialog = make_dialog()
         assert dialog._notebook.FindPage(dialog._reactions_page) == 13
 
-    def test_the_ai_tab_is_appended_after_reactions(self, make_dialog):
-        """Appended for the same reason; SetPageText(14) relies on it."""
+    def test_the_locked_chats_tab_is_appended_after_reactions(self, make_dialog):
+        """The vault keeps index 14: the AI page is appended after it, so
+        SetPageText(14) still addresses it."""
         dialog = make_dialog()
-        assert dialog._notebook.FindPage(dialog._ai_page) == 14
-
-    def test_the_locked_chats_tab_is_appended_after_the_ai_tab(self, make_dialog):
-        """Rare vault policy stays last; SetPageText(15) relies on it."""
-        dialog = make_dialog()
-        assert dialog._notebook.FindPage(dialog._chat_lock_page) == 15
+        assert dialog._notebook.FindPage(dialog._chat_lock_page) == 14
+        assert dialog._notebook.FindPage(dialog._ai_page) == 15
         assert dialog._notebook.GetPageCount() == 16
 
     def test_a_hidden_vault_leaves_the_locked_chats_tab_out(self, make_dialog):
@@ -125,6 +122,8 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         vault.set_hide_navigation(True)
         dialog = make_dialog(vault=vault)
         assert dialog._notebook.FindPage(dialog._chat_lock_page) == -1
+        assert dialog._notebook.FindPage(dialog._ai_page) == 14
+        assert dialog._notebook.GetPageText(14) == dialog.main_window.i18n.t("tab_ai_accessibility")
         assert dialog._notebook.GetPageCount() == 15
 
     def test_the_tabs_that_are_opened_by_number_did_not_move(self, make_dialog):
@@ -145,8 +144,8 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         assert dialog._notebook.GetPageText(11) == i18n.t("tab_calls")
         assert dialog._notebook.GetPageText(12) == i18n.t("tab_profile_backup")
         assert dialog._notebook.GetPageText(13) == i18n.t("tab_reactions")
-        assert dialog._notebook.GetPageText(14) == i18n.t("tab_ai_accessibility")
-        assert dialog._notebook.GetPageText(15) == i18n.t("locked_chats")
+        assert dialog._notebook.GetPageText(14) == i18n.t("locked_chats")
+        assert dialog._notebook.GetPageText(15) == i18n.t("tab_ai_accessibility")
 
 
 class TestLoadingTheCurrentSetting:
