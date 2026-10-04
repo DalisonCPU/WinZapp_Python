@@ -151,7 +151,7 @@ class AIProviderDialog(ModelSelectionMixin, wx.Dialog):
     def _apply_automatic(self):
         """Automatic follows the model WinZapp recommends: a pinned model is
         edited only while it is off."""
-        pinned = not self.automatic.GetValue()
+        pinned = self._model_pinned()
         if not pinned:
             self.model.ChangeValue(PROVIDERS[self._provider].model)
         self.model.Enable(pinned)

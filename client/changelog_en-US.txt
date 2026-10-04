@@ -162,7 +162,7 @@ FIXES
 
 - Update notices now also appear when WinZapp starts with Windows: neither WinZapp's own update nor the WPPConnect Server one was ever offered in that case. The WPPConnect Server notice also now offers a newer release than the one WinZapp was tested with, as a recommended update you can decline, instead of only when WinZapp itself raised the required version.
 
-- "Automatic (recommended)" model in each AI provider window (Transcriptions and Descriptions). Checked by default, the box makes WinZapp always use the model it recommends, which follows updates; uncheck it to pick or type a fixed model.
+- "Automatic (recommended)" model in each AI provider window (Transcriptions and Descriptions). Checked by default for providers where you had not picked a model, the box makes WinZapp always use the model it recommends, which follows updates; uncheck it to pick or type a fixed model.
 
 V1.1.1.0
 

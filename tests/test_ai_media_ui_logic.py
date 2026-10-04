@@ -936,6 +936,7 @@ class ProviderWindowStub:
     _refresh_model_choices = AIProviderDialog._refresh_model_choices
     _hide_key = AIProviderDialog._hide_key
     _apply_automatic = AIProviderDialog._apply_automatic
+    _model_pinned = AIProviderDialog._model_pinned
     _automatic_changed = AIProviderDialog._automatic_changed
 
     def __init__(self, directory, provider="openai"):
@@ -1284,3 +1285,18 @@ def test_a_model_pinned_in_the_provider_window_is_kept_and_automatic_clears_it(t
     page.apply()
     prefs = ai_config.preferences(page.app)
     assert prefs["models"]["openai"] == "gpt-4o" and "openai" not in prefs["auto_models"]
+
+
+def test_automatic_keeps_the_model_fields_locked_through_key_edits_and_model_lists(tmp_path):
+    window = ProviderWindowStub(tmp_path)
+    window.automatic.value = True
+    window._automatic_changed(SimpleNamespace(Skip=lambda: None))
+    window.key.value = "typed"
+    window._key_changed(SimpleNamespace(Skip=lambda: None))
+    assert window.get_models.enabled is False
+    window._model_options = (SimpleNamespace(id="gpt-4o", label="gpt-4o"),)
+    window._refresh_model_choices()
+    assert window.model_choice.enabled is False
+    window.automatic.value = False
+    window._refresh_model_choices()
+    assert window.model_choice.enabled is True

@@ -162,7 +162,7 @@ CORECTĂRI
 
 - Notificările de actualizare apar acum și când WinZapp pornește odată cu Windows: în acest caz nu se oferea nici actualizarea WinZapp, nici cea a WPPConnect Server. Notificarea WPPConnect Server oferă acum și o versiune mai nouă decât cea testată cu WinZapp, ca actualizare recomandată pe care o puteți refuza, nu doar atunci când WinZapp ridica versiunea necesară.
 
-- Modelul „Automat (recomandat)” în fereastra fiecărui furnizor AI (Transcrieri și descrieri). Bifată implicit, caseta face ca WinZapp să folosească mereu modelul pe care îl recomandă, care urmează actualizările; debifați-o pentru a alege sau a scrie un model fix.
+- Modelul „Automat (recomandat)” în fereastra fiecărui furnizor AI (Transcrieri și descrieri). Bifată implicit la furnizorii la care nu ați ales încă un model, caseta face ca WinZapp să folosească mereu modelul pe care îl recomandă, care urmează actualizările; debifați-o pentru a alege sau a scrie un model fix.
 
 V1.1.1.0
 

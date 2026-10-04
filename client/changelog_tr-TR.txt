@@ -162,7 +162,7 @@ DÜZELTMELER
 
 - Güncelleme bildirimleri artık WinZapp Windows ile başladığında da görünüyor: bu durumda ne WinZapp'in kendi güncellemesi ne de WPPConnect Server güncellemesi sunuluyordu. WPPConnect Server bildirimi ayrıca artık WinZapp ile test edilenden daha yeni bir sürümü, reddedebileceğiniz önerilen bir güncelleme olarak sunuyor; önceden yalnızca WinZapp gereken sürümü yükselttiğinde sunuluyordu.
 
-- Her yapay zekâ sağlayıcısının penceresinde (Yazıya Dökme ve Betimleme) "Otomatik (önerilen)" model. Varsayılan olarak işaretli olan kutu, WinZapp'ın her zaman önerdiği ve güncellemeleri izleyen modeli kullanmasını sağlar; sabit bir model seçmek veya yazmak için işareti kaldırın.
+- Her yapay zekâ sağlayıcısının penceresinde (Yazıya Dökme ve Betimleme) "Otomatik (önerilen)" model. Henüz model seçmediğiniz sağlayıcılarda varsayılan olarak işaretli olan kutu, WinZapp'ın her zaman önerdiği ve güncellemeleri izleyen modeli kullanmasını sağlar; sabit bir model seçmek veya yazmak için işareti kaldırın.
 
 V1.1.1.0
 
