@@ -1,318 +1,465 @@
-"""The "Transcriptions and Descriptions" page of Settings (AI accessibility).
+"""The "Transcriptions and Descriptions" page of Settings, and the window that
+sets up one provider.
 
-Lives in its own module so settings_dialog.py only has to build the page, load
-it, read it back and relabel it. The page owns everything specific to this
-feature: the ordered list of providers, the per-provider key/model window and
-the confirmation asked when the feature is turned on.
+Install-wide, shared by every account (``app.json``), with the API keys in the
+separate encrypted store of core/ai_credentials.py: nothing here touches the
+per-account settings, so a key can never reach a settings export.
 
 Design notes that are easy to undo by accident:
 
 * The provider list is a plain ListBox whose item text embeds the state
-  ("Gemini, On" / "Gemini, Off"), not a CheckListBox: NVDA does not reliably
+  ("Gemini, enabled, key saved"), not a CheckListBox: NVDA does not reliably
   announce the check state of a CheckListBox item. The position in the list IS
-  the order in which core/ai_providers.py tries the providers.
-* API key fields are plain, unmasked text controls on purpose. Masking guards
-  against shoulder-surfing, which matters less here than a blind user being
-  able to have the screen reader read the key back to confirm it was typed or
-  pasted correctly.
-* Turning the feature on asks first, because it sends the person's chat media
-  (voice messages, photos, videos, PDFs) to third-party services. It starts
-  switched off and the answer only ever moves it from off to on.
+  the order in which the providers are tried.
+* The key field is masked, with a button that reveals it in a read-only field,
+  so the screen reader can read it back on request without it sitting in
+  plain view.
+* Keys, deletions and the reset are staged until Apply/OK, like every other
+  setting in this dialog; Cancel discards them.
 """
-
 import wx
+from wx.lib.scrolledpanel import ScrolledPanel
 
-from core.combo_search import bind_incremental_search
-from core.claude_client import RECOMMENDED_MODELS as CLAUDE_RECOMMENDED_MODELS
-from core.gemini_client import RECOMMENDED_MODELS as GEMINI_RECOMMENDED_MODELS
-from core.groq_client import RECOMMENDED_MODELS as GROQ_RECOMMENDED_MODELS
-from core.openai_client import RECOMMENDED_MODELS as OPENAI_RECOMMENDED_MODELS
-from core.openrouter_client import RECOMMENDED_MODELS as OPENROUTER_RECOMMENDED_MODELS
-from core import ai_providers
+from app_paths import global_dir
+from app_settings import AppSettings
+from core.ai_credentials import CredentialStore, CredentialError
+from core.ai_media.config import KINDS, PROFILES, PROVIDERS, preferences, supports, valid_model
+from core.ai_media.errors import DescriptionError
+from core.ai_media.service import RequestToken, probe_connection, submit
+from .ai_provider_models import ModelSelectionMixin
 
-#: (provider id, display name, recommended models). The id is also the prefix
-#: of the provider's settings keys and of its i18n keys.
-AI_PROVIDER_UI = (
-    ("gemini", "Gemini", GEMINI_RECOMMENDED_MODELS),
-    ("openai", "OpenAI", OPENAI_RECOMMENDED_MODELS),
-    ("claude", "Claude", CLAUDE_RECOMMENDED_MODELS),
-    ("groq", "Groq", GROQ_RECOMMENDED_MODELS),
-    ("openrouter", "OpenRouter", OPENROUTER_RECOMMENDED_MODELS),
+#: The per-kind switches: (kind, i18n key of its label).
+KIND_TOGGLES = (
+    ("image", "ai_describe_images_label"),
+    ("sticker", "ai_describe_stickers_label"),
+    ("video", "ai_describe_videos_label"),
+    ("audio", "ai_transcribe_audio_label"),
+    ("pdf", "ai_pdf_accessible_label"),
 )
-
-#: The per-kind switches, (settings key, i18n key of its label).
-_TOGGLES = (
-    ("transcribe_audio", "ai_transcribe_audio_label"),
-    ("describe_images", "ai_describe_images_label"),
-    ("describe_videos", "ai_describe_videos_label"),
-    ("transcribe_stickers", "ai_transcribe_stickers_label"),
-    ("pdf_to_accessible_text", "ai_pdf_accessible_label"),
-)
+assert [kind for kind, _key in KIND_TOGGLES] == list(KINDS)
+#: i18n key naming each kind, for the "handles" line of the provider window.
+KIND_NAMES = (("image", "ai_kind_image"), ("sticker", "ai_kind_sticker"), ("video", "ai_kind_video"),
+              ("audio", "ai_kind_audio"), ("pdf", "ai_kind_pdf"))
 
 
-def model_choices(models, saved_value):
-    """(labels-free values, index to select) for a provider's model combo.
+class AIProviderDialog(ModelSelectionMixin, wx.Dialog):
+    """Key, model and on/off of one provider. Edits a draft: nothing is saved
+    until the Settings dialog is applied."""
 
-    The first value, "", is "Automatic": it follows the current recommended
-    model in core/<provider>_client.py, so someone who never reopens the combo
-    keeps working when a model is retired. A model saved by a newer version or
-    typed into settings.json is kept and selected instead of being silently
-    dropped the next time Apply is pressed.
-    """
-    values = ["", *models]
-    value = (saved_value or "").strip()
-    if value not in values:
-        values.append(value)
-    return values, values.index(value)
-
-
-class AIProviderDialog(wx.Dialog):
-    """Key and model of one provider, plus whether it takes part in the
-    automatic fallback."""
-
-    def __init__(self, parent, i18n, provider_id, name, models, state, enabled):
-        super().__init__(
-            parent, title=i18n.t("ai_provider_button").format(provider=name)
-        )
-        self._values, selection = model_choices(models, state.get("model", ""))
-
-        panel = wx.Panel(self)
-        box = wx.BoxSizer(wx.VERTICAL)
-        # A real CheckBox (not a list-item check): NVDA announces its state on
-        # focus reliably.
-        self._enabled_check = wx.CheckBox(
-            panel, label=i18n.t("ai_provider_enabled_checkbox")
-        )
-        self._enabled_check.SetValue(enabled)
-        box.Add(self._enabled_check, 0, wx.ALL, 8)
-
-        box.Add(
-            wx.StaticText(panel, label=i18n.t(f"{provider_id}_api_key_label")),
-            0, wx.LEFT | wx.TOP | wx.RIGHT, 8,
-        )
-        self._key_field = wx.TextCtrl(panel, style=wx.TE_DONTWRAP)
-        self._key_field.ChangeValue(state.get("key", ""))
-        box.Add(self._key_field, 0, wx.EXPAND | wx.ALL, 8)
-        box.Add(
-            wx.StaticText(panel, label=i18n.t(f"{provider_id}_api_key_help_label")),
-            0, wx.LEFT | wx.BOTTOM | wx.RIGHT, 8,
-        )
-
-        box.Add(
-            wx.StaticText(panel, label=i18n.t(f"{provider_id}_model_label")),
-            0, wx.LEFT | wx.TOP | wx.RIGHT, 8,
-        )
-        self._model_combo = wx.ComboBox(
-            panel, style=wx.CB_READONLY,
-            choices=[i18n.t("gemini_model_automatic_option"), *self._values[1:]],
-        )
-        self._model_combo.SetSelection(selection)
-        bind_incremental_search(self._model_combo)
-        box.Add(self._model_combo, 0, wx.EXPAND | wx.ALL, 8)
-        box.Add(
-            wx.StaticText(panel, label=i18n.t(f"{provider_id}_model_help_label")),
-            0, wx.LEFT | wx.BOTTOM | wx.RIGHT, 8,
-        )
-        panel.SetSizer(box)
-
+    def __init__(self, parent, main_window, provider, state, store, reset):
+        self.main_window = main_window
+        self._provider = provider
+        self.store = store
+        self._reset = reset
+        self._deleted = state["deleted"]
+        self._alive = True
+        self._probe = None
+        self._probe_generation = 0
+        self._init_model_catalog()
+        spec = PROVIDERS[provider]
+        super().__init__(parent, title=self._t("ai_provider_button").format(provider=spec.name),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        body = ScrolledPanel(self)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self._labels = []
+        self.enabled = wx.CheckBox(body, label=self._t("ai_provider_enabled_checkbox"))
+        self.enabled.SetValue(state["enabled"])
+        self.sizer.Add(self.enabled, 0, wx.ALL, 8)
+        kinds = ", ".join(self._t(key) for kind, key in KIND_NAMES if supports(provider, kind))
+        self.sizer.Add(wx.StaticText(body, label=self._t("ai_provider_supports").format(kinds=kinds)),
+                       0, wx.ALL, 8)
+        self.key = self._text(body, "ai_api_key", style=wx.TE_PASSWORD)
+        self.key.SetMaxLength(4096)
+        self.key.ChangeValue(state["key"])
+        self.key_state = wx.StaticText(body)
+        self.sizer.Add(self.key_state, 0, wx.ALL, 8)
+        self.revealed = self._text(body, "ai_key_readable", style=wx.TE_READONLY)
+        self._hide_key()
+        self._button(body, "ai_show_key", self._show_key)
+        self._button(body, "ai_delete_key", self._delete_key)
+        self._button(body, "ai_get_key", lambda e: wx.LaunchDefaultBrowser(spec.key_url))
+        self.get_models = self._button(body, "ai_get_models", self._fetch_models)
+        self.model_choice = self._choice(body, "ai_model_choice", [])
+        self.model_choice.Enable(False)
+        self.model = self._text(body, "ai_model")
+        self.model.ChangeValue(state["model"])
+        self._button(body, "ai_test_connection", self._test)
+        self._button(body, "ai_billing", lambda e: wx.LaunchDefaultBrowser(spec.billing_url))
+        self._button(body, "ai_privacy_link", lambda e: wx.LaunchDefaultBrowser(spec.privacy_url))
+        self._caption(body, "status")
+        self.status = wx.TextCtrl(body, style=wx.TE_MULTILINE | wx.TE_READONLY, size=(-1, 65),
+                                  name=self._t("status"))
+        self.sizer.Add(self.status, 0, wx.EXPAND | wx.ALL, 8)
+        body.SetSizer(self.sizer)
+        body.SetupScrolling(scroll_x=False, rate_y=15, scrollIntoView=True)
+        self._body = body
+        self.key.Bind(wx.EVT_TEXT, self._key_changed)
+        self.model_choice.Bind(wx.EVT_CHOICE, self._select_model)
+        self.model.Bind(wx.EVT_TEXT, self._manual_model_changed)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self._destroyed)
         buttons = wx.StdDialogButtonSizer()
-        ok = wx.Button(self, wx.ID_OK, label=i18n.t("ok"))
-        cancel = wx.Button(self, wx.ID_CANCEL, label=i18n.t("cancel"))
+        ok = wx.Button(self, wx.ID_OK, label=self._plain("ok"))
+        cancel = wx.Button(self, wx.ID_CANCEL, label=self._plain("cancel"))
         buttons.AddButton(ok)
         buttons.AddButton(cancel)
         buttons.Realize()
         ok.SetDefault()
-
         outer = wx.BoxSizer(wx.VERTICAL)
-        outer.Add(panel, 1, wx.EXPAND)
+        outer.Add(body, 1, wx.EXPAND)
         outer.Add(buttons, 0, wx.EXPAND | wx.ALL, 8)
-        self.SetSizerAndFit(outer)
-        self._key_field.SetFocus()
+        self.SetSizer(outer)
+        self.SetSize((560, 600))
+        self.SetMinSize((420, 360))
+        self._key_status()
+        self.enabled.SetFocus()
 
-    def values(self):
-        """(state dict, enabled) as currently entered."""
-        selection = self._model_combo.GetSelection()
-        model = self._values[selection] if 0 <= selection < len(self._values) else ""
-        return (
-            {"key": self._key_field.GetValue().strip(), "model": model},
-            self._enabled_check.GetValue(),
-        )
+    def _t(self, key):
+        return self.main_window.i18n.t(key)
 
+    def _plain(self, key):
+        """A label without its mnemonic marker (see ai_result_dialog.plain)."""
+        return self._t(key).replace("&", "")
 
-class AISettingsPage(wx.Panel):
-    """The page itself. ``on_change`` is called when something changed that
-    no checkbox/text event reports (reordering, the provider window)."""
+    def _caption(self, body, key):
+        label = wx.StaticText(body, label=self._t(key))
+        self._labels.append((label, key))
+        self.sizer.Add(label, 0, wx.LEFT | wx.TOP, 8)
 
-    def __init__(self, parent, i18n, on_change):
-        super().__init__(parent)
-        self._i18n = i18n
-        self._on_change = on_change
-        self._state = {pid: {"key": "", "model": ""} for pid, _n, _m in AI_PROVIDER_UI}
-        self._enabled = {pid: True for pid, _n, _m in AI_PROVIDER_UI}
-        self._order = [pid for pid, _n, _m in AI_PROVIDER_UI]
-        self._names = {pid: name for pid, name, _m in AI_PROVIDER_UI}
-        self._models = {pid: models for pid, _n, models in AI_PROVIDER_UI}
+    def _text(self, body, key, style=0):
+        self._caption(body, key)
+        control = wx.TextCtrl(body, style=style, name=self._t(key))
+        self.sizer.Add(control, 0, wx.EXPAND | wx.ALL, 8)
+        return control
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        self._enabled_check = wx.CheckBox(
-            self, label=i18n.t("ai_accessibility_enabled_label")
-        )
-        sizer.Add(self._enabled_check, 0, wx.ALL, 8)
+    def _choice(self, body, key, choices):
+        self._caption(body, key)
+        control = wx.Choice(body, choices=choices, name=self._t(key))
+        self.sizer.Add(control, 0, wx.EXPAND | wx.ALL, 8)
+        return control
 
-        self._provider_list = wx.ListBox(self, choices=[])
-        self._provider_list.SetName(i18n.t("ai_provider_list_label"))
-        self._provider_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_configure)
-        sizer.Add(self._provider_list, 0, wx.EXPAND | wx.ALL, 8)
+    def _button(self, body, key, handler):
+        button = wx.Button(body, label=self._t(key))
+        button.Bind(wx.EVT_BUTTON, handler)
+        self.sizer.Add(button, 0, wx.ALL, 8)
+        return button
 
-        row = wx.BoxSizer(wx.HORIZONTAL)
-        self._configure_button = wx.Button(
-            self, label=i18n.t("ai_provider_configure_button")
-        )
-        self._configure_button.Bind(wx.EVT_BUTTON, self._on_configure)
-        row.Add(self._configure_button, 0, wx.RIGHT, 8)
-        self._up_button = wx.Button(self, label=i18n.t("ai_provider_move_up_button"))
-        self._up_button.Bind(wx.EVT_BUTTON, lambda e: self._move(-1))
-        row.Add(self._up_button, 0, wx.RIGHT, 8)
-        self._down_button = wx.Button(self, label=i18n.t("ai_provider_move_down_button"))
-        self._down_button.Bind(wx.EVT_BUTTON, lambda e: self._move(1))
-        row.Add(self._down_button, 0)
-        sizer.Add(row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-        self._provider_controls = [
-            self._provider_list, self._configure_button,
-            self._up_button, self._down_button,
-        ]
+    def _current_key(self):
+        typed = self.key.GetValue().strip()
+        if typed:
+            return typed
+        return "" if self._reset or self._deleted else self.store.get(self._provider)
 
-        sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        self._toggles = {}
-        for setting_key, label_key in _TOGGLES:
-            check = wx.CheckBox(self, label=i18n.t(label_key))
-            sizer.Add(check, 0, wx.ALL, 8)
-            self._toggles[setting_key] = check
-        self.SetSizer(sizer)
+    def _key_status(self):
+        if self._deleted and not self.key.GetValue().strip():
+            self.key_state.SetLabel(self._t("ai_key_removal_pending"))
+            return
+        try:
+            saved = bool(self.key.GetValue().strip() or
+                         (not self._reset and self.store.get(self._provider)))
+            self.key_state.SetLabel(self._t("ai_key_saved" if saved else "ai_key_missing"))
+        except CredentialError:
+            self.key_state.SetLabel(self._t("ai_error_credentials"))
 
-        self._enabled_check.Bind(wx.EVT_CHECKBOX, self._on_enabled_toggle)
-        self._refresh_list()
-        self._update_enabled_state()
+    def _show_key(self, event):
+        try:
+            if self.revealed.IsShown():
+                self._hide_key()
+            else:
+                self.revealed.ChangeValue(self._current_key())
+                self._reveal(True)
+                self.revealed.SetFocus()
+            self._body.Layout()
+            self._body.FitInside()
+        except CredentialError:
+            self.status.ChangeValue(self._t("ai_error_credentials"))
 
-    # ── values ──────────────────────────────────────────────────────────────
+    def _reveal(self, shown):
+        self.revealed.Show(shown)
+        for label, key in self._labels:
+            if key == "ai_key_readable":
+                label.Show(shown)
 
-    def load(self, ai_settings):
-        """Populate the controls from the ai_accessibility settings."""
-        ai_settings = ai_settings if isinstance(ai_settings, dict) else {}
-        self._enabled_check.SetValue(bool(ai_settings.get("enabled", False)))
-        for pid in self._state:
-            self._state[pid] = {
-                "key": (ai_settings.get(f"{pid}_api_key") or "").strip(),
-                "model": (ai_settings.get(f"{pid}_model") or "").strip(),
-            }
-            self._enabled[pid] = ai_providers.is_provider_enabled(ai_settings, pid)
-        self._order = ai_providers.provider_order(ai_settings)
-        for setting_key, check in self._toggles.items():
-            check.SetValue(bool(ai_settings.get(setting_key, True)))
-        self._refresh_list()
-        self._update_enabled_state()
+    def _hide_key(self):
+        self.revealed.ChangeValue("")
+        self._reveal(False)
 
-    def collect(self):
-        """The settings this page owns, ready to merge into ai_accessibility."""
-        values = {
-            "enabled": self._enabled_check.GetValue(),
-            "provider_order": list(self._order),
-        }
-        for pid, state in self._state.items():
-            values[f"{pid}_api_key"] = state["key"]
-            values[f"{pid}_model"] = state["model"]
-            values[f"{pid}_enabled"] = self._enabled.get(pid, True)
-        for setting_key, check in self._toggles.items():
-            values[setting_key] = check.GetValue()
-        return values
-
-    def refresh_labels(self, i18n):
-        """Relabel after a language change."""
-        self._i18n = i18n
-        self._enabled_check.SetLabel(i18n.t("ai_accessibility_enabled_label"))
-        self._provider_list.SetName(i18n.t("ai_provider_list_label"))
-        self._configure_button.SetLabel(i18n.t("ai_provider_configure_button"))
-        self._up_button.SetLabel(i18n.t("ai_provider_move_up_button"))
-        self._down_button.SetLabel(i18n.t("ai_provider_move_down_button"))
-        for setting_key, label_key in _TOGGLES:
-            self._toggles[setting_key].SetLabel(i18n.t(label_key))
-        self._refresh_list(selection=self._provider_list.GetSelection())
-        self.Layout()
-
-    # ── behaviour ───────────────────────────────────────────────────────────
-
-    def _on_enabled_toggle(self, event):
-        """Turning the feature ON asks first: it sends media from the person's
-        chats to third-party services. Declining puts the box back and stops the
-        event, so Settings is not marked as changed for nothing."""
-        if self._enabled_check.GetValue():
-            answer = wx.MessageBox(
-                self._i18n.t("ai_privacy_notice"),
-                self._i18n.t("ai_privacy_notice_title"),
-                wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
-                self,
-            )
-            if answer != wx.YES:
-                self._enabled_check.SetValue(False)
-                return
-        self._update_enabled_state()
+    def _key_changed(self, event):
+        self._cancel_model_list(clear=True)
+        self._cancel_probe()
+        self._hide_key()
+        if self.key.GetValue().strip():
+            self._deleted = False
+        self._key_status()
         event.Skip()
 
-    def _update_enabled_state(self):
-        """Provider list and per-kind switches only matter while the feature is
-        on; off, they leave the Tab order."""
-        on = self._enabled_check.GetValue()
-        for control in self._provider_controls:
-            control.Enable(on)
-        for check in self._toggles.values():
-            check.Enable(on)
+    def _delete_key(self, event):
+        self._cancel_model_list(clear=True)
+        self._cancel_probe()
+        self._deleted = True
+        self.key.ChangeValue("")
+        self._hide_key()
+        self._key_status()
+        self.status.ChangeValue(self._t("ai_key_removal_notice"))
 
-    def _list_label(self, pid):
-        """Item text with the state embedded, in the active language."""
-        state = self._i18n.t(
-            "ai_provider_state_enabled" if self._enabled.get(pid, True)
-            else "ai_provider_state_disabled"
-        )
-        return f"{self._names[pid]}, {state}"
-
-    def _refresh_list(self, selection=None):
-        self._provider_list.Set([self._list_label(pid) for pid in self._order])
-        if selection is not None and 0 <= selection < self._provider_list.GetCount():
-            self._provider_list.SetSelection(selection)
-
-    def _on_configure(self, event):
-        index = self._provider_list.GetSelection()
-        if index == wx.NOT_FOUND:
-            return
-        pid = self._order[index]
-        dialog = AIProviderDialog(
-            self.GetTopLevelParent(), self._i18n, pid, self._names[pid],
-            self._models[pid], self._state[pid], self._enabled.get(pid, True),
-        )
+    def _test(self, event):
+        self._cancel_model_list()
         try:
-            if dialog.ShowModal() != wx.ID_OK:
-                return
-            new_state, now_enabled = dialog.values()
+            if self._probe:
+                self._probe.cancel()
+            provider, model, key = self._provider, self.model.GetValue().strip(), self._current_key()
+            self._probe = token = RequestToken()
+            self._probe_generation += 1
+            generation = self._probe_generation
+            self.status.ChangeValue(self._t("ai_connection_loading"))
+            submit(lambda: probe_connection(provider, model, key, token),
+                   lambda result, error: wx.CallAfter(self._tested, generation, error))
+        except (DescriptionError, CredentialError) as exc:
+            self.status.ChangeValue(self._t(str(exc)))
+
+    def _tested(self, generation, error):
+        if self._alive and generation == self._probe_generation:
+            self.status.ChangeValue(self._t(error or "ai_connection_ok"))
+
+    def _cancel_probe(self):
+        self._probe_generation += 1
+        if self._probe:
+            self._probe.cancel()
+        self._probe = None
+
+    def values(self):
+        """The draft as entered: a typed key (blank keeps the saved one), whether
+        the saved one is to be removed, the model and the on/off switch."""
+        return {"key": self.key.GetValue().strip(), "deleted": self._deleted,
+                "model": self.model.GetValue().strip(), "enabled": self.enabled.GetValue()}
+
+    def _destroyed(self, event):
+        if event.GetEventObject() is self:
+            self._alive = False
+            self._cancel_model_list()
+            self._cancel_probe()
+        event.Skip()
+
+
+class AISettingsPage(ScrolledPanel):
+    def __init__(self, parent, main_window, on_change):
+        super().__init__(parent)
+        self.main_window = main_window
+        self._on_change = on_change
+        self.app = getattr(main_window, "app_settings", None) or AppSettings(global_dir())
+        self.store = CredentialStore(global_dir())
+        self._alive = True
+        self._labels = []
+        config = preferences(self.app)
+        self._order = list(config["order"])
+        self._disabled = set(config["disabled"])
+        self._models = dict(config["models"])
+        self._drafts = {}      # provider -> key typed in its window, applied with the dialog
+        self._deleted = set()  # providers whose saved key is to be removed
+        self._reset = False
+        self._saved = self.store.saved()
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.enabled = self._check("ai_accessibility_enabled_label", config["enabled"])
+        self._label("ai_provider_list_label")
+        self.providers = wx.ListBox(self, name=self._t("ai_provider_list_label"))
+        self.providers.Bind(wx.EVT_LISTBOX_DCLICK, self._configure)
+        self.sizer.Add(self.providers, 0, wx.EXPAND | wx.ALL, 8)
+        self.configure_button = self._button("ai_provider_configure_button", self._configure)
+        self.up_button = self._button("ai_provider_move_up_button", lambda e: self._move(-1))
+        self.down_button = self._button("ai_provider_move_down_button", lambda e: self._move(1))
+        self.toggles = {kind: self._check(label, config["kinds"][kind]) for kind, label in KIND_TOGGLES}
+        self.profile = self._choice("ai_profile", self._profile_labels())
+        self.profile.SetSelection(PROFILES.index(config["profile"]))
+        self.read_answers = self._check("ai_read_answers", config["read_answers"])
+        self._label("ai_settings_help")
+        self.notice = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY, size=(-1, 155))
+        self.sizer.Add(self.notice, 0, wx.EXPAND | wx.ALL, 8)
+        self._button("ai_technical_info", self._technical_info)
+        self._button("ai_reset_keys", self._reset_keys)
+        self._label("status")
+        self.status = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY, size=(-1, 65))
+        self.sizer.Add(self.status, 0, wx.EXPAND | wx.ALL, 8)
+        self.SetSizer(self.sizer)
+        self.SetupScrolling(scroll_x=False, rate_y=15, scrollIntoView=True)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self._destroyed)
+        self.refresh_labels()
+
+    def DoGetBestSize(self):
+        # The page has many occasional-use actions. Its virtual content may
+        # be tall; it must not make SettingsDialog.Fit() exceed the screen.
+        return wx.Size(420, 450)
+
+    def _t(self, key):
+        return self.main_window.i18n.t(key)
+
+    def _label(self, key):
+        label = wx.StaticText(self, label=self._t(key))
+        self._labels.append((label, key))
+        self.sizer.Add(label, 0, wx.LEFT | wx.TOP, 8)
+
+    def _choice(self, key, choices):
+        self._label(key)
+        control = wx.Choice(self, choices=choices, name=self._t(key))
+        self.sizer.Add(control, 0, wx.EXPAND | wx.ALL, 8)
+        return control
+
+    def _check(self, key, value):
+        control = wx.CheckBox(self, label=self._t(key))
+        self._labels.append((control, key))
+        control.SetValue(value)
+        self.sizer.Add(control, 0, wx.ALL, 8)
+        return control
+
+    def _button(self, key, handler):
+        button = wx.Button(self, label=self._t(key))
+        self._labels.append((button, key))
+        button.Bind(wx.EVT_BUTTON, handler)
+        self.sizer.Add(button, 0, wx.ALL, 8)
+        return button
+
+    def _profile_labels(self):
+        return [self._t("ai_fast"), self._t("ai_balanced"), self._t("ai_detailed")]
+
+    def refresh_labels(self):
+        for control, key in self._labels:
+            control.SetLabel(self._t(key))
+        self.providers.SetName(self._t("ai_provider_list_label"))
+        self.profile.SetName(self._t("ai_profile"))
+        selection = self.profile.GetSelection()
+        self.profile.SetItems(self._profile_labels())
+        self.profile.SetSelection(selection)
+        self.notice.SetName(self._t("ai_settings_help"))
+        self.notice.ChangeValue(self._t("ai_settings_notice"))
+        self.status.SetName(self._t("status"))
+        self._refresh_list(self.providers.GetSelection())
+
+    def _has_key(self, provider):
+        if provider in self._drafts:
+            return True
+        return provider in self._saved and provider not in self._deleted and not self._reset
+
+    def _row(self, provider):
+        """Item text with the state embedded, in the active language."""
+        on = provider not in self._disabled
+        return ", ".join((PROVIDERS[provider].name,
+                          self._t("ai_provider_state_enabled" if on else "ai_provider_state_disabled"),
+                          self._t("ai_key_saved" if self._has_key(provider) else "ai_key_missing")))
+
+    def _refresh_list(self, selection=wx.NOT_FOUND):
+        self.providers.Freeze()
+        try:
+            self.providers.Set([self._row(p) for p in self._order])
+            if 0 <= selection < self.providers.GetCount():
+                self.providers.SetSelection(selection)
         finally:
-            dialog.Destroy()
-        changed = new_state != self._state[pid] or now_enabled != self._enabled.get(pid, True)
-        self._state[pid] = new_state
-        self._enabled[pid] = now_enabled
-        self._refresh_list(selection=index)
-        if changed:
-            self._on_change()
+            self.providers.Thaw()
+
+    def _selected(self):
+        index = self.providers.GetSelection()
+        return (index, self._order[index]) if 0 <= index < len(self._order) else (wx.NOT_FOUND, None)
 
     def _move(self, direction):
         """Swap the selected provider with its neighbour: list order is the
-        automatic try order."""
-        index = self._provider_list.GetSelection()
-        if index == wx.NOT_FOUND:
+        order they are tried."""
+        index, provider = self._selected()
+        target = index + direction
+        if provider is None or not 0 <= target < len(self._order):
             return
-        new_index = index + direction
-        if not 0 <= new_index < len(self._order):
-            return
-        self._order[index], self._order[new_index] = (
-            self._order[new_index], self._order[index],
-        )
-        self._refresh_list(selection=new_index)
+        self._order[index], self._order[target] = self._order[target], self._order[index]
+        self._refresh_list(target)
         self._on_change()
+
+    def _configure(self, event):
+        index, provider = self._selected()
+        if provider is None:
+            return
+        state = {"key": self._drafts.get(provider, ""), "deleted": provider in self._deleted,
+                 "model": self._models[provider], "enabled": provider not in self._disabled}
+        dialog = AIProviderDialog(self.GetTopLevelParent(), self.main_window, provider, state,
+                                  self.store, self._reset)
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            draft = dialog.values()
+        finally:
+            dialog.Destroy()
+        if draft["deleted"]:
+            self._deleted.add(provider)
+            self._drafts.pop(provider, None)
+        elif draft["key"]:
+            self._deleted.discard(provider)
+            self._drafts[provider] = draft["key"]
+        self._models[provider] = draft["model"]
+        (self._disabled.discard if draft["enabled"] else self._disabled.add)(provider)
+        self._refresh_list(index)
+        self._on_change()
+
+    def _reset_keys(self, event):
+        if wx.MessageBox(self._t("ai_reset_confirm"), self._t("ai_reset_keys"),
+                         wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING, self) != wx.YES:
+            return
+        self._reset = True
+        self._deleted = set(PROVIDERS)
+        self._drafts.clear()
+        self._refresh_list(self.providers.GetSelection())
+        self._on_change()
+
+    def _technical_info(self, event):
+        dialog = wx.Dialog(self, title=self._t("ai_technical_info"), size=(560, 400),
+                           style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        try:
+            layout = wx.BoxSizer(wx.VERTICAL)
+            text = wx.TextCtrl(dialog, value=self._t("ai_technical_notice"),
+                               style=wx.TE_MULTILINE | wx.TE_READONLY,
+                               name=self._t("ai_technical_info"))
+            layout.Add(text, 1, wx.EXPAND | wx.ALL, 12)
+            close = wx.Button(dialog, wx.ID_CANCEL, label=self._t("close").replace("&", ""))
+            layout.Add(close, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
+            dialog.SetSizer(layout)
+            dialog.SetMinSize((420, 260))
+            text.SetFocus()
+            dialog.ShowModal()
+        finally:
+            dialog.Destroy()
+
+    def apply(self):
+        """Save the keys and the preferences. False (and the reason in the
+        status field) when something is invalid, so Settings stays open."""
+        if any(not valid_model(model) for model in self._models.values()):
+            self.status.ChangeValue(self._t("ai_error_request"))
+            self.providers.SetFocus()
+            return False
+        try:
+            changes = {provider: None for provider in self._deleted}
+            changes.update(self._drafts)
+            self.store.apply(changes, reset=self._reset)
+            removed = set(self._deleted)
+
+            def merge(old):
+                value = dict(old) if isinstance(old, dict) else {}
+                value.update(
+                    enabled=self.enabled.GetValue(), order=list(self._order),
+                    disabled=sorted(self._disabled), models=dict(self._models),
+                    kinds={kind: check.GetValue() for kind, check in self.toggles.items()},
+                    profile=PROFILES[self.profile.GetSelection()],
+                    read_answers=self.read_answers.GetValue())
+                consented = value.get("consented", [])
+                value["consented"] = [p for p in consented if p not in removed] \
+                    if isinstance(consented, list) else []
+                return value
+            self.app.update("ai_media", merge)
+        except (CredentialError, OSError, RuntimeError):
+            self.status.ChangeValue(self._t("ai_error_credentials"))
+            return False
+        self._drafts.clear()
+        self._deleted.clear()
+        self._reset = False
+        self._saved = self.store.saved()
+        self.status.ChangeValue("")
+        self._refresh_list(self.providers.GetSelection())
+        return True
+
+    def _destroyed(self, event):
+        if event.GetEventObject() is self:
+            self._alive = False
+            self._drafts.clear()
+        event.Skip()

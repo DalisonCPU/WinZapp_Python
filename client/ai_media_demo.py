@@ -1,6 +1,6 @@
-"""Opt-in, user-operated photo demo; no MainWindow/WhatsApp/account bootstrap.
+"""Opt-in, user-operated AI media demo; no MainWindow/WhatsApp/account bootstrap.
 
-Run with the repository's Python: .venv/Scripts/pythonw.exe client/photo_demo.py
+Run with the repository's Python: .venv/Scripts/pythonw.exe client/ai_media_demo.py
 This is a manual application entry point, never invoked by pytest or on import.
 """
 import os
@@ -20,9 +20,9 @@ def main():
     from core.ai_media.diagnostics import configure_demo_log
     configure_demo_log(runtime / "photo-diagnostics.log")
     import wx
-    from ui.photo_description_demo import PhotoDemoFrame
+    from ui.ai_media_demo import AIMediaDemoFrame
     app = wx.App(False)
-    frame = PhotoDemoFrame()
+    frame = AIMediaDemoFrame()
     app.SetTopWindow(frame)
     frame.Show()
     wx.CallAfter(frame.panel.focus_photo)

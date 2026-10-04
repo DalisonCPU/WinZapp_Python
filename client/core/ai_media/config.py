@@ -189,3 +189,28 @@ def eligible_kind(message):
         if mime != "application/pdf":
             return None
     return kind
+
+
+#: i18n key of the context-menu item (and of the focus-time announcement) for
+#: each kind: one verb per kind, shared by the menu and Ctrl+Shift+Y.
+MENU_KEY = {"image": "ai_describe_image_menu", "sticker": "ai_describe_sticker_menu",
+            "video": "ai_describe_video_menu", "audio": "ai_transcribe_audio_menu",
+            "pdf": "ai_pdf_accessible_menu"}
+#: i18n key of the window title per kind.
+TITLE_KEY = {"image": "ai_result_description_title", "sticker": "ai_result_description_title",
+             "video": "ai_result_description_title", "audio": "ai_result_transcription_title",
+             "pdf": "ai_result_pdf_title"}
+
+
+def offered_kind(message, config, saved):
+    """The kind to offer on ``message`` right now, or None.
+
+    Needs the feature switched on, the kind switched on, and at least one
+    provider that is on, holds a key (``saved``: the providers with a saved
+    key) and takes this kind: offering an action that can only fail wastes the
+    person's time with a screen reader.
+    """
+    kind = eligible_kind(message)
+    if kind is None or not config["enabled"] or not config["kinds"].get(kind, True):
+        return None
+    return kind if chain(config, kind, lambda provider: provider in saved) else None

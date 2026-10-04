@@ -1,234 +1,380 @@
+"""Accessible RAM-only window for one AI action: a transcript, a description or a
+converted PDF, with follow-up questions for pictures and videos.
+
+Owned by the account's conversation panel (ui/conversation_panel/ai_actions.py),
+which builds it, runs it modally and tears it down.
 """
-client/ui/dialogs/ai_result_dialog.py
-
-Janela que mostra o resultado de uma transcrição de áudio, descrição de
-imagem/vídeo ou conversão de PDF em texto acessível, de um jeito navegável:
-o conteúdo é dividido em blocos (parágrafos/frases) e a pessoa pode andar
-entre eles com as setas do teclado, para explorar com calma usando o leitor
-de tela — em vez de precisar ouvir tudo de uma vez com um único "ler tudo".
-
-Padrão de acessibilidade seguido: um wx.ListBox de itens navegáveis (o
-NVDA/JAWS já leem cada item ao navegar com as setas, sem precisar de nenhum
-código especial de leitura), mais uma caixa de texto multilinha somente
-leitura contendo o texto completo, para quem preferir usar Ctrl+A/Ctrl+C ou
-o modo de navegação do próprio leitor de tela.
-"""
-
-from __future__ import annotations
-
-import re
-import threading
-
 import wx
 
+from app_paths import active_account_id, global_dir
+from core.ai_credentials import CredentialStore, CredentialError
+from core.ai_media import config as ai_config
+from core.ai_media.config import MAX_QUESTION_CHARS, PROVIDERS, TITLE_KEY, asks_questions
+from core.ai_media.errors import DescriptionError
+from core.ai_media.payload import prepare_media
+from core.ai_media.prompts import first_question, instructions
+from core.ai_media.service import run_chain, submit
+from core.ai_media.session import MediaSession
+from core.ai_media.diagnostics import record
+from core.ai_media.feedback import ProcessingCue
+from core.ai_media.transcript import render_history, spoken_answer
+from ui.accessible import AccessibleAskQuestion
 
-def _split_into_blocks(text: str) -> list[str]:
-    """
-    Divide o texto em blocos navegáveis: primeiro por parágrafo (linhas em
-    branco), e qualquer parágrafo que ainda fique muito longo é subdividido
-    por frase, para que nenhum item da lista fique grande demais para ouvir
-    de uma vez.
-    """
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    blocks: list[str] = []
-    for paragraph in paragraphs:
-        if len(paragraph) <= 400:
-            blocks.append(paragraph)
-            continue
-        # Parágrafo longo: subdivide por frase (mantendo a pontuação final).
-        sentences = re.split(r"(?<=[.!?])\s+", paragraph)
-        buffer = ""
-        for sentence in sentences:
-            if buffer and len(buffer) + len(sentence) > 400:
-                blocks.append(buffer.strip())
-                buffer = sentence
-            else:
-                buffer = f"{buffer} {sentence}".strip()
-        if buffer:
-            blocks.append(buffer.strip())
-    return blocks or [text.strip()]
+#: Extra time over the request's own overall budget before the window gives up
+#: waiting for a worker that never reported back.
+_WATCHDOG_GRACE_SECONDS = 5
+
+
+def plain(i18n, key):
+    """A label without its mnemonic marker. Shortcuts of this window are
+    announced by the controls' accessible objects (ui/accessible.py), never
+    written into a label: a mnemonic also fires on the bare letter while a
+    button has focus."""
+    return i18n.t(key).replace("&", "")
+
+
+def provider_names(providers):
+    return ", ".join(PROVIDERS[p].name for p in providers)
+
+
+def failure_text(i18n, error):
+    """The sentence for a failed action. A chain that tried several providers
+    lists each one's reason so the person can see what to fix."""
+    attempts = getattr(error, "attempts", ())
+    if len(attempts) > 1:
+        lines = [i18n.t("ai_attempt_line").format(provider=PROVIDERS[p].name,
+                                                  reason=i18n.t(f"ai_error_{category}"))
+                 for p, category in attempts]
+        return i18n.t("ai_chain_failed") + "\n" + "\n".join(lines)
+    return i18n.t(str(error))
+
+
+class AIConsentDialog(wx.Dialog):
+    """Asks before media leaves the machine; names every provider that may
+    receive it, in the order they would be tried."""
+
+    def __init__(self, parent, i18n, providers, kind, locked):
+        super().__init__(parent, title=i18n.t("ai_consent_title"))
+        layout = wx.BoxSizer(wx.VERTICAL)
+        message = i18n.t("ai_consent").format(providers=provider_names(providers))
+        if "gemini" in providers:
+            message += "\n\n" + i18n.t("ai_gemini_notice")
+        if locked:
+            message += "\n\n" + i18n.t("ai_locked_consent")
+        text = wx.TextCtrl(self, value=message, style=wx.TE_MULTILINE | wx.TE_READONLY,
+                           size=(520, 220), name=i18n.t("ai_consent_title"))
+        layout.Add(text, 1, wx.EXPAND | wx.ALL, 10)
+        self.remember = wx.CheckBox(self, label=i18n.t("ai_remember_consent"))
+        self.remember.Enable(not locked)
+        layout.Add(self.remember, 0, wx.ALL, 10)
+        buttons = wx.WrapSizer(wx.HORIZONTAL)
+        buttons.Add(wx.Button(self, wx.ID_OK, label=i18n.t("ai_send_media")), 0, wx.ALL, 8)
+        cancel = wx.Button(self, wx.ID_CANCEL, label=plain(i18n, "cancel"))
+        buttons.Add(cancel, 0, wx.ALL, 8)
+        layout.Add(buttons)
+        self.SetSizerAndFit(layout)
+        cancel.SetDefault()
+        text.SetFocus()
 
 
 class AIResultDialog(wx.Dialog):
-    """
-    Diálogo simples e totalmente acessível por teclado:
-        - Tab / Shift+Tab: alterna entre a lista navegável e os botões
-        - Setas cima/baixo, dentro da lista: andam bloco a bloco
-        - Ctrl+C: copia o bloco atual (quando a lista está focada)
-        - Botão "Copiar tudo": copia o texto inteiro para a área de transferência
-        - Esc / botão Fechar: fecha a janela
-    """
+    def __init__(self, panel, identity, kind, locked, config, app_settings, loader, mime):
+        self.panel = panel
+        self.main_window = panel.main_window
+        self.i18n = self.main_window.i18n
+        self.session = MediaSession(*identity, kind, locked=locked)
+        self.kind = kind
+        self.config = config
+        self.app = app_settings
+        self.loader = loader
+        self.mime = mime
+        self._consented = False
+        self._consent_dialog = None
+        self._latest = ""
+        self._timer = None
+        self._description_first = False
+        self._provider = None
+        self._processing = ProcessingCue(self.main_window)
+        super().__init__(panel, title=self.i18n.t(TITLE_KEY[kind]),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, size=(680, 560))
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(wx.StaticText(self, label=self.i18n.t("status")), 0, wx.LEFT | wx.TOP, 8)
+        self.status = wx.TextCtrl(self, style=wx.TE_READONLY, name=self.i18n.t("status"))
+        layout.Add(self.status, 0, wx.EXPAND | wx.ALL, 8)
+        layout.Add(wx.StaticText(self, label=self.i18n.t("ai_result")), 0, wx.LEFT, 8)
+        self.result = wx.TextCtrl(self, style=wx.TE_READONLY | wx.TE_MULTILINE,
+                                 name=self.i18n.t("ai_result"))
+        layout.Add(self.result, 1, wx.EXPAND | wx.ALL, 8)
+        buttons = wx.WrapSizer(wx.HORIZONTAL)
+        self.question = None
+        self.ask = None
+        if asks_questions(kind):
+            layout.Add(wx.StaticText(self, label=self.i18n.t("ai_question")), 0, wx.LEFT, 8)
+            self.question = wx.TextCtrl(self, style=wx.TE_MULTILINE, size=(-1, 75),
+                                       name=self.i18n.t("ai_question"))
+            self.question.SetMaxLength(MAX_QUESTION_CHARS)
+            # Ctrl+Enter sends (see _key); the shortcut is announced by the
+            # control's accessible object, never written into its label.
+            self.question.SetAccessible(AccessibleAskQuestion())
+            layout.Add(self.question, 0, wx.EXPAND | wx.ALL, 8)
+            self.ask = self._button(buttons, "ai_ask", self._ask)
+            self.ask.SetAccessible(AccessibleAskQuestion())
+        self.copy = self._button(buttons, "ai_copy_answer", self._copy)
+        self.regenerate = self._button(buttons, "ai_regenerate", self._regenerate)
+        self.cancel = self._button(buttons, "cancel", self._cancel)
+        close = wx.Button(self, wx.ID_CANCEL, label=plain(self.i18n, "close"))
+        close.Bind(wx.EVT_BUTTON, self._close)
+        buttons.Add(close, 0, wx.ALL, 5)
+        layout.Add(buttons, 0, wx.ALL, 5)
+        self.SetSizer(layout)
+        self.SetMinSize((560, 450))
+        self.Bind(wx.EVT_CLOSE, self._close)
+        self.Bind(wx.EVT_CHAR_HOOK, self._key)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self._destroyed)
+        self._busy(False)
+        self.result.SetFocus()
+        # ShowModal's event loop must start before consent, loading or errors.
+        wx.CallAfter(self._regenerate)
 
-    def __init__(self, parent, title: str, full_text: str, ask_fn=None):
-        """
-        ask_fn: callable(question: str) -> str, or None.
+    def _button(self, row, key, handler):
+        button = wx.Button(self, label=plain(self.i18n, key))
+        button.Bind(wx.EVT_BUTTON, handler)
+        row.Add(button, 0, wx.ALL, 5)
+        return button
 
-        When provided (used for image/video results, not audio or PDF),
-        the dialog shows an extra field letting the person ask something
-        specific that the general description might have missed — e.g. the
-        price of one product in a promotional flyer, or a particular value
-        on an invoice. ask_fn is called on a background thread so the
-        window (and screen reader) never freezes while waiting for the
-        answer; it should raise on failure with a message safe to show the
-        user directly.
-        """
-        i18n = parent.i18n if hasattr(parent, "i18n") else None
-        super().__init__(
-            parent,
-            title=title,
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
-        )
-        self._full_text = full_text
-        self._blocks = _split_into_blocks(full_text)
-        self._i18n = i18n
-        self._ask_fn = ask_fn
-        self._build()
-        self.SetSize((640, 560 if ask_fn else 480))
-        self.Centre()
+    def _valid(self):
+        return (not self.session.closed and active_account_id() == self.session.identity[0]
+                and not getattr(self.main_window, "_shutting_down", False)
+                and (not self.session.locked or getattr(self.main_window, "_chat_lock_unlocked", False)))
 
-    def _t(self, key: str, default: str) -> str:
-        if self._i18n is not None:
-            translated = self._i18n.t(key)
-            # i18n.t() returns the key itself when missing — fall back nicely.
-            return translated if translated != key else default
-        return default
+    def _speak(self, text):
+        if self._valid() and self.main_window.IsShown():
+            self.main_window.output(text)
 
-    def _build(self):
-        sizer = wx.BoxSizer(wx.VERTICAL)
+    def _chain(self, store):
+        """Providers to try now: the person's order, on, with a saved key and
+        taking this kind; the one that answered first leads follow-ups."""
+        saved = store.saved()
+        return ai_config.chain(self.config, self.kind, lambda p: p in saved, prefer=self._provider)
 
-        list_label = wx.StaticText(
-            self, label=self._t("ai_result_blocks_label", "Conteúdo (navegue com as setas):")
-        )
-        sizer.Add(list_label, 0, wx.LEFT | wx.TOP | wx.RIGHT, 10)
+    def _consent(self, providers):
+        """Consent covers every provider the media may reach. Remembered per
+        provider, never for a locked chat."""
+        needed = [p for p in providers if p not in self.config["consented"]]
+        if self._consented or (not needed and not self.session.locked):
+            self._consented = True
+            return True
+        dialog = AIConsentDialog(self, self.i18n, providers, self.kind, self.session.locked)
+        self._consent_dialog = dialog
+        try:
+            accepted = dialog.ShowModal() == wx.ID_OK and self._valid()
+            if accepted and dialog.remember.GetValue() and not self.session.locked:
+                def merge(old):
+                    value = dict(old) if isinstance(old, dict) else {}
+                    current = value.get("consented", [])
+                    consented = set(current if isinstance(current, list) else [])
+                    value["consented"] = sorted(consented | set(providers))
+                    return value
+                try:
+                    self.app.update("ai_media", merge)
+                    self.config["consented"] = sorted(set(self.config["consented"]) | set(providers))
+                except (OSError, RuntimeError):
+                    # Consent is valid for this session even if remembering failed.
+                    pass
+            self._consented = accepted
+            return accepted
+        finally:
+            self._consent_dialog = None
+            if dialog:
+                dialog.Destroy()
+            # EndModal only requests exit. The child ShowModal must return
+            # before MSW can end the parent's now-active modal event loop.
+            if self.session.closed and self:
+                self._finish_close()
 
-        self._listbox = wx.ListBox(self, choices=self._blocks, style=wx.LB_SINGLE)
-        if self._blocks:
-            self._listbox.SetSelection(0)
-        self._listbox.Bind(wx.EVT_KEY_DOWN, self._on_list_key_down)
-        sizer.Add(self._listbox, 1, wx.EXPAND | wx.ALL, 10)
+    def _busy(self, busy):
+        if busy:
+            self._processing.start()
+        else:
+            self._processing.stop()
+        if self.ask is not None:
+            self.ask.Enable(not busy)
+        self.regenerate.Enable(not busy)
+        self.cancel.Enable(busy)
+        self.copy.Enable(bool(self._latest))
 
-        if self._ask_fn is not None:
-            ask_label = wx.StaticText(
-                self,
-                label=self._t(
-                    "ai_result_ask_label",
-                    "Pergunte algo específico sobre esta mídia:",
-                ),
-            )
-            sizer.Add(ask_label, 0, wx.LEFT | wx.RIGHT, 10)
-
-            ask_row = wx.BoxSizer(wx.HORIZONTAL)
-            self._question_field = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
-            self._question_field.Bind(wx.EVT_TEXT_ENTER, self._on_ask)
-            ask_row.Add(self._question_field, 1, wx.RIGHT, 6)
-
-            self._ask_btn = wx.Button(
-                self, label=self._t("ai_result_ask_btn", "&Perguntar")
-            )
-            self._ask_btn.Bind(wx.EVT_BUTTON, self._on_ask)
-            ask_row.Add(self._ask_btn, 0)
-
-            sizer.Add(ask_row, 0, wx.EXPAND | wx.ALL, 10)
-
-        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        copy_all_btn = wx.Button(
-            self, label=self._t("ai_result_copy_all_btn", "&Copiar tudo")
-        )
-        copy_all_btn.Bind(wx.EVT_BUTTON, self._on_copy_all)
-        btn_sizer.Add(copy_all_btn, 0, wx.RIGHT, 6)
-
-        close_btn = wx.Button(self, wx.ID_CLOSE, label=self._t("close", "&Fechar"))
-        close_btn.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CLOSE))
-        btn_sizer.Add(close_btn, 0)
-
-        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
-
-        self.SetSizer(sizer)
-        self.SetEscapeId(wx.ID_CLOSE)
-        self._listbox.SetFocus()
-
-    def _on_list_key_down(self, event):
-        keycode = event.GetKeyCode()
-        if keycode == ord("C") and event.ControlDown():
-            self._copy_current_block()
+    def _key(self, event):
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            self._close()
             return
-        event.Skip()
+        if event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and event.ControlDown():
+            if self.question is not None and wx.Window.FindFocus() is self.question:
+                self._ask()
+                return
+        event.Skip()  # Plain Enter remains a newline in the question editor.
 
-    def _copy_current_block(self):
-        idx = self._listbox.GetSelection()
-        if idx == wx.NOT_FOUND:
+    def _ask(self, event=None):
+        self._start(self.question.GetValue().strip())
+
+    def _show_error(self, error):
+        text = failure_text(self.i18n, error)
+        self.status.ChangeValue(text)
+        record("ui_error", category=str(error).removeprefix("ai_error_"))
+        self._speak(text)
+
+    def _regenerate(self, event=None):
+        self._start(first_question(self.kind), regenerate=True)
+
+    def _start(self, question, regenerate=False):
+        if not self._valid() or self.session.active is not None:
             return
-        self._copy_to_clipboard(self._blocks[idx])
-
-    def _on_copy_all(self, event):
-        self._copy_to_clipboard(self._full_text)
-
-    def _copy_to_clipboard(self, text: str):
-        if wx.TheClipboard.Open():
-            wx.TheClipboard.SetData(wx.TextDataObject(text))
-            wx.TheClipboard.Close()
-
-    def _on_ask(self, event):
-        question = self._question_field.GetValue().strip()
-        if not question or self._ask_fn is None:
+        if not question or len(question) > MAX_QUESTION_CHARS:
+            self._show_error("ai_error_question")
             return
+        try:
+            store = CredentialStore(global_dir())
+            providers = self._chain(store)
+            if not providers:
+                raise DescriptionError("providers")
+            if not self._consent(providers) or not self._valid():
+                return
+            generation, operation = self.session.begin(question)
+            record("ui_start", generation=generation)
+            self._busy(True)
+            loading = self.i18n.t("ai_processing_msg" if regenerate else "ai_question_loading")
+            self.status.ChangeValue(loading)
+            self._speak(loading)
+            media = self.session.media
+            history = () if regenerate else tuple(self.session.history)
+            config = dict(self.config)
+            kind, mime, loader = self.kind, self.mime, self.loader
+            language = self.i18n.get_language()
+            def work():
+                operation.check()
+                record("media_load_started", generation=generation)
+                prepared = media or prepare_media(kind, loader(operation), mime, config["profile"])
+                record("media_ready", generation=generation)
+                operation.check()
+                answer = run_chain(operation, providers, config["models"], store.get, prepared, history,
+                                   question, instructions(language, config["profile"], kind),
+                                   config["profile"])
+                return prepared, answer
+            # Arm the GUI watchdog BEFORE dispatch; even a failed/very fast
+            # worker callback must never leave an unprotected busy state.
+            self._timer = wx.CallLater(int((operation.total_seconds + _WATCHDOG_GRACE_SECONDS) * 1000),
+                                       self._timeout, generation)
+            record("ui_waiting", generation=generation)
+            submit(work, lambda result, error: wx.CallAfter(self._complete, generation, question,
+                                                          regenerate, result, error))
+        except (DescriptionError, CredentialError) as exc:
+            self._cancel()
+            self._show_error(exc.key if isinstance(exc, DescriptionError) else str(exc))
+        except Exception as exc:
+            record("ui_error", category="response", exception_type=type(exc).__name__)
+            self._cancel()
+            self._show_error("ai_error_response")
 
-        self._ask_btn.Enable(False)
-        self._question_field.Enable(False)
-        waiting_label = self._t("ai_result_asking_msg", "Perguntando à IA...")
-        # Gives immediate feedback in the list itself — a screen reader
-        # arriving at this item hears that a question is in flight, instead
-        # of silence while the request is out.
-        waiting_index = self._listbox.Append(f"{waiting_label} ({question})")
-        self._listbox.SetSelection(waiting_index)
+    def _complete(self, generation, question, regenerate, result, error):
+        if not self._valid() or generation != self.session.generation or self.session.active is None:
+            record("ui_completion_ignored", generation=generation)
+            return
+        record("ui_completed", generation=generation)
+        try:
+            self.session.active.check()
+        except DescriptionError as exc:
+            self._cancel()
+            self._show_error(exc.key)
+            return
+        if self._timer:
+            self._timer.Stop()
+            self._timer = None
+        if error is not None:
+            self.session.accept(generation, question, None)
+            self._busy(False)
+            self._show_error(error)
+        else:
+            media, (answer, provider) = result
+            if regenerate:
+                self.session.history.clear()
+            if not self.session.accept(generation, question, answer):
+                return
+            if regenerate:
+                self._description_first = True
+            self.session.media = media
+            self._provider = provider
+            self._latest = answer
+            # Stop/free the waiting stream before updating or speaking. The
+            # latest answer must already exist when Copy is re-enabled.
+            self._busy(False)
+            # One update per complete response, never token-by-token. Keep the
+            # input's current value/focus: the user may be writing the next question.
+            text = render_history(self.session.history, description_first=self._description_first,
+                                  question_label=self.i18n.t("ai_history_question"),
+                                  answer_label=self.i18n.t("ai_history_answer"))
+            self.result.ChangeValue(text)
+            if self.question is not None and not regenerate and self.question.GetValue().strip() == question:
+                self.question.ChangeValue("")
+            ready = self.i18n.t("ai_ready") + " " + self.i18n.t("ai_answered_by").format(
+                provider=PROVIDERS[provider].name)
+            self.status.ChangeValue(ready)
+            self._speak(spoken_answer(answer) if self.config["read_answers"] else ready)
 
-        def _run():
-            stop_watchdog = threading.Event()
+    def _timeout(self, generation):
+        record("ui_watchdog", generation=generation)
+        if self._valid() and generation == self.session.generation:
+            self._cancel()
+            self._show_error("ai_error_timeout")
 
-            def _watchdog():
-                while not stop_watchdog.wait(8):
-                    parent = self.GetParent()
-                    if parent is not None and hasattr(parent, "output"):
-                        wx.CallAfter(
-                            parent.output,
-                            self._t(
-                                "ai_still_processing_msg",
-                                "Ainda processando com a IA...",
-                            ),
-                        )
+    def _cancel(self, event=None):
+        record("ui_cancel")
+        self.session.cancel()
+        if self._timer:
+            self._timer.Stop()
+            self._timer = None
+        self._busy(False)
+        self.status.ChangeValue(self.i18n.t("ai_cancel_notice"))
 
-            watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
-            watchdog_thread.start()
+    def _copy(self, event):
+        if self._latest and wx.TheClipboard.Open():
             try:
-                answer = self._ask_fn(question)
-                error_text = None
-            except Exception as exc:  # noqa: BLE001 — surfaced to the user as-is
-                answer = None
-                error_text = str(exc)
+                wx.TheClipboard.SetData(wx.TextDataObject(self._latest))
             finally:
-                stop_watchdog.set()
+                wx.TheClipboard.Close()
 
-            def _finish():
-                self._listbox.Delete(waiting_index)
-                if error_text is not None:
-                    wx.MessageBox(
-                        error_text,
-                        self._t("ai_result_ask_error_title", "Não foi possível responder"),
-                        wx.OK | wx.ICON_ERROR,
-                        self,
-                    )
-                else:
-                    entry = f"P: {question}\nR: {answer}"
-                    self._blocks.append(entry)
-                    self._full_text = f"{self._full_text}\n\n{entry}"
-                    new_index = self._listbox.Append(entry)
-                    self._listbox.SetSelection(new_index)
-                    self._listbox.SetFocus()
-                self._ask_btn.Enable(True)
-                self._question_field.Enable(True)
-                self._question_field.SetValue("")
-                self._question_field.SetFocus()
+    def _dispose(self):
+        """Also reached on Escape/unexpected destruction, without wx calls."""
+        if self.session.closed:
+            return
+        self._processing.stop()
+        record("ui_close")
+        self.session.close()
+        self.loader = None
+        self._latest = ""
+        if self._timer:
+            self._timer.Stop()
+            self._timer = None
 
-            wx.CallAfter(_finish)
+    def _close(self, event=None):
+        self._dispose()
+        self.result.ChangeValue("")
+        if self.question is not None:
+            self.question.ChangeValue("")
+        self.status.ChangeValue("")
+        # Clear private state immediately, but unwind nested modal loops
+        # inside-out. Ending the parent in the child's active loop leaves
+        # the main window disabled on MSW.
+        if self._consent_dialog is not None:
+            if self._consent_dialog and self._consent_dialog.IsModal():
+                self._consent_dialog.EndModal(wx.ID_CANCEL)
+            return  # _consent's finally finishes the outer close.
+        self._finish_close()
 
-        threading.Thread(target=_run, daemon=True).start()
+    def _finish_close(self):
+        if self.IsModal():
+            record("ui_close_finished")
+            self.EndModal(wx.ID_CANCEL)
+
+    def _destroyed(self, event):
+        if event.GetEventObject() is self:
+            self._dispose()
+        event.Skip()

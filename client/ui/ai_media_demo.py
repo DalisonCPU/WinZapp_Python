@@ -1,6 +1,7 @@
-"""User-operated manual demo: real photo controls, no WhatsApp runtime.
+"""User-operated manual demo: the real AI media controls on a generated photo,
+no WhatsApp runtime.
 
-Not a GUI probe or an automated test. Only photo_demo.py's explicit manual
+Not a GUI probe or an automated test. Only ai_media_demo.py's explicit manual
 entry point constructs these windows; importing this module shows nothing.
 """
 import wx
@@ -16,19 +17,19 @@ from core.i18n import I18n
 from core.sound_system import SoundSystem, discover_sound_packs, DEFAULT_PACK_ID
 from core.ai_media.demo_fixture import DEMO_PHOTO_ID, demo_messages, make_demo_photo
 from core.ai_media.errors import DescriptionError
-from ui.conversation_panel.image_description import ImageDescriptionMixin
+from ui.conversation_panel.ai_actions import AIActionsMixin
 from ui.conversation_panel.media_paths import cached_media_path
-from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
+from ui.dialogs.ai_settings_page import AISettingsPage
 
 
 class DemoSettingsDialog(wx.Dialog):
     def __init__(self, frame):
-        super().__init__(frame, title=frame.i18n.t("ai_title"), size=(600, 660),
+        super().__init__(frame, title=frame.i18n.t("tab_ai_accessibility"), size=(600, 660),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         layout = wx.BoxSizer(wx.VERTICAL)
         notebook = wx.Notebook(self)
-        self.page = ImageDescriptionSettingsPage(notebook, frame)
-        notebook.AddPage(self.page, frame.i18n.t("ai_title"))
+        self.page = AISettingsPage(notebook, frame, on_change=self._mark_dirty)
+        notebook.AddPage(self.page, frame.i18n.t("tab_ai_accessibility"))
         layout.Add(notebook, 1, wx.EXPAND | wx.ALL, 8)
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         for identifier, label in ((wx.ID_APPLY, "apply"), (wx.ID_OK, "ok"),
@@ -51,13 +52,13 @@ class DemoSettingsDialog(wx.Dialog):
             self.EndModal(wx.ID_OK)
 
 
-class DemoConversationPanel(wx.Panel, ImageDescriptionMixin):
+class DemoConversationPanel(wx.Panel, AIActionsMixin):
     def __init__(self, frame):
         super().__init__(frame)
         self.main_window = frame
         self.conversation = {"remoteJid": "demo-chat"}
         self._sorted_messages = demo_messages()
-        self._image_description_dialog = None
+        self._ai_dialog = None
         self.messages_list = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL,
                                         name=frame.i18n.t("messages").replace("&", ""))
         self.messages_list.InsertColumn(0, frame.i18n.t("messages").replace("&", ""), width=650)
@@ -88,7 +89,7 @@ class DemoConversationPanel(wx.Panel, ImageDescriptionMixin):
         if frame.lock_test.GetValue():
             frame._lock_timer = wx.CallLater(15_000, frame._simulate_lock)
         try:
-            self._on_describe_photo(event, message)
+            self._on_ai_action(event, message)
         finally:
             if frame._lock_timer:
                 frame._lock_timer.Stop()
@@ -104,14 +105,14 @@ class DemoConversationPanel(wx.Panel, ImageDescriptionMixin):
             return
         menu = wx.Menu()
         try:
-            item = menu.Append(wx.ID_ANY, self.main_window.i18n.t("ai_describe_photo") + "\tCtrl+Shift+Y")
+            item = menu.Append(wx.ID_ANY, self.main_window.i18n.t("ai_describe_image_menu") + "\tCtrl+Shift+Y")
             menu.Bind(wx.EVT_MENU, lambda e: self._describe(message=self._sorted_messages[1]), id=item.GetId())
             self.messages_list.PopupMenu(menu)
         finally:
             menu.Destroy()
 
 
-class PhotoDemoFrame(wx.Frame):
+class AIMediaDemoFrame(wx.Frame):
     def __init__(self):
         self.settings = {"general": {"language": "tr-TR"},
                          "accessibility": {"sapi_fallback_enabled": False}}
@@ -135,13 +136,13 @@ class PhotoDemoFrame(wx.Frame):
         layout.Add(self.lock_test, 0, wx.ALL, 8)
         buttons = wx.WrapSizer(wx.HORIZONTAL)
         for label, handler in (("settings", self._settings),
-                               ("ai_describe_photo", self.panel.describe_selected),
+                               ("ai_describe_image_menu", self.panel.describe_selected),
                                ("close", lambda e: self.Close())):
             button = wx.Button(self, label=self.i18n.t(label))
             button.Bind(wx.EVT_BUTTON, handler)
             buttons.Add(button, 0, wx.ALL, 6)
         layout.Add(buttons, 0, wx.ALL, 4)
-        self.status = wx.TextCtrl(self, style=wx.TE_READONLY, name=self.i18n.t("ai_status"))
+        self.status = wx.TextCtrl(self, style=wx.TE_READONLY, name=self.i18n.t("status"))
         layout.Add(self.status, 0, wx.EXPAND | wx.ALL, 8)
         self.SetSizer(layout)
         self.Bind(wx.EVT_CLOSE, self._close)
@@ -183,12 +184,12 @@ class PhotoDemoFrame(wx.Frame):
 
     def _simulate_lock(self):
         self._chat_lock_unlocked = False
-        self.panel.close_image_description(locked_only=True)
+        self.panel.close_ai_media(locked_only=True)
         self.output(self.i18n.t("ai_demo_locked"))
 
     def _close(self, event):
         self._shutting_down = True
         if self._lock_timer:
             self._lock_timer.Stop()
-        self.panel.close_image_description()
+        self.panel.close_ai_media()
         event.Skip()

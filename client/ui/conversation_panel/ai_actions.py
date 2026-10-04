@@ -1,186 +1,154 @@
 """AIActionsMixin — part of ConversationsPanel (see ui/conversation_panel/__init__.py).
 
-Transcribe a voice message, describe an image, video or sticker, or turn a PDF
-into accessible text, using the AI providers the person configured in Settings
-(core/ai_providers.py decides WHICH provider answers; this file only drives the
-message -> file -> provider -> result window flow).
+Transcribe a voice message, describe a photo, sticker or video, or turn a PDF
+into accessible text, with the AI providers the person set up in Settings.
+
+The single entry point is ``_on_ai_action``: the context-menu item and the
+Ctrl+Shift+Y accelerator both end there. Which provider answers, in which
+order and under which consent is core/ai_media's business; this file only
+drives message -> bounded download -> window.
 
 Methods run with ``self`` bound to the ConversationsPanel instance.
-
-Two things worth knowing before changing this:
-
-* The media cache is encrypted (.wzmedia / .msv). The provider SDKs need a
-  plain file, so the content is decrypted into a private temporary folder for
-  the duration of the request. That folder is removed as soon as the result
-  window closes (or as soon as the request fails) — nothing decrypted stays in
-  %TEMP%. Follow-up questions about an image or video are answered while the
-  result window is open, which is exactly how long the file is kept.
-* The network call runs on a worker thread; everything that touches wx goes
-  back through ``wx.CallAfter``. While it is in flight a "still working"
-  reminder is spoken every few seconds, because a silent wait is
-  indistinguishable from a frozen program for a screen-reader user.
 """
-
-import logging
+import copy
 import os
-import shutil
-import tempfile
-import threading
 
 import wx
+from cryptography.fernet import InvalidToken
 
-from core import ai_providers
-from core.ai_providers import AIProviderError
+from app_paths import active_account_id, global_dir
+from app_settings import AppSettings
+from core.ai_credentials import CredentialStore
+from core.ai_media import config as ai_config
+from core.ai_media.config import MAX_SOURCE_BYTES, MENU_KEY, preferences
+from core.ai_media.errors import DescriptionError
 from core.utils import decrypt_bytes
 from ui.conversation_panel.media_paths import cached_media_path
-from ui.dialogs.ai_result_dialog import AIResultDialog
 
-#: Seconds between the spoken "still processing" reminders.
-_STILL_WORKING_SECONDS = 8
+
+def encrypted_limit(limit):
+    """Largest encrypted cache file that can hold ``limit`` bytes of media:
+    Fernet expands the payload by a third plus its header."""
+    return limit * 4 // 3 + 1024
 
 
 class AIActionsMixin:
     """AI transcription and description of a message's media."""
 
-    def _ai_accessibility_settings(self):
-        """The ai_accessibility settings if the feature is usable right now,
-        otherwise None (see core.ai_providers.usable_settings)."""
-        return ai_providers.usable_settings(
-            self.main_window.settings.get("ai_accessibility", {})
-        )
-
-    def _ai_menu_label_for_type(self, msg_type: str, i18n) -> str:
-        """Context-menu label for this message type, or "" when AI processing
-        is not offered for it (feature off, no key, or the toggle for this
-        kind of media is off)."""
-        key = ai_providers.action_label_key(
-            msg_type, self.main_window.settings.get("ai_accessibility", {})
-        )
-        return i18n.t(key) if key else ""
-
-    def _on_menu_ai_process(self, msg: dict):
-        """Send this message's media to the configured AI providers and show
-        the result in AIResultDialog."""
-        i18n = self.main_window.i18n
-        ai_settings = self._ai_accessibility_settings()
-        if ai_settings is None:
-            wx.MessageBox(
-                i18n.t("ai_not_configured_msg"),
-                self.main_window.app_name,
-                wx.OK | wx.ICON_INFORMATION,
-                self,
-            )
-            return
-
-        msg_type = msg.get("messageType", "")
-        msg_id = (msg.get("key") or {}).get("id", "")
-        if not msg_id:
-            return
-
-        if msg_type == "documentMessage" and not ai_providers.is_pdf_message(msg):
-            wx.MessageBox(
-                i18n.t("ai_pdf_only_msg"),
-                self.main_window.app_name,
-                wx.OK | wx.ICON_INFORMATION,
-                self,
-            )
-            return
-
-        file_name = self._resolve_media_filename(msg)
-        media_path = cached_media_path(msg_type, msg_id)
-        is_video = msg_type == "videoMessage"
-        key = self.main_window.key
-
-        self.main_window.output(i18n.t("ai_processing_msg"))
-        threading.Thread(
-            target=self._run_ai_process,
-            args=(msg, msg_type, media_path, file_name, is_video, key, ai_settings),
-            daemon=True,
-        ).start()
-
-    def _run_ai_process(self, msg, msg_type, media_path, file_name, is_video,
-                        key, ai_settings):
-        """Worker thread of _on_menu_ai_process(). Never touches wx directly."""
+    def _ai_settings(self):
         mw = self.main_window
-        i18n = mw.i18n
+        app = getattr(mw, "app_settings", None) or AppSettings(global_dir())
+        return app, preferences(app)
 
-        if not self._ensure_media_on_disk(msg, media_path):
-            wx.CallAfter(mw.output, i18n.t("ai_media_download_error_msg"))
+    def _ai_menu_label(self, msg, i18n):
+        """Context-menu label for this message, or "" when no AI action is
+        offered on it (feature off, nothing usable for its kind, view-once...)."""
+        app, config = self._ai_settings()
+        kind = ai_config.offered_kind(msg, config, CredentialStore(global_dir()).saved())
+        return i18n.t(MENU_KEY[kind]) if kind else ""
+
+    def _focused_message(self):
+        """The message under focus in the message list, or None."""
+        if wx.Window.FindFocus() is not self.messages_list:
+            return None
+        index = self.messages_list.GetFocusedItem()
+        if index < 0 or index >= len(self._sorted_messages):
+            return None
+        return self._sorted_messages[index]
+
+    def _on_ai_action(self, event=None, message=None):
+        """Menu item and Ctrl+Shift+Y: act on ``message``, or on the focused one."""
+        if message is None:
+            message = self._focused_message()
+        kind = ai_config.eligible_kind(message)
+        if kind is None:
             return
-
-        stop_watchdog = threading.Event()
-
-        def _watchdog():
-            while not stop_watchdog.wait(_STILL_WORKING_SECONDS):
-                wx.CallAfter(mw.output, i18n.t("ai_still_processing_msg"))
-
-        threading.Thread(target=_watchdog, daemon=True).start()
-
-        tmp_dir = None
-        handed_to_dialog = False
+        mw = self.main_window
+        app, config = self._ai_settings()
+        if ai_config.offered_kind(message, config, CredentialStore(global_dir()).saved()) is None:
+            mw.output(mw.i18n.t("ai_disabled"))
+            return
+        chat = (message.get("key") or {}).get("remoteJid") or (self.conversation or {}).get("remoteJid", "")
+        locked = mw.is_chat_locked(chat)
+        if locked and not getattr(mw, "_chat_lock_unlocked", False):
+            return
+        identity = (active_account_id(), chat, message["key"]["id"])
+        existing = getattr(self, "_ai_dialog", None)
+        if existing is not None:
+            existing.Raise()
+            return  # No second window or duplicate billed request.
+        snapshot = copy.deepcopy(message)
+        msg_type = snapshot["messageType"]
+        info = (snapshot.get("message") or {}).get(msg_type) or {}
+        loader = self._ai_loader(snapshot, kind, cached_media_path(msg_type, identity[2]), mw.key)
+        from ui.dialogs.ai_result_dialog import AIResultDialog
+        dialog = AIResultDialog(self, identity, kind, locked, config, app, loader, str(info.get("mimetype") or ""))
+        self._ai_dialog = dialog
         try:
-            with open(media_path, "rb") as fh:
-                content = decrypt_bytes(fh.read(), key)
-
-            tmp_dir = tempfile.mkdtemp(prefix="wz_ai_")
-            # Only the extension matters to the providers; the sender's file
-            # name is never written into the temporary path.
-            tmp_path = os.path.join(
-                tmp_dir, "media" + os.path.splitext(file_name)[1]
-            )
-            with open(tmp_path, "wb") as fh:
-                fh.write(content)
-
-            ask_fn = None
-            if msg_type == "audioMessage":
-                result_text, _used = ai_providers.transcribe_audio(tmp_path, ai_settings)
-                title = i18n.t("ai_result_transcription_title")
-            elif msg_type in ("imageMessage", "videoMessage", "stickerMessage"):
-                result_text, used_provider = ai_providers.describe_visual_media(
-                    tmp_path, ai_settings, is_video=is_video
-                )
-                title = i18n.t(
-                    "ai_result_sticker_title" if msg_type == "stickerMessage"
-                    else "ai_result_description_title"
-                )
-
-                # Follow-up questions reuse the file while the result window
-                # stays open, preferring the provider that described it (and
-                # falling back further if that one now fails).
-                def _ask(question, p=tmp_path, s=ai_settings, v=is_video,
-                         pv=used_provider):
-                    return ai_providers.ask_about_visual_media(
-                        p, s, question, is_video=v, prefer=pv
-                    )[0]
-
-                ask_fn = _ask
-            else:  # documentMessage, already confirmed to be a PDF
-                result_text, _used = ai_providers.pdf_to_accessible_text(
-                    tmp_path, ai_settings
-                )
-                title = i18n.t("ai_result_pdf_title")
-
-            def _show_result():
-                try:
-                    dlg = AIResultDialog(mw, title, result_text, ask_fn=ask_fn)
-                    try:
-                        dlg.ShowModal()
-                    finally:
-                        dlg.Destroy()
-                finally:
-                    shutil.rmtree(tmp_dir, ignore_errors=True)
-
-            handed_to_dialog = True
-            wx.CallAfter(_show_result)
-        except AIProviderError as exc:
-            wx.CallAfter(
-                wx.MessageBox, str(exc), mw.app_name, wx.OK | wx.ICON_ERROR, self
-            )
-        except Exception as exc:
-            # The type only: an SDK message can carry the sender's file name.
-            logging.error("[_run_ai_process] unexpected %s", type(exc).__name__)
-            wx.CallAfter(mw.output, i18n.t("ai_unexpected_error_msg"))
+            dialog.ShowModal()
         finally:
-            stop_watchdog.set()
-            if tmp_dir and not handed_to_dialog:
-                shutil.rmtree(tmp_dir, ignore_errors=True)
+            dialog._dispose()
+            self._ai_dialog = None
+            dialog.Destroy()
+            self._restore_focus_after_ai(identity, locked)
+
+    def _ai_loader(self, snapshot, kind, path, key):
+        """Callable that returns the decrypted original, never reading more than
+        the kind's size limit even when the message's own metadata understates it."""
+        mw = self.main_window
+        msg_type = snapshot["messageType"]
+        limit = MAX_SOURCE_BYTES[kind]
+
+        def loader(token):
+            info = (snapshot.get("message") or {}).get(msg_type) or {}
+            try:
+                size = int(info.get("fileLength", 0))
+            except (TypeError, ValueError):
+                size = 0
+            if size > limit:
+                raise DescriptionError("media_size")
+            if not os.path.isfile(path):
+                fetch = mw.handle_audio_message if msg_type == "audioMessage" else mw.handle_media_message
+                fetch(snapshot, timeout=15, max_bytes=limit, cancel_check=token.check)
+            token.check()
+            if not os.path.isfile(path):
+                raise DescriptionError("media")
+            cap = encrypted_limit(limit)
+            try:
+                with open(path, "rb") as stream:
+                    encrypted = stream.read(cap + 1)
+                if len(encrypted) > cap:
+                    raise DescriptionError("media_size")
+                return decrypt_bytes(encrypted, key)
+            except (OSError, InvalidToken, ValueError, TypeError):
+                raise DescriptionError("media") from None
+        return loader
+
+    def _restore_focus_after_ai(self, identity, locked):
+        """Put focus back on the message, found again by identity: incoming
+        messages can reorder the rows while the window was open."""
+        mw = self.main_window
+        current_chat = (self.conversation or {}).get("remoteJid", "")
+        if not (mw.IsShown() and not getattr(mw, "_shutting_down", False)
+                and current_chat == identity[1]
+                and (not locked or getattr(mw, "_chat_lock_unlocked", False))):
+            return
+        for index, msg in enumerate(self._sorted_messages):
+            if (msg.get("key") or {}).get("id") == identity[2]:
+                self.messages_list.Focus(index)
+                self.messages_list.Select(index)
+                break
+        self.messages_list.SetFocus()
+
+    def close_ai_media(self, *, locked_only=False, message_ids=None):
+        """Close the open AI window (and so drop its media and answers): on
+        leaving the chat, locking the vault, hiding or closing the app, or
+        deleting its message."""
+        dialog = getattr(self, "_ai_dialog", None)
+        if dialog is None:
+            return
+        if locked_only and not (dialog.session.locked or self.main_window.is_chat_locked(dialog.session.identity[1])):
+            return
+        if message_ids is not None and dialog.session.identity[2] not in message_ids:
+            return
+        dialog._close()

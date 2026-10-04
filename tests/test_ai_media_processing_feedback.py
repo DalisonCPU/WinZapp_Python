@@ -134,9 +134,9 @@ def test_request_owned_sound_cannot_create_an_unstoppable_device_fallback(monkey
 ])
 @pytest.mark.parametrize("regenerate", [True, False])
 def test_dialog_releases_the_real_cue_controller_before_auto_reading(monkeypatch, answer, spoken, regenerate):
-    from tests.test_image_description_ui_logic import DialogStub
-    from core.ai_media.image_input import ImageInput
-    import ui.dialogs.image_description_dialog as dialog_module
+    from tests.test_ai_media_ui_logic import DialogStub
+    from core.ai_media.payload import Media
+    import ui.dialogs.ai_result_dialog as dialog_module
     monkeypatch.setattr(dialog_module, "active_account_id", lambda: "a")
     events = _fake_audio(monkeypatch)
     dialog = DialogStub()
@@ -145,7 +145,7 @@ def test_dialog_releases_the_real_cue_controller_before_auto_reading(monkeypatch
     dialog.main_window.output = lambda text: events.append(("speak", text))
     generation, _ = dialog.session.begin("describe")
     dialog._busy(True)
-    dialog._complete(generation, "describe", regenerate, (ImageInput(b"photo", "image/jpeg", 1, 1), answer), None)
+    dialog._complete(generation, "describe", regenerate, (Media("image", b"photo", "image/jpeg", "image.jpg"), (answer, "gemini")), None)
     assert events[-3:] == ["stop", "free", ("speak", spoken)]
     assert dialog._latest == answer and dialog.session.history[-1] == ("assistant", answer)
     assert dialog.result.value == (answer if regenerate else

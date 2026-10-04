@@ -58,11 +58,6 @@ class MessageMenuMixin:
 
         menu = wx.Menu()
 
-        from core.ai_media.config import eligible_photo
-        if eligible_photo(msg):
-            describe = menu.Append(wx.ID_ANY, f"{i18n.t('ai_describe_photo')}\tCtrl+Shift+Y")
-            self.Bind(wx.EVT_MENU, lambda e, m=msg: self._on_describe_photo(message=m), describe)
-
         if is_call and is_returnable_missed_call(
                 msg, str((self.conversation or {}).get("remoteJid") or "")):
             return_item = menu.Append(
@@ -359,13 +354,13 @@ class MessageMenuMixin:
             )
 
         # AI transcription / description (ui/conversation_panel/ai_actions.py).
-        # Offered only while the feature is on and at least one provider has a
-        # key, and only for the kinds of media it handles.
-        ai_label = self._ai_menu_label_for_type(msg_type, i18n)
+        # Offered only while the feature is on and a provider with a key takes
+        # this kind of media. Ctrl+Shift+Y is the accelerator of the same action.
+        ai_label = self._ai_menu_label(msg, i18n)
         if ai_label:
-            ai_item = menu.Append(wx.ID_ANY, ai_label)
+            ai_item = menu.Append(wx.ID_ANY, f"{ai_label}\tCtrl+Shift+Y")
             self.Bind(
-                wx.EVT_MENU, lambda e, m=msg: self._on_menu_ai_process(m), ai_item
+                wx.EVT_MENU, lambda e, m=msg: self._on_ai_action(message=m), ai_item
             )
 
         # Edit (own text messages within WhatsApp's edit window — see

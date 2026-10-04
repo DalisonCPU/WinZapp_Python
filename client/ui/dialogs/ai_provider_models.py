@@ -1,4 +1,4 @@
-"""Settings-only model discovery; background completions never move keyboard focus."""
+"""Model discovery for the provider window; background completions never move keyboard focus."""
 import wx
 
 from core.ai_credentials import CredentialError
@@ -90,7 +90,6 @@ class ModelSelectionMixin:
         if 0 <= index < len(self._model_options):
             self._cancel_probe()
             self.model.ChangeValue(self._model_options[index].id)
-            self.GetParent().GetParent()._mark_dirty()
         event.Skip()
 
     def _manual_model_changed(self, event):

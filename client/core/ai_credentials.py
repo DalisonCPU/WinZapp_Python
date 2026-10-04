@@ -58,6 +58,15 @@ class CredentialStore:
         except (OSError, ValueError, TypeError, InvalidToken, RuntimeError):
             raise CredentialError() from None
 
+    def saved(self):
+        """The providers that have a key saved. An unreadable store reports
+        none: the actions that need a key then simply are not offered."""
+        try:
+            with app_settings_lock(str(self.directory)):
+                return frozenset(p for p, v in self._read().items() if v)
+        except (OSError, ValueError, TypeError, InvalidToken, RuntimeError):
+            return frozenset()
+
     def set(self, provider, value):
         """Blank input preserves an existing key; deletion is explicit."""
         self._provider(provider)

@@ -421,11 +421,13 @@ class MediaMixin:
             # row that just gained a duration clause.
             cp._repaint_message_rows([msg_id])
 
-    def handle_audio_message(self, msg, timeout=60):
+    def handle_audio_message(self, msg, timeout=60, *, max_bytes=None, cancel_check=None):
         """Download and encrypt a voice message to data/voice_messages/.
 
         Returns True only when this call actually wrote a new file — see
-        handle_media_message(), which follows the same contract.
+        handle_media_message(), which follows the same contract. ``max_bytes``
+        and ``cancel_check`` opt in to the bounded, cancellable download the AI
+        actions use, exactly as in handle_media_message().
         """
         voice_messages_dir = data_path("voice_messages")
         msg_id = msg.get('key', {}).get('id', '')
@@ -439,6 +441,10 @@ class MediaMixin:
             # See handle_media_message() — same reasoning applies to audio.
             logging.info("[handle_audio_message] Skipping download for %s — not connected.", msg_id)
             return False
+        if max_bytes is not None:
+            audio_content = self.fetch_media_bytes(
+                msg, timeout=timeout, max_bytes=max_bytes, cancel_check=cancel_check)
+            return bool(audio_content) and self.save_audio_locally(msg, audio_content)
         base64_audio = self.get_base64_from_media(msg, timeout=timeout)
         if not base64_audio:
             return False

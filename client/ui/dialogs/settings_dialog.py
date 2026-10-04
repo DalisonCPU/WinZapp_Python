@@ -1330,16 +1330,6 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_CHECKBOX, self._on_fixed_quick_reactions_toggle
         )
 
-        # ── Transcriptions and descriptions tab (AI) ─────────────────────────
-        # All of it lives in ui/dialogs/ai_settings_page.py. Appended after
-        # Reactions so no earlier index moved; SetPageText(14) relies on it.
-        # The optional locked-chats tab below stays last, as the file's own
-        # tests require.
-        self._ai_page = AISettingsPage(
-            self._notebook, i18n, on_change=self._mark_dirty
-        )
-        self._notebook.AddPage(self._ai_page, i18n.t("tab_ai_accessibility"))
-
         # ── Locked chats tab ────────────────────────────────────────────────
         # Persistent vault policy belongs in Settings, not beside the chat
         # list the user visits repeatedly. The controls stay unavailable until
@@ -1420,11 +1410,12 @@ class SettingsDialog(wx.Dialog):
         else:
             self._chat_lock_page.Hide()
 
-        # Append: Connection's established index (4) and all other pages stay
-        # stable whether the optional hidden-vault page is present or not.
-        from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
-        self._image_description_page = ImageDescriptionSettingsPage(self._notebook, self.main_window)
-        self._notebook.AddPage(self._image_description_page, i18n.t("ai_title"))
+        # Appended after everything else: Connection's established index (4)
+        # and every other page stay stable whether the optional hidden-vault
+        # page is present or not. The page is found with FindPage(), never by
+        # index, for the same reason.
+        self._ai_page = AISettingsPage(self._notebook, self.main_window, on_change=self._mark_dirty)
+        self._notebook.AddPage(self._ai_page, i18n.t("tab_ai_accessibility"))
 
         # ── Button row ───────────────────────────────────────────────────────
         btn_sizer = wx.StdDialogButtonSizer()
@@ -1794,8 +1785,6 @@ class SettingsDialog(wx.Dialog):
             "voice_message_stereo", False
         )
         self._voice_stereo_check.SetValue(bool(voice_stereo))
-
-        self._ai_page.load(self.main_window.settings.get("ai_accessibility", {}))
 
         # Sound events / packs
         self.main_window.refresh_sound_packs()
@@ -2898,8 +2887,8 @@ class SettingsDialog(wx.Dialog):
         if not self._validate():
             return False
 
-        if not self._image_description_page.apply():
-            self._notebook.SetSelection(self._notebook.FindPage(self._image_description_page))
+        if not self._ai_page.apply():
+            self._notebook.SetSelection(self._notebook.FindPage(self._ai_page))
             return False
 
         # Language
@@ -3011,9 +3000,6 @@ class SettingsDialog(wx.Dialog):
         self.main_window.settings.setdefault("reactions", {})[
             "quick_reaction_slots"
         ] = list(self._quick_reaction_slots)
-        self.main_window.settings.setdefault(
-            "ai_accessibility", {}
-        ).update(self._ai_page.collect())
         self.main_window.settings.setdefault("user_interface", {})[
             "conversation_video_media_viewer_dialog"
         ] = self._conversation_video_media_viewer_dialog_cb.GetValue()
@@ -3364,9 +3350,6 @@ class SettingsDialog(wx.Dialog):
 
     def _refresh_dialog_labels(self):
         """Update this dialog's own title and notebook tab captions after a language change."""
-        self._image_description_page.refresh_labels()
-        self._notebook.SetPageText(self._notebook.FindPage(self._image_description_page),
-                                   self.main_window.i18n.t("ai_title"))
         i18n = self.main_window.i18n
         self.SetTitle(i18n.t("settings_title"))
         self._notebook.SetPageText(0, i18n.t("tab_general"))
@@ -3383,10 +3366,10 @@ class SettingsDialog(wx.Dialog):
         self._notebook.SetPageText(11, i18n.t("tab_calls"))
         self._notebook.SetPageText(12, i18n.t("tab_profile_backup"))
         self._notebook.SetPageText(13, i18n.t("tab_reactions"))
-        self._notebook.SetPageText(14, i18n.t("tab_ai_accessibility"))
-        self._ai_page.refresh_labels(i18n)
         if self._chat_lock_tab_shown:
-            self._notebook.SetPageText(15, i18n.t("locked_chats"))
+            self._notebook.SetPageText(14, i18n.t("locked_chats"))
+        self._ai_page.refresh_labels()
+        self._notebook.SetPageText(self._notebook.FindPage(self._ai_page), i18n.t("tab_ai_accessibility"))
         self._chat_lock_intro.SetLabel(i18n.t("chat_lock_settings_intro"))
         self._chat_lock_unlock_btn.SetLabel(
             i18n.t("chat_lock_settings_unlock")

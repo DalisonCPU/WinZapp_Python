@@ -10,7 +10,7 @@ from core.ai_credentials import CredentialError
 from core.bounded_http import BodyTooLarge, HTTPError, TimeoutError, read_bounded
 
 from .config import MAX_RESPONSE_BYTES, PROVIDERS, supports, valid_model
-from .errors import DescriptionError, status_error
+from .errors import DescriptionError, ErrorKey, status_error
 from .providers import build_request, parse_answer
 from .diagnostics import record
 
@@ -28,7 +28,7 @@ def submit(work, complete):
             try:
                 result, error = work(), None
             except DescriptionError as exc:
-                result, error = None, str(exc)
+                result, error = None, exc.key
                 record("worker_finished", category=exc.category)
             except Exception as exc:
                 # Exception messages can include credentials or private text.
@@ -199,6 +199,12 @@ class ChainFailed(DescriptionError):
     def __init__(self, attempts):
         self.attempts = tuple(attempts)
         super().__init__(self.attempts[-1][1] if self.attempts else "providers")
+
+    @property
+    def key(self):
+        key = ErrorKey(str(self))
+        key.attempts = self.attempts
+        return key
 
 
 class Operation:

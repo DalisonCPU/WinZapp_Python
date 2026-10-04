@@ -1,9 +1,9 @@
-"""Native settings methods on recording stubs: no windows, keys, network or speech."""
+"""The provider window's model-list methods on recording stubs: no windows, keys, network or speech."""
 from types import SimpleNamespace
 
 import pytest
 
-from tests.test_image_description_ui_logic import Control
+from tests.test_ai_media_ui_logic import Control
 
 
 class Choice(Control):
@@ -22,8 +22,8 @@ class Choice(Control):
 
 @pytest.fixture
 def page(monkeypatch):
-    from ui.dialogs.image_description_models import ModelSelectionMixin
-    import ui.dialogs.image_description_models as module
+    from ui.dialogs.ai_provider_models import ModelSelectionMixin
+    import ui.dialogs.ai_provider_models as module
     class Stub(ModelSelectionMixin):
         def __init__(self):
             self._alive = True
@@ -45,9 +45,6 @@ def page(monkeypatch):
 
         def _cancel_probe(self):
             pass
-
-        def GetParent(self):
-            return SimpleNamespace(GetParent=lambda: SimpleNamespace(_mark_dirty=lambda: self.dirty.append(True)))
 
     class Timer:
         def __init__(self, milliseconds, callback, generation):
@@ -90,12 +87,12 @@ def test_unknown_manual_model_is_never_replaced_by_first_list_item(page, monkeyp
     assert page.model.value == "custom-model" and page.model_choice.GetSelection() == -1
 
 
-def test_explicit_selection_updates_the_model_and_marks_apply_dirty(page, monkeypatch):
+def test_explicit_selection_updates_the_model_field_only(page, monkeypatch):
     page, _, jobs = start(page, monkeypatch)
     jobs[0][1](choices(), None)
     page.model_choice.selection = 1
     page._select_model(SimpleNamespace(Skip=lambda: None))
-    assert page.model.value == "gpt-4.1" and page.dirty[-1] is True
+    assert page.model.value == "gpt-4.1" and page.dirty == [("speak", "ai_models_ready")]
 
 
 @pytest.mark.parametrize("ending", ["provider", "key", "destroy", "timeout"])
@@ -181,16 +178,15 @@ def test_unexpected_dispatch_error_is_safe_and_does_not_leave_loading(page, monk
 
 @pytest.mark.parametrize("action", ["key_changed", "delete_key", "destroyed"])
 def test_real_settings_actions_cancel_metadata_before_stale_completion(page, monkeypatch, action):
-    from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
+    from ui.dialogs.ai_settings_page import AIProviderDialog
     page, _, jobs = start(page, monkeypatch)
     token = page._model_list_token
     page._hide_key = lambda: None
     page._key_status = lambda: None
-    page._deleted = set()
-    page._drafts = {}
+    page._deleted = False
     page._probe = None
     event = SimpleNamespace(Skip=lambda: None, GetEventObject=lambda: page)
-    getattr(ImageDescriptionSettingsPage, "_" + action)(page, event)
+    getattr(AIProviderDialog, "_" + action)(page, event)
     previous = page.status.value
     jobs[0][1](choices(), None)
     assert token.cancelled.is_set() and page.status.value == previous
@@ -204,21 +200,6 @@ def test_manual_identifier_updates_list_selection_without_touching_focus(page, m
     page._manual_model_changed(SimpleNamespace(Skip=lambda: None))
     assert page.model_choice.selection == -1 and page.model.value == "custom-model"
     assert not hasattr(page.model_choice, "focused")
-
-
-def test_provider_change_discards_previous_provider_catalog(page, monkeypatch):
-    from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
-    page, _, jobs = start(page, monkeypatch)
-    page._drafts, page._models = {}, {}
-    page.provider = Control(selection=1)
-    page._hide_key = lambda: None
-    page._key_status = lambda: None
-    token = page._model_list_token
-    ImageDescriptionSettingsPage._change_provider(page, SimpleNamespace(Skip=lambda: None))
-    jobs[0][1](choices(), None)
-    assert page._provider == "gemini" and token.cancelled.is_set()
-    assert page.model.value == "gemini-3.8-flash"
-    assert not page.model_choice.enabled and not page.model_choice.items
 
 
 def test_late_old_catalog_does_not_release_new_requests_watchdog(page, monkeypatch):
@@ -243,14 +224,14 @@ def test_expired_result_is_rejected_even_before_the_gui_watchdog_fires(page, mon
 
 
 def test_disposal_cancels_without_accessing_destroyed_native_controls(page, monkeypatch):
-    from ui.dialogs.image_description_settings import ImageDescriptionSettingsPage
+    from ui.dialogs.ai_settings_page import AIProviderDialog
     page, _, jobs = start(page, monkeypatch)
     token = page._model_list_token
     def forbidden(*args):
         raise AssertionError("destroyed widgets must not be touched")
     page.get_models.Enable = forbidden
     page.model_choice.SetItems = forbidden
-    page._drafts, page._probe = {}, None
-    ImageDescriptionSettingsPage._destroyed(page, SimpleNamespace(GetEventObject=lambda: page, Skip=lambda: None))
+    page._probe = None
+    AIProviderDialog._destroyed(page, SimpleNamespace(GetEventObject=lambda: page, Skip=lambda: None))
     jobs[0][1](choices(), None)
     assert not page._alive and token.cancelled.is_set() and page._model_list_timer is None

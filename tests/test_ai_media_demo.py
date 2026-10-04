@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from PIL import Image
 import pytest
 
-from core.ai_media.config import eligible_photo
+from core.ai_media.config import eligible_kind
 from core.ai_media.demo_fixture import demo_directory, demo_messages, make_demo_photo
 from core.ai_media.errors import DescriptionError
 from core.ai_media.image_input import prepare_image
@@ -14,7 +14,7 @@ from core.ai_media.image_input import prepare_image
 
 def test_demo_data_is_outside_checkout():
     root = Path(__file__).resolve().parents[1]
-    path = demo_directory(root / "client" / "photo_demo.py")
+    path = demo_directory(root / "client" / "ai_media_demo.py")
     assert path == root.parent / "_MANUEL_TEST" / "fotograf-betimleme"
     assert not path.is_relative_to(root)
 
@@ -33,30 +33,30 @@ def test_generated_photo_is_small_and_contains_known_shapes_without_metadata():
 
 def test_demo_messages_are_fresh_and_only_photo_is_eligible():
     messages = demo_messages()
-    assert [eligible_photo(m) for m in messages] == [False, True]
+    assert [eligible_kind(m) for m in messages] == [None, "image"]
     messages[1]["key"]["id"] = "changed"
     assert demo_messages()[1]["key"]["id"] == "demophoto"
 
 
 def test_missing_demo_media_never_downloads_from_whatsapp():
-    from ui.photo_description_demo import PhotoDemoFrame
+    from ui.ai_media_demo import AIMediaDemoFrame
     with pytest.raises(DescriptionError, match="ai_error_media"):
-        PhotoDemoFrame.handle_media_message(SimpleNamespace(), {})
+        AIMediaDemoFrame.handle_media_message(SimpleNamespace(), {})
 
 
-def test_simulated_vault_closes_only_locked_photo_sessions():
-    from ui.photo_description_demo import PhotoDemoFrame
+def test_simulated_vault_closes_only_locked_ai_sessions():
+    from ui.ai_media_demo import AIMediaDemoFrame
     calls = []
     stub = SimpleNamespace(_chat_lock_unlocked=True,
-                           panel=SimpleNamespace(close_image_description=lambda **kw: calls.append(kw)),
+                           panel=SimpleNamespace(close_ai_media=lambda **kw: calls.append(kw)),
                            output=calls.append, i18n=SimpleNamespace(t=lambda key: key))
-    PhotoDemoFrame._simulate_lock(stub)
+    AIMediaDemoFrame._simulate_lock(stub)
     assert stub._chat_lock_unlocked is False
     assert calls == [{"locked_only": True}, "ai_demo_locked"]
 
 
 def test_context_menu_does_not_require_unsupported_wx_context_manager(monkeypatch):
-    import ui.photo_description_demo as module
+    import ui.ai_media_demo as module
     calls = []
     class MenuStub:
         def Append(self, identifier, label):
@@ -72,11 +72,11 @@ def test_context_menu_does_not_require_unsupported_wx_context_manager(monkeypatc
                            messages_list=SimpleNamespace(GetFocusedItem=lambda: 1,
                                                          PopupMenu=lambda menu: calls.append("shown")))
     module.DemoConversationPanel._menu(stub, None)
-    assert calls == ["ai_describe_photo\tCtrl+Shift+Y", "shown", "destroyed"]
+    assert calls == ["ai_describe_image_menu\tCtrl+Shift+Y", "shown", "destroyed"]
 
 
 def test_demo_initializes_its_own_existing_sound_system_without_account_runtime(monkeypatch):
-    import ui.photo_description_demo as module
+    import ui.ai_media_demo as module
     calls = []
     class FakeSystem:
         def __init__(self, window, path):
@@ -87,17 +87,17 @@ def test_demo_initializes_its_own_existing_sound_system_without_account_runtime(
     monkeypatch.setattr(module, "SoundSystem", FakeSystem)
     monkeypatch.setattr(module, "discover_sound_packs", lambda path: {"default": {"id": "default"}})
     window = SimpleNamespace()
-    module.PhotoDemoFrame._initialize_sounds(window)
+    module.AIMediaDemoFrame._initialize_sounds(window)
     assert calls == ["created", "started"]
-    assert module.PhotoDemoFrame.get_active_sound_pack(window) == {"id": "default"}
+    assert module.AIMediaDemoFrame.get_active_sound_pack(window) == {"id": "default"}
 
 
 def test_demo_audio_initialization_failure_does_not_abort_the_demo(monkeypatch, caplog):
-    import ui.photo_description_demo as module
+    import ui.ai_media_demo as module
     def fail(*args):
         raise RuntimeError("private native error text")
     monkeypatch.setattr(module, "SoundSystem", fail)
     window = SimpleNamespace()
-    module.PhotoDemoFrame._initialize_sounds(window)
+    module.AIMediaDemoFrame._initialize_sounds(window)
     assert window.sound_system is None
     assert "RuntimeError" in caplog.text and "private native error text" not in caplog.text

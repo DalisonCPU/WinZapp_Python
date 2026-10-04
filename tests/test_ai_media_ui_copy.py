@@ -1,4 +1,4 @@
-"""Localized photo guidance and operation labels; data only, no windows or audio."""
+"""Localized guidance and operation labels; data only, no windows or audio."""
 import json
 from pathlib import Path
 
@@ -21,6 +21,7 @@ def test_settings_guidance_is_split_into_four_readable_paragraphs(translations):
     assert "ChatGPT" in paragraphs[2]
     assert "Gemini" in paragraphs[3]
     assert "store=false" not in translations["ai_settings_notice"]
+    assert "Claude" in paragraphs[2]  # a Claude subscription does not include the API either
 
 
 def test_technical_information_retains_key_cache_and_provider_limits(translations):
@@ -32,16 +33,16 @@ def test_technical_information_retains_key_cache_and_provider_limits(translation
 
 
 def test_operation_statuses_are_translated_distinct_and_do_not_expose_internal_keys(translations):
-    keys = ("ai_description_loading", "ai_question_loading", "ai_connection_loading")
+    keys = ("ai_processing_msg", "ai_question_loading", "ai_connection_loading")
     values = [translations[key] for key in keys]
     assert len(set(values)) == 3
     assert all(value.strip() and value not in keys for value in values)
     assert translations["ai_settings_help"] != translations["ai_privacy_link"]
 
 
-def test_consent_still_names_the_provider_and_retains_explicit_confirmation(translations):
-    text = translations["ai_consent"].format(provider="SYNTHETIC PROVIDER")
-    assert "SYNTHETIC PROVIDER" in text and "API" in text
+def test_consent_names_every_provider_that_may_receive_the_media_and_keeps_explicit_confirmation(translations):
+    text = translations["ai_consent"].format(providers="SYNTHETIC PROVIDER, OTHER PROVIDER")
+    assert "SYNTHETIC PROVIDER, OTHER PROVIDER" in text and "API" in text
     assert translations["ai_remember_consent"].strip()
     assert translations["ai_locked_consent"].strip()
 
