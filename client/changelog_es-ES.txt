@@ -172,6 +172,8 @@ CORRECCIONES
 
 - Modelo "Automático (recomendado)" en la ventana de cada proveedor de IA (Transcripciones y Descripciones). Marcada por defecto en los proveedores donde aún no habías elegido un modelo, la casilla hace que WinZapp use siempre el modelo que recomienda, que sigue las actualizaciones; desmárcala para elegir o escribir un modelo fijo.
 
+- En una conversación cuyos mensajes más antiguos solo están en el teléfono, WinZapp seguía pidiéndoselos al teléfono al llegar al primer mensaje: no llegaba nada, el teléfono podía mostrar cada vez un aviso de sincronización y la lista quedaba ocupada durante minutos. Ahora WinZapp detecta este caso, no pide nada y anuncia "Usa WhatsApp en tu teléfono para ver los mensajes más antiguos."
+
 V1.1.1.0
 
 Esta versión trata de mantener tu cuenta conectada. WinZapp ahora guarda una copia de seguridad del perfil del navegador — que es donde vive realmente tu conexión con WhatsApp — y la restaura por su cuenta cuando deja de ser aceptada, avisando de lo ocurrido. Junto a ella llegan las correcciones de las situaciones que rompían la sesión y hacían que el programa pidiera vincular de nuevo: apagar el ordenador, suspender y reanudar, y el propio programa reiniciando la conexión. También llegan la corrección ortográfica en el campo de mensaje y las acciones sobre enlaces.

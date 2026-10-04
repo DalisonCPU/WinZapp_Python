@@ -172,6 +172,8 @@ DÜZELTMELER
 
 - Her yapay zekâ sağlayıcısının penceresinde (Yazıya Dökme ve Betimleme) "Otomatik (önerilen)" model. Henüz model seçmediğiniz sağlayıcılarda varsayılan olarak işaretli olan kutu, WinZapp'ın her zaman önerdiği ve güncellemeleri izleyen modeli kullanmasını sağlar; sabit bir model seçmek veya yazmak için işareti kaldırın.
 
+- Daha eski mesajları yalnızca telefonda bulunan bir sohbette WinZapp, ilk mesaja gelindiğinde bunları telefondan istemeyi sürdürüyordu: hiçbir şey gelmiyor, telefon her seferinde bir eşitleme bildirimi gösterebiliyor ve liste dakikalarca meşgul kalıyordu. WinZapp artık bu durumu algılıyor, hiçbir şey istemiyor ve "Daha eski mesajları görmek için telefonunuzdaki WhatsApp'ı kullanın." duyurusunu yapıyor.
+
 V1.1.1.0
 
 Bu sürüm, hesabınızın bağlı kalmasını sağlamaya odaklanmaktadır. WinZapp artık WhatsApp bağlantınızın gerçekte tutulduğu tarayıcı profilinin bir yedeğini saklar; profil kabul edilmediğinde durumu bildirerek profili otomatik olarak geri yükler. Bunun yanında oturumun kopmasına ve uygulamanın yeniden eşleme istemesine yol açan durumlar için düzeltmeler içerir: bilgisayarı kapatma, askıya alma ve sürdürme ile uygulamanın bağlantıyı kendi kendine yeniden başlatması. Ayrıca mesaj alanında yazım denetimi ve bağlantı eylemleri de eklendi.
