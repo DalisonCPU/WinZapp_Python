@@ -9,7 +9,7 @@ from urllib3.util import Timeout
 from core.ai_credentials import CredentialError
 from core.bounded_http import BodyTooLarge, HTTPError, TimeoutError, read_bounded
 
-from .config import MAX_RESPONSE_BYTES, PROVIDERS, supports, valid_model
+from .config import MAX_RESPONSE_BYTES, PROVIDERS, valid_model
 from .errors import DescriptionError, ErrorKey, status_error
 from .providers import build_request, parse_answer
 from .diagnostics import record

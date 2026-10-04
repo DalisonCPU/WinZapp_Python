@@ -35,8 +35,8 @@ and never in an export.
 ## Providers
 
 Every provider is reached over plain HTTPS with `requests`; no vendor SDK is
-shipped (the SDKs added roughly twenty packages and tens of megabytes for what
-is one POST). The table in `config.PROVIDERS` is the single source of what each
+shipped (the three SDKs would have added seventeen pinned packages for what is
+one POST per request). The table in `config.PROVIDERS` is the single source of what each
 accepts today:
 
 | Provider | Photos, stickers | Voice messages | Video | PDF |
@@ -138,8 +138,8 @@ Automated tests use synthetic data and fake transports: every payload shape,
 the parsers, the chain, the deadlines and cancellation, consent, the settings
 logic and the localized strings. **Calls to the live providers were not made
 for this merged feature**: the request shapes were written from each provider's
-documentation, the Gemini and OpenAI photo paths descend from code that was
-exercised live by its author, and the Claude, Groq, OpenRouter, audio, PDF and
-video paths were not. Real NVDA/JAWS behaviour of the merged windows, the
+documentation. Only the Gemini photo path descends from code its author
+exercised live; the OpenAI, Claude, Groq and OpenRouter requests and every
+audio, PDF and video path were not. Real NVDA/JAWS behaviour of the merged windows, the
 packaged executable, and the Turkish and Romanian wording (translated from
 English) still need a native, manual pass.
