@@ -21,6 +21,7 @@ from core.reaction_shortcuts import (
     fixed_quick_reactions,
 )
 from ui.dialogs.emoji_picker import choose_reaction_emoji
+from ui.dialogs.ai_settings_page import AISettingsPage
 
 # Win32 modifier constants for RegisterHotKey
 _MOD_ALT     = 0x0001
@@ -1408,6 +1409,13 @@ class SettingsDialog(wx.Dialog):
             self._notebook.AddPage(self._chat_lock_page, i18n.t("locked_chats"))
         else:
             self._chat_lock_page.Hide()
+
+        # Appended after everything else: Connection's established index (4)
+        # and every other page stay stable whether the optional hidden-vault
+        # page is present or not. The page is found with FindPage(), never by
+        # index, for the same reason.
+        self._ai_page = AISettingsPage(self._notebook, self.main_window, on_change=self._mark_dirty)
+        self._notebook.AddPage(self._ai_page, i18n.t("tab_ai_accessibility"))
 
         # ── Button row ───────────────────────────────────────────────────────
         btn_sizer = wx.StdDialogButtonSizer()
@@ -2879,6 +2887,10 @@ class SettingsDialog(wx.Dialog):
         if not self._validate():
             return False
 
+        if not self._ai_page.apply():
+            self._notebook.SetSelection(self._notebook.FindPage(self._ai_page))
+            return False
+
         # Language
         old_lang = self.main_window.i18n.language
         sel = self._lang_combo.GetSelection()
@@ -3356,6 +3368,8 @@ class SettingsDialog(wx.Dialog):
         self._notebook.SetPageText(13, i18n.t("tab_reactions"))
         if self._chat_lock_tab_shown:
             self._notebook.SetPageText(14, i18n.t("locked_chats"))
+        self._ai_page.refresh_labels()
+        self._notebook.SetPageText(self._notebook.FindPage(self._ai_page), i18n.t("tab_ai_accessibility"))
         self._chat_lock_intro.SetLabel(i18n.t("chat_lock_settings_intro"))
         self._chat_lock_unlock_btn.SetLabel(
             i18n.t("chat_lock_settings_unlock")

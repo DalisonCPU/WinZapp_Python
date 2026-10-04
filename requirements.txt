@@ -32,6 +32,7 @@ libloader==1.4.2
 numpy==2.4.6
 packaging==25.0
 pefile==2024.8.26
+pillow==12.3.0
 platform_utils==1.6.0
 platformdirs==4.5.0
 pluggy==1.6.0

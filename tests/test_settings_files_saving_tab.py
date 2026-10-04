@@ -108,10 +108,12 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         assert dialog._notebook.FindPage(dialog._reactions_page) == 13
 
     def test_the_locked_chats_tab_is_appended_after_reactions(self, make_dialog):
-        """Rare vault policy stays last; SetPageText(14) relies on it."""
+        """The vault keeps index 14: the AI page is appended after it, so
+        SetPageText(14) still addresses it."""
         dialog = make_dialog()
         assert dialog._notebook.FindPage(dialog._chat_lock_page) == 14
-        assert dialog._notebook.GetPageCount() == 15
+        assert dialog._notebook.FindPage(dialog._ai_page) == 15
+        assert dialog._notebook.GetPageCount() == 16
 
     def test_a_hidden_vault_leaves_the_locked_chats_tab_out(self, make_dialog):
         """A vault the user chose to hide must not be advertised by Settings."""
@@ -120,7 +122,9 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         vault.set_hide_navigation(True)
         dialog = make_dialog(vault=vault)
         assert dialog._notebook.FindPage(dialog._chat_lock_page) == -1
-        assert dialog._notebook.GetPageCount() == 14
+        assert dialog._notebook.FindPage(dialog._ai_page) == 14
+        assert dialog._notebook.GetPageText(14) == dialog.main_window.i18n.t("tab_ai_accessibility")
+        assert dialog._notebook.GetPageCount() == 15
 
     def test_the_tabs_that_are_opened_by_number_did_not_move(self, make_dialog):
         """main.py's custom-API first-run flow does SetSelection(4), and this
@@ -141,6 +145,7 @@ class TestTheTabIsWhereTheIndicesSayItIs:
         assert dialog._notebook.GetPageText(12) == i18n.t("tab_profile_backup")
         assert dialog._notebook.GetPageText(13) == i18n.t("tab_reactions")
         assert dialog._notebook.GetPageText(14) == i18n.t("locked_chats")
+        assert dialog._notebook.GetPageText(15) == i18n.t("tab_ai_accessibility")
 
 
 class TestLoadingTheCurrentSetting:
