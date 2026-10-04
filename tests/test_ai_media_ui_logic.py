@@ -732,6 +732,7 @@ class PageStub:
         self._order = list(config["order"])
         self._disabled = set()
         self._models = dict(config["models"])
+        self._auto = set(config["auto_models"])
         self._drafts = {}
         self._deleted = set()
         self._reset = False
@@ -761,13 +762,15 @@ def test_apply_saves_order_switches_models_and_kinds_but_never_a_key_in_the_sett
     page._order = ["groq", "gemini", "openai", "claude", "openrouter"]
     page._disabled = {"claude"}
     page._models["openai"] = "gpt-4o"
+    page._auto.discard("openai")
     page._drafts = {"gemini": "gemini-secret"}
     page.toggles["audio"].value = False
     page.profile.selection = 2
     assert page.apply()
     saved = page.app.get("ai_media")
     assert saved["order"][:3] == ["groq", "gemini", "openai"] and saved["disabled"] == ["claude"]
-    assert saved["models"]["openai"] == "gpt-4o" and saved["kinds"]["audio"] is False
+    assert saved["models"]["openai"] == "gpt-4o" and saved["models"]["groq"] == ""  # pinned vs automatic
+    assert saved["kinds"]["audio"] is False
     assert saved["profile"] == "detailed" and saved["enabled"] is True and saved["read_answers"] is False
     assert "secret" not in str(saved) and page.store.get("gemini") == "gemini-secret"
     assert page._drafts == {} and "gemini" in page._saved
@@ -932,6 +935,8 @@ class ProviderWindowStub:
     _cancel_model_list = AIProviderDialog._cancel_model_list
     _refresh_model_choices = AIProviderDialog._refresh_model_choices
     _hide_key = AIProviderDialog._hide_key
+    _apply_automatic = AIProviderDialog._apply_automatic
+    _automatic_changed = AIProviderDialog._automatic_changed
 
     def __init__(self, directory, provider="openai"):
         self.store = CredentialStore(directory)
@@ -946,6 +951,7 @@ class ProviderWindowStub:
         self.key_state = Control()
         self.revealed = Control()
         self.model = Control("m")
+        self.automatic = Control(False)
         self.model_choice = Control(selection=-1)
         self.get_models = Control()
         self.enabled = Control(True)
@@ -1250,3 +1256,31 @@ def test_consent_text_names_providers_and_warns_about_metadata_only_where_it_is_
     text = consent_text(i18n, ["gemini", "groq"], "image", True)
     assert "Google Gemini, Groq" in text and "ai_gemini_notice" in text and "ai_locked_consent" in text
     assert "ai_gemini_notice" not in consent_text(i18n, ["groq"], "image", False)
+
+
+def test_automatic_model_follows_the_recommendation_and_pinning_unlocks_the_fields(tmp_path):
+    window = ProviderWindowStub(tmp_path)
+    window.automatic.value = True
+    window.model.value = "gpt-4o"
+    assert window.values()["model"] == ""
+    window._automatic_changed(SimpleNamespace(Skip=lambda: None))
+    assert window.model.value == ai_config.PROVIDERS["openai"].model
+    assert window.model.enabled is False and window.get_models.enabled is False
+    window.automatic.value = False
+    window._automatic_changed(SimpleNamespace(Skip=lambda: None))
+    assert window.model.enabled is True and window.get_models.enabled is True
+    window.model.value = "gpt-4o"
+    assert window.values()["model"] == "gpt-4o"
+
+
+def test_a_model_pinned_in_the_provider_window_is_kept_and_automatic_clears_it(tmp_path):
+    page = PageStub(tmp_path)
+    assert page._auto == set(ai_config.PROVIDERS)  # nothing saved: all follow the recommendation
+    page.apply()
+    assert set(page.app.get("ai_media")["models"].values()) == {""}
+    assert ai_config.preferences(page.app)["models"]["openai"] == ai_config.PROVIDERS["openai"].model
+    page._auto.discard("openai")
+    page._models["openai"] = "gpt-4o"
+    page.apply()
+    prefs = ai_config.preferences(page.app)
+    assert prefs["models"]["openai"] == "gpt-4o" and "openai" not in prefs["auto_models"]
