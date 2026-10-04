@@ -80,6 +80,8 @@ MELHORIAS
 
 CORREÇÕES
 
+- Ao enviar mensagem a alguém que não está nos seus contactos e não tem nome no perfil do WhatsApp, a conversa passava a aparecer com o seu próprio nome em vez do número da pessoa. Agora continua a mostrar o número até o nome verdadeiro ser encontrado.
+
 - O desinstalador passa a seguir o idioma de apresentação do Windows, como o instalador, em vez de aparecer sempre em português.
 
 - Reencaminhar mensagens já não falha nas versões recentes do WhatsApp Web, em que todo o reencaminhamento era recusado com o erro “forwardMessages function is not available”.
@@ -161,6 +163,8 @@ CORREÇÕES
 - Os avisos de atualização passam a aparecer também quando o WinZapp arranca com o Windows: nem a atualização do próprio WinZapp nem a do WPPConnect Server eram oferecidas nesse caso. O aviso do WPPConnect Server passa também a oferecer uma versão mais recente do que a testada com o WinZapp, como atualização recomendada que pode recusar, e não apenas quando o próprio WinZapp aumentava a versão exigida.
 
 - Botão "Descrever" nas mensagens com multimédia. Numa foto, autocolante ou vídeo (e também em áudios e PDFs, quando as funcionalidades de IA estão ativas), aparece um botão logo a seguir a "Guardar como", acessível com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de multimédia, também a mostrar Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
+
+- Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
 
 V1.1.1.0
 

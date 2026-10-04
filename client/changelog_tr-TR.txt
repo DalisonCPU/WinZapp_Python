@@ -80,6 +80,8 @@ YENİLİKLER
 
 DÜZELTMELER
 
+- Kişilerinde kayıtlı olmayan ve WhatsApp profilinde adı bulunmayan birine mesaj yazdığında, sohbet kişinin telefon numarası yerine senin kendi adını göstermeye başlıyordu. Artık gerçek adı bulunana kadar telefon numarasını göstermeye devam ediyor.
+
 - Kaldırma programı artık her zaman Portekizce görünmek yerine, kurulum programı gibi Windows görüntüleme dilini izliyor.
 
 - Mesajları iletme, her iletimin “forwardMessages function is not available” hatasıyla reddedildiği son WhatsApp Web sürümlerinde artık başarısız olmuyor.
@@ -161,6 +163,8 @@ DÜZELTMELER
 - Güncelleme bildirimleri artık WinZapp Windows ile başladığında da görünüyor: bu durumda ne WinZapp'in kendi güncellemesi ne de WPPConnect Server güncellemesi sunuluyordu. WPPConnect Server bildirimi ayrıca artık WinZapp ile test edilenden daha yeni bir sürümü, reddedebileceğiniz önerilen bir güncelleme olarak sunuyor; önceden yalnızca WinZapp gereken sürümü yükselttiğinde sunuluyordu.
 
 - Medya mesajlarında "Betimle" düğmesi. Bir fotoğrafta, çıkartmada veya videoda (yapay zekâ özellikleri açıkken ses ve PDF'lerde de) "Farklı kaydet"in hemen ardından Tab ile ulaşılabilen ve Ctrl+Shift+I kısayoluyla aynı işi yapan bir düğme görünür; bağlam menüsünde öğe artık diğer medya eylemleriyle birlikte durur ve Ctrl+Shift+I kısayolunu gösterir. Düğme ve öğe yalnızca betimlenebilen mesajlarda görünür.
+
+- Her yapay zekâ sağlayıcısının penceresinde (Yazıya Dökme ve Betimleme) "Otomatik (önerilen)" model. Henüz model seçmediğiniz sağlayıcılarda varsayılan olarak işaretli olan kutu, WinZapp'ın her zaman önerdiği ve güncellemeleri izleyen modeli kullanmasını sağlar; sabit bir model seçmek veya yazmak için işareti kaldırın.
 
 V1.1.1.0
 
