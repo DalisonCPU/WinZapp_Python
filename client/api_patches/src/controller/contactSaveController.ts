@@ -21,11 +21,23 @@ const KNOWN_CODES = [
   'number_is_not_your_contact',
 ];
 
-function toWid(phone: unknown): string {
-  const raw = String(phone ?? '').trim();
-  if (raw.includes('@')) return raw.replace(/@c\.us$/, '@c.us');
-  const digits = raw.replace(/\D/g, '');
-  return digits.length >= 7 ? `${digits}@c.us` : '';
+// The only two id forms a contact has. Anything else (a group, a broadcast, a
+// newsletter, free text) never reaches the page.
+const WID = /^\d{7,20}@(c\.us|lid)$/;
+
+/**
+ * The contact id out of req.body.phone, or '' when it is not one.
+ *
+ * save-contact runs behind statusConnection, which replaces the field with an
+ * array holding the id WhatsApp resolved for the number (['<id>@c.us']: this
+ * is what settles the Brazilian 9th digit). remove-contact does not, and gets
+ * what the client sent: bare digits, or a whole '<digits>@lid'.
+ */
+export function toWid(phone: unknown): string {
+  const first = Array.isArray(phone) ? phone[0] : phone;
+  const raw = String(first ?? '').trim();
+  const wid = raw.includes('@') ? raw : `${raw.replace(/\D/g, '')}@c.us`;
+  return WID.test(wid) ? wid : '';
 }
 
 function fail(res: Response, error: any) {
@@ -82,7 +94,16 @@ export async function saveContact(req: Request, res: Response) {
       }
     }, command);
     if (result?.code !== undefined) return fail(res, result);
-    return res.status(200).json({ status: 'success', response: result });
+    // The id the contact was saved under, so the client files it under the
+    // same one instead of under whatever digits the user typed.
+    return res.status(200).json({
+      status: 'success',
+      response: {
+        id,
+        isMyContact: !!result?.isMyContact,
+        syncToAddressbook: !!result?.syncToAddressbook,
+      },
+    });
   } catch (error: any) {
     return fail(res, error);
   }

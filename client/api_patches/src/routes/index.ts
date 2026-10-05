@@ -1004,10 +1004,15 @@ routes.post(
   statusConnection,
   ContactSaveController.saveContact
 );
+// Deliberately WITHOUT statusConnection, like subscribe-presence above: its
+// contact-validation pass answers 400 "O número X não existe." whenever
+// checkNumberStatus() fails or errors, and a contact whose number has left
+// WhatsApp is exactly one the user needs to be able to remove. The controller
+// answers a missing or closed page itself (503 contact_not_available), and
+// WPP.contact.remove says so when the number is not a contact.
 routes.post(
   '/api/:session/remove-contact',
   verifyToken,
-  statusConnection,
   ContactSaveController.removeContact
 );
 

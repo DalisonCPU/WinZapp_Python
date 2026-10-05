@@ -1651,10 +1651,11 @@ class ConversationDataDialog(wx.Dialog):
         return contact if phone_contacts.is_phone_synced(contact) else None
 
     def _populate_contact_action_buttons(self):
-        """(Re)build the Add/Edit/Delete local-contact button(s) for the
-        current state — called on dialog build and again after any action
-        that adds, edits, or removes the local contact for this number, so
-        the buttons switch immediately without closing/reopening the dialog.
+        """(Re)build the Add/Edit/Delete contact button(s) for the current
+        state — called on dialog build and again after any action that adds,
+        edits, or removes the contact for this number (a local one, or one in
+        the phone's address book: _contact_entry()), so the buttons switch
+        immediately without closing/reopening the dialog.
         """
         sizer = self._contact_action_sizer
         sizer.Clear(delete_windows=True)
@@ -1730,9 +1731,15 @@ class ConversationDataDialog(wx.Dialog):
         """Remove the contact entry for this number (confirmation first — this
         can't be undone from here). A contact saved to the phone is removed
         from WhatsApp and the phone too, and kept here if that fails."""
+        if getattr(self, "_deleting_contact", False):
+            return      # the request of an earlier press is still running
         i18n = self._i18n
-        jid = self._resolve_contact_phone_jid()
-        synced = phone_contacts.is_phone_synced(self._contact_entry())
+        entry = self._contact_entry()
+        # The key the record is really stored under: the tolerant lookup finds
+        # it under the other 8/9-digit form of this chat's JID too, and
+        # deleting "this chat's JID" would then leave the record behind.
+        jid = phone_contacts.key_of(self._mw, entry, self._resolve_contact_phone_jid())
+        synced = phone_contacts.is_phone_synced(entry)
         message_key = "delete_contact_phone_confirm_msg" if synced else "delete_contact_local_confirm_msg"
         if wx.MessageBox(
             i18n.t(message_key).format(name=self._name),
@@ -1746,6 +1753,7 @@ class ConversationDataDialog(wx.Dialog):
             return
 
         def _removed(ok):
+            self._deleting_contact = False
             if not ok:
                 text = i18n.t("delete_contact_phone_failed")
                 self._mw.output(text)
@@ -1754,6 +1762,8 @@ class ConversationDataDialog(wx.Dialog):
                 return
             self._finish_delete_contact(jid)
 
+        self._deleting_contact = True
+        self._mw.output(i18n.t("delete_contact_phone_removing"))
         self._mw.remove_phone_synced_contact(jid, _removed)
 
     def _finish_delete_contact(self, jid: str):
