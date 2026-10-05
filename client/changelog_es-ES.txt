@@ -1,3 +1,19 @@
+V2.1.0.0
+
+Esta versión trae la transcripción y descripción con IA de mensajes de voz, imágenes, vídeos, stickers y PDF.
+
+NOVEDADES
+
+- Transcribe y describe contenido con IA. La nueva pestaña "Transcripciones y Descripciones" de los Ajustes activa las funciones de IA (empiezan desactivadas) y recibe la clave de API de uno o más proveedores — Gemini, OpenAI, Claude, Groq y OpenRouter —, que se prueban en el orden que definas; así, cuando uno falla o se queda sin cuota, responde el siguiente. En el menú contextual de un mensaje, o con Ctrl+Shift+I, "Transcribir" convierte un mensaje de voz en texto, "Describir" describe una foto o un vídeo, "Describir sticker" describe un sticker y "Convertir en texto accesible" convierte un PDF en texto simple y legible. El resultado se abre en una ventana con el texto y, en fotos y vídeos, puedes hacer preguntas de seguimiento en ella. WinZapp pregunta antes de enviar contenido a un proveedor y vuelve a preguntar cada vez en los chats bloqueados; tus claves se cifran en tu ordenador y solo se envían al proveedor al que pertenecen. Suena un sonido de espera mientras el proveedor trabaja, y las respuestas pueden leerse en voz alta automáticamente. El texto sigue el idioma de la aplicación.
+
+CORRECCIONES
+
+- Contenido con IA: restablecer todas las claves también borra los consentimientos de envío recordados, incluso al introducir una nueva clave antes de aplicar. Las transcripciones y los textos de PDF largos ahora indican un error de límite de texto en vez de perder el final sin avisar; no se prueba otro proveedor automáticamente por este límite.
+
+- Botón "Describir" en los mensajes con contenido multimedia. En una foto, un sticker o un vídeo (y también en audios y PDF, cuando las funciones de IA están activadas), aparece un botón justo después de "Guardar como", accesible con Tab, que hace lo mismo que el atajo Ctrl+Shift+I; en el menú contextual, el elemento queda junto a las demás acciones multimedia y también muestra Ctrl+Shift+I. El botón y el elemento solo aparecen en los mensajes que se pueden describir.
+
+- Modelo "Automático (recomendado)" en la ventana de cada proveedor de IA (Transcripciones y Descripciones). Marcada por defecto en los proveedores donde aún no habías elegido un modelo, la casilla hace que WinZapp use siempre el modelo que recomienda, que sigue las actualizaciones; desmárcala para elegir o escribir un modelo fijo.
+
 V2.0.0.0
 
 La gran novedad de esta versión son las llamadas: ahora se pueden hacer, contestar y rechazar llamadas de voz y videollamadas desde el propio WinZapp, sin coger el móvil, con una ventana de llamada accesible, atajos de teclado, configuración de audio propia y el historial en la nueva pestaña Llamadas. También llegan los chats bloqueados, la búsqueda en las conversaciones archivadas, los idiomas turco y rumano y varias mejoras de uso, además de correcciones en situaciones en las que WinZapp pedía vincular de nuevo sin necesidad. Por dentro, el código del programa ha pasado por una gran reorganización: no cambia nada en el uso, pero hace que WinZapp sea más fácil de mantener y de corregir a partir de ahora.
@@ -54,8 +70,6 @@ NOVEDADES
 
 - Elegir qué dicen las notificaciones en segundo plano. En la pestaña General de Configuración, "Contenido de las notificaciones en segundo plano" ofrece tres niveles: sonido, nombre de la conversación o grupo y texto del mensaje, como antes; sonido y nombre de la conversación o grupo, sin el texto; o solo sonido, sin notificación en pantalla y sin que se lea nada. Las notificaciones de los chats bloqueados siguen sin mostrar nombre ni contenido.
 
-- Transcribe y describe contenido con IA. La nueva pestaña "Transcripciones y Descripciones" de los Ajustes activa las funciones de IA (empiezan desactivadas) y recibe la clave de API de uno o más proveedores — Gemini, OpenAI, Claude, Groq y OpenRouter —, que se prueban en el orden que definas; así, cuando uno falla o se queda sin cuota, responde el siguiente. En el menú contextual de un mensaje, o con Ctrl+Shift+I, "Transcribir" convierte un mensaje de voz en texto, "Describir" describe una foto o un vídeo, "Describir sticker" describe un sticker y "Convertir en texto accesible" convierte un PDF en texto simple y legible. El resultado se abre en una ventana con el texto y, en fotos y vídeos, puedes hacer preguntas de seguimiento en ella. WinZapp pregunta antes de enviar contenido a un proveedor y vuelve a preguntar cada vez en los chats bloqueados; tus claves se cifran en tu ordenador y solo se envían al proveedor al que pertenecen. Suena un sonido de espera mientras el proveedor trabaja, y las respuestas pueden leerse en voz alta automáticamente. El texto sigue el idioma de la aplicación.
-
 - Volver a los resultados de la búsqueda al cerrar una conversación. Marcando "Mantener la búsqueda de conversaciones al abrir una conversación" en la pestaña Interfaz de usuario de Configuración, la búsqueda de conversaciones sigue activa cuando abres una conversación encontrada con ella, y Esc devuelve el foco a esa conversación en los resultados, en lugar de volver a la lista completa. La opción viene desmarcada.
 
 - Reenviar los mensajes de voz como mensajes de voz. WhatsApp convierte en audio normal todo mensaje de voz reenviado, lo que lo saca de la reproducción en secuencia de los mensajes de voz en la conversación de destino. Marcando "Reenviar los mensajes de voz como mensajes de voz, en lugar de audio" en la pestaña Interfaz de usuario de Configuración, la copia llega como mensaje de voz y sigue marcada como reenviada. La opción viene desmarcada.
@@ -93,8 +107,6 @@ MEJORAS
 - Reenviar ahora confirma cuando ha salido bien. Antes solo se avisaba del fallo; ahora, al terminar, aparece un cuadro que dice "Mensaje reenviado." o cuántos mensajes se han reenviado.
 
 CORRECCIONES
-
-- Contenido con IA: restablecer todas las claves también borra los consentimientos de envío recordados, incluso al introducir una nueva clave antes de aplicar. Las transcripciones y los textos de PDF largos ahora indican un error de límite de texto en vez de perder el final sin avisar; no se prueba otro proveedor automáticamente por este límite.
 
 - Al escribir a alguien que no está en tus contactos y no tiene nombre en su perfil de WhatsApp, la conversación pasaba a mostrar tu propio nombre en lugar del teléfono de la persona. Ahora sigue mostrando el teléfono hasta que se encuentre su nombre real.
 
@@ -177,10 +189,6 @@ CORRECCIONES
 - Al responder a un mensaje mencionando a alguien en la respuesta, esta llegaba a los destinatarios como un mensaje nuevo, sin la cita, aunque WinZapp la mostraba como respuesta. Ahora la cita va junto con la mención.
 
 - Los avisos de actualización ahora también aparecen cuando WinZapp se inicia con Windows: en ese caso no se ofrecía ni la actualización del propio WinZapp ni la de WPPConnect Server. El aviso de WPPConnect Server también ofrece ahora una versión más reciente que la probada con WinZapp, como actualización recomendada que puedes rechazar, y no solo cuando el propio WinZapp subía la versión exigida.
-
-- Botón "Describir" en los mensajes con contenido multimedia. En una foto, un sticker o un vídeo (y también en audios y PDF, cuando las funciones de IA están activadas), aparece un botón justo después de "Guardar como", accesible con Tab, que hace lo mismo que el atajo Ctrl+Shift+I; en el menú contextual, el elemento queda junto a las demás acciones multimedia y también muestra Ctrl+Shift+I. El botón y el elemento solo aparecen en los mensajes que se pueden describir.
-
-- Modelo "Automático (recomendado)" en la ventana de cada proveedor de IA (Transcripciones y Descripciones). Marcada por defecto en los proveedores donde aún no habías elegido un modelo, la casilla hace que WinZapp use siempre el modelo que recomienda, que sigue las actualizaciones; desmárcala para elegir o escribir un modelo fijo.
 
 - En una conversación cuyos mensajes más antiguos solo están en el teléfono, WinZapp seguía pidiéndoselos al teléfono al llegar al primer mensaje: no llegaba nada, el teléfono podía mostrar cada vez un aviso de sincronización y la lista quedaba ocupada durante minutos. Ahora WinZapp detecta este caso, no pide nada y anuncia "Usa WhatsApp en tu teléfono para ver los mensajes más antiguos."
 
