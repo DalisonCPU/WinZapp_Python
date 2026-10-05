@@ -1,5 +1,7 @@
 """Native custom-list manager; tests invoke methods on plain recording stubs."""
 
+import re
+
 import wx
 from core.chat_lists import list_contains
 from ui.conversation_panel.chat_lists import list_result_text
@@ -7,8 +9,9 @@ from ui.conversation_panel.chat_lists import list_result_text
 
 def _manage_title(i18n):
     """The window title: the same words as the main-screen button, whose
-    label carries a mnemonic marker a title would show as a literal '&'."""
-    return i18n.t("wa_lists_manage").replace("&", "")
+    label carries a mnemonic marker a title would show as a literal '&'.
+    "&&", a literal ampersand in a label, stays one."""
+    return re.sub(r"&(.)", r"\1", i18n.t("wa_lists_manage"))
 
 
 class WhatsAppListsDialog(wx.Dialog):

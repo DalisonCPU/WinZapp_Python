@@ -8,13 +8,13 @@ WHAT'S NEW
 
 - WhatsApp custom lists: refresh and filter by your lists, create or rename a list, and add or remove selected chats. List editing depends on WhatsApp account support. Locked and locally unavailable chats are excluded from selection; other memberships remain unchanged. Unverified changes are reported without automatic retries.
 
-- Contacts synced with the phone: in "Add contact" (contact data and new conversation) there are now two tabs, local contact (only in WinZapp) and contact synced with the phone, which saves the name in WhatsApp and in the phone's address book. The synced tab opens by default, and deleting a synced contact also removes it from WhatsApp and the phone
+- Contacts synced with the phone: when you add a contact (in "Chat info", in "New chat" or from a contact message) there are now two tabs, "WinZapp local contact" (only in WinZapp) and "Contact synced with the phone", which saves the name in WhatsApp and in the phone's address book. The synced tab opens by default, a number that is already in the phone's address book shows only that tab, and deleting a synced contact also removes it from WhatsApp and the phone
 
-- New shortcut Alt+Shift+P in the messages list: jump to the previous message that replies to you, like Alt+Shift+M does for mentions. Repeated presses go back through them and wrap to the newest. It is also listed in the F1 shortcuts
+- New shortcut Alt+Shift+P in the messages list: jump to the previous message that replies to you, like Alt+Shift+M does for mentions. Repeated presses go back through them and wrap to the newest. It is also listed in "Keyboard shortcuts" (F1)
 
 FIXES
 
-- Fixes for lists and mentions: the buttons for WhatsApp lists, on the chats screen and in the lists window, now have keyboard shortcuts. A person mentioned by name next to @all keeps their link in the mentions list, and a notification of a mention of you uses the word chosen in "How should I be referred to?" instead of always saying "Me"
+- Mentions: a person mentioned by name next to @all keeps their link in the message's mentions, and a mention of you, in the notification and in the chat list preview, uses the word chosen in "How should I be referred to?" instead of a fixed word
 
 - AI media: resetting all keys also clears remembered sending consent, even when a new key is entered before applying. Long transcripts and PDF text now report a text-limit error instead of silently losing their endings; another provider is not tried automatically for this limit.
 

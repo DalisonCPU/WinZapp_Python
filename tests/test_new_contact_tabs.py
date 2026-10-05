@@ -12,6 +12,8 @@ import pytest
 import wx
 
 from core import phone_contacts
+from tests.locales import registered_locale_codes
+from tests.mnemonics import load_strings, mnemonic
 from ui.dialogs import new_contact
 from ui.dialogs.new_contact import (
     MODE_LOCAL, MODE_PHONE, NewContactDialog, resolve_initial_mode)
@@ -218,3 +220,26 @@ class TestANumberAlreadyInThePhoneBook:
     def test_the_jid_a_typed_number_names(self):
         assert NewContactDialog._jid_of("+55 (11) 99999-9999") == "5511999999999@s.whatsapp.net"
         assert NewContactDialog._jid_of("") == ""
+
+
+class TestMnemonics:
+    """Per locale: the letters of the buttons this feature added or renamed
+    repeat no other control of their own dialog."""
+
+    @pytest.fixture(params=registered_locale_codes())
+    def strings(self, request):
+        return load_strings(request.param)
+
+    def test_save_to_phone_shares_no_letter_with_the_new_contact_dialog(self, strings):
+        letter = mnemonic(strings["create_contact_phone"])
+        assert letter is not None
+        assert letter not in {mnemonic(strings[k]) for k in (
+            "contact_name", "contact_surname", "create_contact", "cancel")}
+
+    def test_new_contact_shares_no_letter_with_the_new_chat_dialog(self, strings):
+        """The button no longer says "local" (the dialog it opens defaults to
+        the synced tab), so its letter moved."""
+        letter = mnemonic(strings["new_contact"])
+        assert letter is not None
+        assert letter not in {mnemonic(strings[k]) for k in (
+            "close", "new_group", "search_name_or_number")}
