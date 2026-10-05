@@ -1798,10 +1798,7 @@ class MessageEventsMixin:
                 # locked conversation is already open after PIN entry.
                 if locked and not is_current_conv:
                     return
-                if is_current_conv:
-                    self.message_current_sound.play()
-                else:
-                    self.message_foreground_sound.play()
+                self.reaction_received_sound.play()
                 self.output(f"{title}: {body}")
                 return
 
@@ -1822,8 +1819,10 @@ class MessageEventsMixin:
                     self.i18n.t("notif_hidden_reaction"),
                 )
                 if content is None:
-                    self.notification_manager.send_sound_only(remote_jid)
+                    self.notification_manager.send_sound_only(
+                        remote_jid, sound_event="reaction_received")
                 else:
-                    self.notification_manager.send(*content, remote_jid)
+                    self.notification_manager.send(
+                        *content, remote_jid, sound_event="reaction_received")
         except Exception:
             logging.exception("[_maybe_notify_reaction] failed")

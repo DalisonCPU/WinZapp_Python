@@ -1030,6 +1030,7 @@
     "sound_event_message_foreground": "Message in another chat (app in foreground)",
     "sound_event_message_sent": "Message sent",
     "sound_event_message_background": "Message while the program is in the background",
+    "sound_event_reaction_received": "Reaction to your message",
     "sound_event_call_incoming": "Incoming call",
     "incoming_call_announcement": "{name} is calling you.",
     "incoming_video_call_announcement": "{name} is video calling you.",

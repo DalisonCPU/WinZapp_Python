@@ -1030,6 +1030,7 @@
     "sound_event_message_foreground": "Mensaje en otra conversación (app en primer plano)",
     "sound_event_message_sent": "Mensaje enviado",
     "sound_event_message_background": "Mensaje con el programa en segundo plano",
+    "sound_event_reaction_received": "Reacción a tu mensaje",
     "sound_event_call_incoming": "Llamada entrante",
     "incoming_call_announcement": "{name} te está llamando.",
     "incoming_video_call_announcement": "{name} te está llamando por vídeo.",
