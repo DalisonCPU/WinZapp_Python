@@ -1,3 +1,19 @@
+V2.1.0.0
+
+W tej wersji pojawiają się transkrypcje i opisy wiadomości głosowych, obrazów, filmów, naklejek i plików PDF tworzone przez AI.
+
+NOWOŚCI
+
+- Transkrybuj i opisuj pliki za pomocą AI. Nowa karta „Transkrypcje i opisy” w Ustawieniach włącza funkcje AI (domyślnie są wyłączone) i przyjmuje klucz API jednego lub kilku dostawców — Gemini, OpenAI, Claude, Groq i OpenRouter — którzy są wypróbowywani w ustawionej przez Ciebie kolejności; gdy jeden zawiedzie lub wyczerpie limit, odpowiada następny. W menu kontekstowym wiadomości lub skrótem Ctrl+Shift+I „Transkrybuj” zamienia wiadomość głosową na tekst, „Opisz” opisuje zdjęcie lub film, „Opisz naklejkę” opisuje naklejkę, a „Konwertuj na dostępny tekst” zamienia plik PDF w zwykły, czytelny tekst. Wynik otwiera się w oknie z tekstem, a dla zdjęć i filmów możesz w nim zadawać dodatkowe pytania. WinZapp pyta przed wysłaniem pliku do dostawcy, a w zablokowanych czatach pyta za każdym razem; klucze są szyfrowane na Twoim komputerze i wysyłane tylko do dostawcy, do którego należą. Podczas pracy dostawcy odtwarzany jest dźwięk oczekiwania, a odpowiedzi mogą być czytane na głos automatycznie. Tekst jest w języku aplikacji.
+
+POPRAWKI
+
+- Treści AI: resetowanie wszystkich kluczy usuwa też zapamiętane zgody na wysyłanie, nawet po wpisaniu nowego klucza przed zastosowaniem zmian. Długie transkrypcje i teksty PDF zgłaszają teraz błąd limitu tekstu zamiast tracić końcówkę bez ostrzeżenia; ten limit nie powoduje automatycznej próby u innego dostawcy.
+
+- Przycisk „Opisz” przy wiadomościach z multimediami. Przy zdjęciu, naklejce lub wideo (a także przy nagraniach audio i plikach PDF, gdy funkcje AI są włączone) zaraz po „Zapisz jako” pojawia się przycisk dostępny klawiszem Tab, który robi to samo co skrót Ctrl+Shift+I; w menu kontekstowym pozycja znajduje się teraz wśród pozostałych akcji multimediów i także pokazuje Ctrl+Shift+I. Przycisk i pozycja pojawiają się tylko przy wiadomościach, które można opisać.
+
+- Model „Automatycznie (zalecane)” w oknie każdego dostawcy AI (Transkrypcje i opisy). Domyślnie zaznaczone u dostawców, u których nie wybrano jeszcze modelu, pole sprawia, że WinZapp zawsze używa zalecanego modelu, który podąża za aktualizacjami; odznacz je, aby wybrać lub wpisać stały model.
+
 V2.0.0.0
 
 Najważniejszą nowością tej wersji są połączenia: połączenia głosowe i wideo można teraz nawiązywać, odbierać i odrzucać bezpośrednio w WinZapp, bez sięgania po telefon — z dostępnym oknem połączenia, skrótami klawiszowymi, własnymi ustawieniami dźwięku i historią w nowej karcie Połączenia. Doszły też zablokowane czaty, wyszukiwanie w zarchiwizowanych czatach, języki turecki i rumuński oraz kilka usprawnień w obsłudze, a także poprawki sytuacji, w których WinZapp niepotrzebnie prosił o ponowne parowanie. Pod spodem kod programu przeszedł dużą reorganizację: niczego nie zmienia w codziennym używaniu, ale sprawia, że WinZapp będzie łatwiej utrzymywać i naprawiać.
@@ -56,8 +72,6 @@ NOWOŚCI
 
 - Wybór tego, co mówią powiadomienia w tle. Na karcie Ogólne w Ustawieniach „Treść powiadomień w tle” oferuje trzy poziomy: dźwięk, nazwa czatu lub grupy i treść wiadomości, jak dotąd; dźwięk i nazwa czatu lub grupy, bez treści; albo tylko dźwięk, bez powiadomienia na ekranie i bez odczytywania czegokolwiek. Powiadomienia zablokowanych czatów nadal nie pokazują ani nazwy, ani treści.
 
-- Transkrybuj i opisuj pliki za pomocą AI. Nowa karta „Transkrypcje i opisy” w Ustawieniach włącza funkcje AI (domyślnie są wyłączone) i przyjmuje klucz API jednego lub kilku dostawców — Gemini, OpenAI, Claude, Groq i OpenRouter — którzy są wypróbowywani w ustawionej przez Ciebie kolejności; gdy jeden zawiedzie lub wyczerpie limit, odpowiada następny. W menu kontekstowym wiadomości lub skrótem Ctrl+Shift+I „Transkrybuj” zamienia wiadomość głosową na tekst, „Opisz” opisuje zdjęcie lub film, „Opisz naklejkę” opisuje naklejkę, a „Konwertuj na dostępny tekst” zamienia plik PDF w zwykły, czytelny tekst. Wynik otwiera się w oknie z tekstem, a dla zdjęć i filmów możesz w nim zadawać dodatkowe pytania. WinZapp pyta przed wysłaniem pliku do dostawcy, a w zablokowanych czatach pyta za każdym razem; klucze są szyfrowane na Twoim komputerze i wysyłane tylko do dostawcy, do którego należą. Podczas pracy dostawcy odtwarzany jest dźwięk oczekiwania, a odpowiedzi mogą być czytane na głos automatycznie. Tekst jest w języku aplikacji.
-
 - Powrót do wyników wyszukiwania po zamknięciu czatu. Po zaznaczeniu „Zachowaj wyszukiwanie czatów po otwarciu czatu” na karcie Interfejs użytkownika w Ustawieniach wyszukiwanie czatów pozostaje aktywne, gdy otwierasz znaleziony nim czat, a Esc przywraca fokus na ten czat wśród wyników zamiast na pełną listę. Opcja jest domyślnie wyłączona.
 
 - Przekazywanie wiadomości głosowych dalej jako wiadomości głosowych. WhatsApp zamienia każdą przekazaną dalej wiadomość głosową w zwykłe audio, przez co wypada ona z odtwarzania wiadomości głosowych po kolei w czacie docelowym. Po zaznaczeniu „Przekazuj dalej wiadomości głosowe jako wiadomości głosowe, a nie jako audio” na karcie Interfejs użytkownika w Ustawieniach kopia dociera jako wiadomość głosowa i nadal jest oznaczona jako przekazana dalej. Opcja jest domyślnie wyłączona.
@@ -96,7 +110,7 @@ ULEPSZENIA
 
 POPRAWKI
 
-- Treści AI: resetowanie wszystkich kluczy usuwa też zapamiętane zgody na wysyłanie, nawet po wpisaniu nowego klucza przed zastosowaniem zmian. Długie transkrypcje i teksty PDF zgłaszają teraz błąd limitu tekstu zamiast tracić końcówkę bez ostrzeżenia; ten limit nie powoduje automatycznej próby u innego dostawcy.
+- Połączenia: naprawiono błąd "cannot load module more than once per process", który mógł się pojawić przy rozpoczynaniu połączenia głosowego lub wideo. Silnik połączeń WhatsApp jest teraz uruchamiany tylko raz i współdzielony, zamiast być uruchamiany ponownie przy każdej akcji połączenia.
 
 - Po wysłaniu wiadomości do osoby, której nie ma w Twoich kontaktach i która nie ma nazwy w profilu WhatsApp, rozmowa zaczynała pokazywać Twoje własne imię zamiast numeru telefonu tej osoby. Teraz nadal pokazuje numer telefonu, dopóki nie uda się znaleźć jej prawdziwego imienia.
 
@@ -179,10 +193,6 @@ POPRAWKI
 - Odpowiedź na wiadomość ze wzmianką o kimś docierała do odbiorców jako nowa wiadomość, bez cytatu, chociaż WinZapp pokazywał ją jako odpowiedź. Teraz cytat jest wysyłany razem ze wzmianką.
 
 - Powiadomienia o aktualizacjach pojawiają się teraz także wtedy, gdy WinZapp uruchamia się razem z Windows: w takim przypadku nie była oferowana ani aktualizacja samego WinZapp, ani WPPConnect Server. Powiadomienie o WPPConnect Server oferuje też teraz nowszą wersję niż ta testowana z WinZapp, jako zalecaną aktualizację, którą można odrzucić, a nie tylko wtedy, gdy sam WinZapp podnosił wymaganą wersję.
-
-- Przycisk „Opisz” przy wiadomościach z multimediami. Przy zdjęciu, naklejce lub wideo (a także przy nagraniach audio i plikach PDF, gdy funkcje AI są włączone) zaraz po „Zapisz jako” pojawia się przycisk dostępny klawiszem Tab, który robi to samo co skrót Ctrl+Shift+I; w menu kontekstowym pozycja znajduje się teraz wśród pozostałych akcji multimediów i także pokazuje Ctrl+Shift+I. Przycisk i pozycja pojawiają się tylko przy wiadomościach, które można opisać.
-
-- Model „Automatycznie (zalecane)” w oknie każdego dostawcy AI (Transkrypcje i opisy). Domyślnie zaznaczone u dostawców, u których nie wybrano jeszcze modelu, pole sprawia, że WinZapp zawsze używa zalecanego modelu, który podąża za aktualizacjami; odznacz je, aby wybrać lub wpisać stały model.
 
 - W czacie, którego starsze wiadomości są tylko na telefonie, WinZapp po dojściu do pierwszej wiadomości wciąż prosił o nie telefon: nic nie przychodziło, telefon mógł za każdym razem pokazać powiadomienie o synchronizacji, a lista przez kilka minut była zajęta. Teraz WinZapp wykrywa ten przypadek, o nic nie prosi i ogłasza „Starsze wiadomości zobaczysz w aplikacji WhatsApp na telefonie.”
 
