@@ -8,7 +8,13 @@ YENİLİKLER
 
 - Özel WhatsApp listeleri: listeleri yenileme ve listeye göre filtreleme, liste oluşturma veya yeniden adlandırma, seçilen sohbetleri ekleme ve çıkarma. Liste düzenleme, WhatsApp hesabının desteğine bağlıdır. Kilitli veya yerelde bulunmayan sohbetler seçimde gösterilmez; diğer üyelikler korunur. Doğrulanamayan değişiklikler otomatik tekrarlanmadan bildirilir.
 
+- Telefonla eşitlenen kişiler: "Kişi ekle" bölümünde (kişi bilgileri ve yeni konuşma) artık iki sekme var: yerel kişi (yalnızca WinZapp'ta) ve telefonla eşitlenen kişi; ikincisi adı WhatsApp'a ve telefonun rehberine kaydeder. Eşitlenen sekme varsayılan olarak açılır ve eşitlenen bir kişiyi silmek onu WhatsApp'tan ve telefondan da kaldırır
+
+- Mesaj listesinde yeni Alt+Shift+P kısayolu: size yanıt veren önceki mesaja gider; Alt+Shift+M'nin bahsetmeler için yaptığı gibi. Tekrar basınca geriye doğru ilerler ve en yeniye döner. F1 kısayol listesinde de yer alır
+
 DÜZELTMELER
+
+- Liste ve bahsetme düzeltmeleri: WhatsApp listelerinin düğmelerinin, sohbetler ekranında ve listeler penceresinde, artık klavye kısayolları var. @tümü ile birlikte adıyla anılan kişi bahsetmeler listesinde bağlantısını korur ve size yapılan bir bahsetme bildirimi her zaman "Ben" demek yerine "Kendimden nasıl bahsedilsin?" ayarında seçilen sözcüğü kullanır
 
 - Yapay zekâ işlemleri: tüm anahtarlar sıfırlandığında, kaydetmeden önce yeni bir anahtar girilse de hatırlanmış gönderim onayları temizlenir. Uzun ses dökümleri ve PDF metinleri artık sonları sessizce kesilmek yerine metin sınırı hatası verir; bu sınır için başka bir sağlayıcı otomatik olarak denenmez.
 

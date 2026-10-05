@@ -5,10 +5,16 @@ from core.chat_lists import list_contains
 from ui.conversation_panel.chat_lists import list_result_text
 
 
+def _manage_title(i18n):
+    """The window title: the same words as the main-screen button, whose
+    label carries a mnemonic marker a title would show as a literal '&'."""
+    return i18n.t("wa_lists_manage").replace("&", "")
+
+
 class WhatsAppListsDialog(wx.Dialog):
     def __init__(self, main_window):
         self._mw, self._closed, self._busy, self._ids = main_window, False, False, []
-        super().__init__(main_window, title=main_window.i18n.t("wa_lists_manage"),
+        super().__init__(main_window, title=_manage_title(main_window.i18n),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         main_window._wa_lists_dialog = self
         self._build_list_manager()
@@ -111,7 +117,7 @@ class WhatsAppListsDialog(wx.Dialog):
 
     def _ask_list_name(self, current=""):
         i18n = self._mw.i18n
-        dialog = wx.TextEntryDialog(self, i18n.t("wa_lists_name"), i18n.t("wa_lists_manage"), value=current)
+        dialog = wx.TextEntryDialog(self, i18n.t("wa_lists_name"), _manage_title(i18n), value=current)
         try:
             if dialog.ShowModal() != wx.ID_OK:
                 return None
@@ -138,7 +144,7 @@ class WhatsAppListsDialog(wx.Dialog):
     def _delete_list(self, event):
         item, i18n = self._selected_list(), self._mw.i18n
         if item is not None and wx.MessageBox(
-            i18n.t("wa_lists_delete_confirm").format(name=item.name), i18n.t("wa_lists_manage"),
+            i18n.t("wa_lists_delete_confirm").format(name=item.name), _manage_title(i18n),
             wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, parent=self,
         ) == wx.YES:
             self._submit_list_command({"action": "remove", "id": item.id})
@@ -157,7 +163,7 @@ class WhatsAppListsDialog(wx.Dialog):
             return
         prompt = i18n.t("wa_lists_pick_remove") if want_member else i18n.t("wa_lists_pick_add")
         dialog = wx.MultiChoiceDialog(self, prompt.format(name=item.name),
-                                      i18n.t("wa_lists_manage"), [name for _jid, name in rows])
+                                      _manage_title(i18n), [name for _jid, name in rows])
         try:
             if dialog.ShowModal() != wx.ID_OK:
                 return

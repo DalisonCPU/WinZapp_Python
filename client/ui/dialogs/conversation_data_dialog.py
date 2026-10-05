@@ -21,6 +21,7 @@ import threading
 from datetime import datetime
 import wx
 import wx.adv
+from core import phone_contacts
 from ui.accessible import AccessibleSaveAs
 from core.utils import (
     format_number, GROUP_MEDIA_TYPES, GROUP_MEDIA_FILTERS,
@@ -1638,6 +1639,17 @@ class ConversationDataDialog(wx.Dialog):
             return contact
         return None
 
+    def _contact_entry(self) -> dict | None:
+        """The contact this dialog edits or deletes: a local one, or a number
+        already saved in the phone's address book (added through the synced tab
+        or on the phone itself). None when there is neither."""
+        local = self._local_contact_entry()
+        if local is not None:
+            return local
+        contact = phone_contacts.existing_contact(
+            self._mw, self._resolve_contact_phone_jid())
+        return contact if phone_contacts.is_phone_synced(contact) else None
+
     def _populate_contact_action_buttons(self):
         """(Re)build the Add/Edit/Delete local-contact button(s) for the
         current state — called on dialog build and again after any action
@@ -1649,7 +1661,7 @@ class ConversationDataDialog(wx.Dialog):
         panel = self._contact_panel
         i18n  = self._i18n
 
-        if self._local_contact_entry() is not None:
+        if self._contact_entry() is not None:
             edit_btn = wx.Button(panel, label=i18n.t("edit_contact_local"))
             edit_btn.Bind(wx.EVT_BUTTON, self._on_edit_contact)
             sizer.Add(edit_btn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
@@ -1689,18 +1701,23 @@ class ConversationDataDialog(wx.Dialog):
         """Open NewContactDialog pre-filled with the existing local contact's
         own stored name/surname/phone (not this chat's resolved display
         name, which can differ once the contact has been edited)."""
-        from ui.dialogs.new_contact import NewContactDialog
-        contact = self._local_contact_entry() or {}
+        from ui.dialogs.new_contact import MODE_LOCAL, MODE_PHONE, NewContactDialog
+        contact = self._contact_entry() or {}
         stored_name = (contact.get("name") or self._name or "").strip()
         parts  = stored_name.split(None, 1) if stored_name else []
         p_name = parts[0] if parts else ""
         p_sur  = parts[1] if len(parts) > 1 else ""
         jid = self._resolve_contact_phone_jid()
+        # A contact saved to the phone is edited as one (a "local" copy of it
+        # would leave the WhatsApp one behind); a local one may become synced.
+        synced = phone_contacts.is_phone_synced(contact)
         dlg = NewContactDialog(
             self._mw, self,
             prefill_phone=format_number(jid),
             prefill_name=p_name,
             prefill_surname=p_sur,
+            initial_mode=MODE_PHONE if synced else MODE_LOCAL,
+            modes=(MODE_PHONE,) if synced else (MODE_LOCAL, MODE_PHONE),
         )
         dlg.SetTitle(self._i18n.t("edit_contact_local").replace("&", ""))
         result = dlg.ShowModal()
@@ -1710,19 +1727,40 @@ class ConversationDataDialog(wx.Dialog):
             threading.Thread(target=self._fetch_data, daemon=True).start()
 
     def _on_delete_contact(self, event):
-        """Remove the local contact entry for this number (confirmation
-        first — this can't be undone from here)."""
+        """Remove the contact entry for this number (confirmation first — this
+        can't be undone from here). A contact saved to the phone is removed
+        from WhatsApp and the phone too, and kept here if that fails."""
         i18n = self._i18n
+        jid = self._resolve_contact_phone_jid()
+        synced = phone_contacts.is_phone_synced(self._contact_entry())
+        message_key = "delete_contact_phone_confirm_msg" if synced else "delete_contact_local_confirm_msg"
         if wx.MessageBox(
-            i18n.t("delete_contact_local_confirm_msg").format(name=self._name),
+            i18n.t(message_key).format(name=self._name),
             i18n.t("delete_contact_local").replace("&", ""),
             wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
             self,
         ) != wx.YES:
             return
-        self._mw.remove_local_contact(self._resolve_contact_phone_jid())
-        self._populate_contact_action_buttons()
-        threading.Thread(target=self._fetch_data, daemon=True).start()
+        if not synced:
+            self._finish_delete_contact(jid)
+            return
+
+        def _removed(ok):
+            if not ok:
+                text = i18n.t("delete_contact_phone_failed")
+                self._mw.output(text)
+                if self:
+                    wx.MessageBox(text, i18n.t("app_name"), wx.OK | wx.ICON_WARNING, self)
+                return
+            self._finish_delete_contact(jid)
+
+        self._mw.remove_phone_synced_contact(jid, _removed)
+
+    def _finish_delete_contact(self, jid: str):
+        self._mw.remove_local_contact(jid)
+        if self:
+            self._populate_contact_action_buttons()
+            threading.Thread(target=self._fetch_data, daemon=True).start()
 
     def _on_add_to_group(self, event):
         """Open SelectGroupDialog to pick a group to add this contact to."""

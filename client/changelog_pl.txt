@@ -8,7 +8,13 @@ NOWOŚCI
 
 - Własne listy WhatsApp: odświeżanie i filtrowanie według list, tworzenie lub zmiana nazwy listy oraz dodawanie i usuwanie wybranych czatów. Edycja zależy od obsługi konta WhatsApp. Czaty zamknięte w sejfie lub niedostępne lokalnie nie pojawiają się w wyborze; pozostali członkowie są zachowywani. Niepotwierdzone zmiany są zgłaszane bez automatycznego ponawiania.
 
+- Kontakty synchronizowane z telefonem: w "Dodaj kontakt" (dane kontaktu i nowa rozmowa) są teraz dwie karty, kontakt lokalny (tylko w WinZappie) i kontakt zsynchronizowany z telefonem, który zapisuje nazwę w WhatsAppie i w książce adresowej telefonu. Karta synchronizowana otwiera się domyślnie, a usunięcie kontaktu zsynchronizowanego usuwa go też z WhatsAppa i z telefonu
+
+- Nowy skrót Alt+Shift+P na liście wiadomości: przejście do poprzedniej wiadomości z odpowiedzią do Ciebie, tak jak Alt+Shift+M robi to dla wzmianek. Kolejne naciśnięcia cofają się po nich i wracają do najnowszej. Skrót jest też na liście skrótów pod F1
+
 POPRAWKI
+
+- Poprawki list i wzmianek: przyciski list WhatsApp, na ekranie czatów i w oknie list, mają teraz skróty klawiaturowe. Osoba wspomniana z imienia obok @wszyscy zachowuje swój link na liście wzmianek, a powiadomienie o wzmiance o Tobie używa słowa wybranego w "Jak mam się do Ciebie zwracać?" zamiast zawsze mówić "Ja"
 
 - Treści AI: resetowanie wszystkich kluczy usuwa też zapamiętane zgody na wysyłanie, nawet po wpisaniu nowego klucza przed zastosowaniem zmian. Długie transkrypcje i teksty PDF zgłaszają teraz błąd limitu tekstu zamiast tracić końcówkę bez ostrzeżenia; ten limit nie powoduje automatycznej próby u innego dostawcy.
 

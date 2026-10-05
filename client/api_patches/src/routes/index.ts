@@ -23,6 +23,7 @@ import * as CatalogController from '../controller/catalogController';
 import * as ChatListsController from '../controller/chatListsController';
 import * as CommunityController from '../controller/communityController';
 import ContactController from '../controller/contactController';
+import * as ContactSaveController from '../controller/contactSaveController';
 import * as DeviceController from '../controller/deviceController';
 import { encryptSession } from '../controller/encryptController';
 import * as GroupController from '../controller/groupController';
@@ -993,6 +994,21 @@ routes.post(
   verifyToken,
   statusConnection,
   DeviceController.unblockContact
+);
+
+// Contacts that WhatsApp syncs to the phone's address book (WPP.contact.save
+// / .remove, which neither wppconnect nor this server exposed).
+routes.post(
+  '/api/:session/save-contact',
+  verifyToken,
+  statusConnection,
+  ContactSaveController.saveContact
+);
+routes.post(
+  '/api/:session/remove-contact',
+  verifyToken,
+  statusConnection,
+  ContactSaveController.removeContact
 );
 
 // Device

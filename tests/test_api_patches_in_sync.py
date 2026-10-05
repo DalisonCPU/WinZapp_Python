@@ -89,6 +89,7 @@ MIRRORED_FILES = [
     "src/tests/util/logger.test.ts",
     "src/controller/callController.ts",
     "src/controller/chatListsController.ts",
+    "src/controller/contactSaveController.ts",
     "src/controller/deviceController.ts",
     "src/controller/messageController.ts",
     "src/controller/sessionController.ts",
