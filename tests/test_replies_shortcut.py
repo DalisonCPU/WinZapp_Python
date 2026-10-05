@@ -12,7 +12,12 @@ tests/test_mentions_and_reactions.py.
 """
 
 import pytest
+import wx
 
+from main import MainWindow
+from main_window.message_rules import quote_is_of_my_message
+from tests.mnemonics import built_table, load_strings
+from ui.conversation_panel.accelerators import AcceleratorsMixin
 from ui.conversations import ConversationsPanel
 from ui.dialogs.shortcuts_dialog import ShortcutsDialog
 from tests.test_mentions_and_reactions import ME, SOMEONE, _FakeList, _FakeMainWindow
@@ -90,6 +95,62 @@ class TestWhatCountsAsAReplyToMe:
         assert _Panel()._is_reply_to_me(msg) is True
 
 
+class TestTheSharedRule:
+    """message_rules.quote_is_of_my_message(), also used by the notification
+    side (MainWindow._is_reply_or_mention_of_me)."""
+
+    @staticmethod
+    def _never(stanza_id):
+        raise AssertionError("the participant settles it")
+
+    def test_a_participant_settles_it_without_looking_the_message_up(self):
+        is_me = lambda jid: jid == ME
+        assert quote_is_of_my_message({"participant": ME, "stanzaId": "x"}, is_me, self._never) is True
+        assert quote_is_of_my_message({"participant": SOMEONE, "stanzaId": "x"}, is_me, self._never) is False
+
+    def test_without_a_participant_the_lookup_answers(self):
+        for answer in (True, False, None):
+            assert quote_is_of_my_message({"stanzaId": "x"}, lambda j: False,
+                                          lambda stanza_id: answer) is answer
+
+    def test_no_participant_and_no_id_cannot_be_told(self):
+        assert quote_is_of_my_message({"quotedMessage": {}}, lambda j: False, self._never) is None
+
+
+class TestMeUnderEveryJidForm:
+    """The quote's participant arrives as a phone JID, an @lid or with a
+    Baileys device suffix; the real MainWindow._is_self_jid has to see me in
+    each, or a reply to me is missed."""
+
+    class _MW:
+        _is_self_jid = MainWindow._is_self_jid
+        _phone_digits_equivalent = staticmethod(MainWindow._phone_digits_equivalent)
+        my_jid = "5511900000000@s.whatsapp.net"
+        my_lid = "777000111@lid"
+        _lid_to_phone = {"888000222@lid": "5511900000000@s.whatsapp.net"}
+        i18n = None
+
+    @pytest.mark.parametrize("participant", [
+        "5511900000000@s.whatsapp.net",
+        "5511900000000:12@s.whatsapp.net",
+        "5511900000000@c.us",
+        "551100000000@s.whatsapp.net",      # the same number without the 9th digit
+        "777000111@lid",
+        "777000111:3@lid",
+        "888000222@lid",
+    ])
+    def test_a_reply_to_me_is_found(self, participant):
+        panel = _Panel()
+        panel.main_window = self._MW()
+        assert panel._is_reply_to_me(_reply("m1", participant=participant)) is True
+
+    @pytest.mark.parametrize("participant", ["5511911111111@s.whatsapp.net", "999@lid"])
+    def test_a_reply_to_someone_else_is_not(self, participant):
+        panel = _Panel()
+        panel.main_window = self._MW()
+        assert panel._is_reply_to_me(_reply("m1", participant=participant)) is False
+
+
 class TestTheJump:
     def test_nothing_to_find_says_so(self):
         panel = _Panel(messages=[_plain(), _reply("m1", participant=SOMEONE)])
@@ -124,12 +185,13 @@ class TestTheJump:
 
 
 class TestTheKeyIsWiredAndDocumented:
-    def test_the_accelerator_is_bound_to_the_handler(self):
-        import inspect
-        from ui.conversation_panel import accelerators
-        source = inspect.getsource(accelerators)
-        assert 'ord("P"),          self.ID_ALT_SHIFT_P' in source
-        assert "self._on_accel_replies,             id=self.ID_ALT_SHIFT_P" in source
+    def test_alt_shift_p_reaches_the_handler(self, monkeypatch):
+        """The open conversation's real table, built on a recording stub."""
+        panel = built_table(AcceleratorsMixin.create_accel_conversation,
+                            load_strings("pt-BR"), monkeypatch)
+        alt_shift = wx.ACCEL_ALT | wx.ACCEL_SHIFT
+        assert panel.handler_for(alt_shift, ord("P")) is panel._on_accel_replies
+        assert panel.handler_for(alt_shift, ord("M")) is panel._on_accel_mentions
 
     def test_it_is_listed_in_the_f1_shortcuts(self):
         class _I18n:

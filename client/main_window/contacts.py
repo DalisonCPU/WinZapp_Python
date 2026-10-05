@@ -10,6 +10,7 @@ import threading
 import time
 import wx
 from core import phone_contacts
+from main_window.message_rules import quote_is_of_my_message
 from core.api_client import api_get
 from traceback import format_exc
 from core.utils import (
@@ -574,20 +575,9 @@ class ContactsMixin:
             ):
                 return True
 
-        for ctx in ctx_candidates:
-            if "quotedMessage" not in ctx and not ctx.get("stanzaId"):
-                continue
-            participant = ctx.get("participant", "")
-            if participant:
-                if self._is_self_jid(participant):
-                    return True
-                continue
-            # No participant on the quote (typical for 1:1 chats) — resolve
-            # via the quoted message's own fromMe flag, if it's still in our
-            # local history for this chat.
-            stanza_id = ctx.get("stanzaId", "")
-            if not stanza_id:
-                continue
+        def _quoted_from_me(stanza_id):
+            # The quoted message's own fromMe flag, when it is still in our
+            # local history for this chat; None when it is not.
             chat = self.chats.get(remote_jid) or {}
             container = chat.get("messages")
             records = []
@@ -597,7 +587,14 @@ class ContactsMixin:
                     records = inner["records"]
             for m in records:
                 if isinstance(m, dict) and m.get("key", {}).get("id") == stanza_id:
-                    if m.get("key", {}).get("fromMe", False):
-                        return True
-                    break
+                    return bool(m.get("key", {}).get("fromMe", False))
+            return None
+
+        for ctx in ctx_candidates:
+            if "quotedMessage" not in ctx and not ctx.get("stanzaId"):
+                continue
+            # Only a certain answer counts here: a quote that cannot be
+            # resolved must not break through a mute on a guess.
+            if quote_is_of_my_message(ctx, self._is_self_jid, _quoted_from_me) is True:
+                return True
         return False
