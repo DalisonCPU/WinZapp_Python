@@ -20,6 +20,7 @@ import swaggerUi from 'swagger-ui-express';
 import uploadConfig from '../config/upload';
 import * as CallController from '../controller/callController';
 import * as CatalogController from '../controller/catalogController';
+import * as ChatListsController from '../controller/chatListsController';
 import * as CommunityController from '../controller/communityController';
 import ContactController from '../controller/contactController';
 import * as DeviceController from '../controller/deviceController';
@@ -40,6 +41,9 @@ import swaggerDocument from '../swagger.json';
 
 const upload = multer(uploadConfig as any) as any;
 const routes: Router = Router();
+
+routes.get('/api/:session/custom-lists', verifyToken, statusConnection, ChatListsController.readLists);
+routes.post('/api/:session/custom-lists', verifyToken, statusConnection, ChatListsController.changeList);
 
 // ── WinZapp multi-account: Node instance identity (plan Zad 3.0) ─────────────
 // Public, unauthenticated, read-only. Lets a WinZapp client verify that THIS

@@ -34,6 +34,7 @@ Where to look (and where new code goes):
     read_state          mark read/unread, local-read anchor
     chat_actions        block, mute, archive, delete, clear, typing, pin
     chat_list           computing and rendering the chat list and previews
+    chat_lists          WhatsApp custom lists, membership and account-scoped jobs
     chats_store         local chat storage, remote chats, dedup, saving
     contacts            local/remote contacts, self reference
     identity            JID normalization, @lid <-> phone, name resolution

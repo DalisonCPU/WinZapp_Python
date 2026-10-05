@@ -140,6 +140,9 @@ class ChatsStoreMixin:
         then on. Every other caller ignores it.
         """
         logging.info("[clear_local_data] Clearing all local caches, media, and database...")
+        invalidate = getattr(self, "_invalidate_wa_lists", None)
+        if invalidate is not None:
+            invalidate()
         # Invalidate every background job before touching shared chat state.
         # A backfill captures this generation and must not keep querying or
         # writing after F5/logout has emptied the database underneath it.

@@ -130,6 +130,7 @@ from ui.conversation_panel.transfer_gauge import (  # noqa: F401
 )
 from ui.conversation_panel.accelerators import AcceleratorsMixin
 from ui.conversation_panel.conversation_navigation import ConversationNavigationMixin
+from ui.conversation_panel.chat_lists import WhatsAppListFilterMixin
 from ui.conversation_panel.composer import ComposerMixin
 from ui.conversation_panel.voice_recording import VoiceRecordingMixin
 from ui.conversation_panel.system_audio_recording import SystemAudioRecordingMixin
@@ -166,6 +167,7 @@ from ui.conversation_panel.ai_actions import AIActionsMixin
 class ConversationsPanel(
     AcceleratorsMixin,
     ConversationNavigationMixin,
+    WhatsAppListFilterMixin,
     ConversationPanelVisibilityMixin,
     ComposerMixin,
     VoiceRecordingMixin,
@@ -558,6 +560,8 @@ class ConversationsPanel(
         )
         self._filter_radio.Bind(wx.EVT_RADIOBOX, self._on_filter_changed)
         outer_sizer.Add(self._filter_radio, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+
+        self._build_wa_list_controls(outer_sizer)
 
         # ── Conversations list ──────────────────────────────────────────────
         self.conversations_label = wx.StaticText(self, label=i18n.t("conversations"))
@@ -1172,6 +1176,7 @@ class ConversationsPanel(
 
     def refresh_labels(self):
         """Update all translatable labels and column headers after a language change."""
+        self._refresh_wa_list_labels()
         i18n = self.main_window.i18n
         self._spell_checker.set_language(
             self.main_window.settings.get("general", {}).get("language")
