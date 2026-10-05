@@ -6,6 +6,8 @@ NOVEDADES
 
 - Transcribe y describe contenido con IA. La nueva pestaña "Transcripciones y Descripciones" de los Ajustes activa las funciones de IA (empiezan desactivadas) y recibe la clave de API de uno o más proveedores — Gemini, OpenAI, Claude, Groq y OpenRouter —, que se prueban en el orden que definas; así, cuando uno falla o se queda sin cuota, responde el siguiente. En el menú contextual de un mensaje, o con Ctrl+Shift+I, "Transcribir" convierte un mensaje de voz en texto, "Describir" describe una foto o un vídeo, "Describir sticker" describe un sticker y "Convertir en texto accesible" convierte un PDF en texto simple y legible. El resultado se abre en una ventana con el texto y, en fotos y vídeos, puedes hacer preguntas de seguimiento en ella. WinZapp pregunta antes de enviar contenido a un proveedor y vuelve a preguntar cada vez en los chats bloqueados; tus claves se cifran en tu ordenador y solo se envían al proveedor al que pertenecen. Suena un sonido de espera mientras el proveedor trabaja, y las respuestas pueden leerse en voz alta automáticamente. El texto sigue el idioma de la aplicación.
 
+- Listas personalizadas de WhatsApp: actualizar y filtrar por tus listas, crear o cambiar el nombre de una lista y añadir o quitar chats seleccionados. La edición depende de la compatibilidad de la cuenta WhatsApp. Los chats bloqueados por la bóveda o no disponibles localmente no aparecen en la selección; se conservan los demás miembros. Los cambios no confirmados se notifican sin repetición automática.
+
 CORRECCIONES
 
 - Contenido con IA: restablecer todas las claves también borra los consentimientos de envío recordados, incluso al introducir una nueva clave antes de aplicar. Las transcripciones y los textos de PDF largos ahora indican un error de límite de texto en vez de perder el final sin avisar; no se prueba otro proveedor automáticamente por este límite.
@@ -19,8 +21,6 @@ V2.0.0.0
 La gran novedad de esta versión son las llamadas: ahora se pueden hacer, contestar y rechazar llamadas de voz y videollamadas desde el propio WinZapp, sin coger el móvil, con una ventana de llamada accesible, atajos de teclado, configuración de audio propia y el historial en la nueva pestaña Llamadas. También llegan los chats bloqueados, la búsqueda en las conversaciones archivadas, los idiomas turco y rumano y varias mejoras de uso, además de correcciones en situaciones en las que WinZapp pedía vincular de nuevo sin necesidad. Por dentro, el código del programa ha pasado por una gran reorganización: no cambia nada en el uso, pero hace que WinZapp sea más fácil de mantener y de corregir a partir de ahora.
 
 NOVEDADES
-
-- Listas personalizadas de WhatsApp: actualizar y filtrar por tus listas, crear o cambiar el nombre de una lista y añadir o quitar chats seleccionados. La edición depende de la compatibilidad de la cuenta WhatsApp. Los chats bloqueados por la bóveda o no disponibles localmente no aparecen en la selección; se conservan los demás miembros. Los cambios no confirmados se notifican sin repetición automática.
 
 - Los mensajes destacados ahora se sincronizan con WhatsApp. Cada cambio se verifica en el dispositivo vinculado; los rechazos y los resultados sin verificar se informan por separado. Los destacados locales antiguos se conservan hasta que elijas "Sincronizar destacados locales antiguos con WhatsApp" en el menú del chat y confirmes. Puedes detener un lote después de la solicitud actual.
 

@@ -6,6 +6,8 @@ NOUTĂȚI
 
 - Transcrieți și descrieți conținut cu AI. Noul tab „Transcrieri și descrieri” din Setări activează funcțiile AI (pornesc dezactivate) și primește cheia API a unuia sau mai multor furnizori — Gemini, OpenAI, Claude, Groq și OpenRouter — care sunt încercați în ordinea stabilită de dumneavoastră; astfel, când unul eșuează sau rămâne fără cotă, răspunde următorul. În meniul contextual al unui mesaj, sau cu Ctrl+Shift+I, „Transcrieți” transformă un mesaj vocal în text, „Descrieți” descrie o fotografie sau un videoclip, „Descrieți autocolantul” descrie un autocolant, iar „Convertiți în text accesibil” transformă un PDF în text simplu și lizibil. Rezultatul se deschide într-o fereastră cu textul și, pentru fotografii și videoclipuri, puteți pune în ea întrebări suplimentare. WinZapp întreabă înainte de a trimite conținut unui furnizor și întreabă din nou de fiecare dată pentru conversațiile blocate; cheile sunt criptate pe computerul dumneavoastră și sunt trimise doar furnizorului căruia îi aparțin. Cât lucrează furnizorul se aude un sunet de așteptare, iar răspunsurile pot fi citite automat cu voce tare. Textul respectă limba aplicației.
 
+- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată.
+
 CORECTĂRI
 
 - Conținut AI: resetarea tuturor cheilor șterge și acordurile de trimitere memorate, chiar dacă introduci o cheie nouă înainte de aplicare. Transcrierile și textele PDF lungi afișează acum o eroare de limită de text în loc să piardă finalul fără avertizare; nu se încearcă automat alt furnizor pentru această limită.
@@ -19,8 +21,6 @@ V2.0.0.0
 Marea noutate a acestei versiuni sunt apelurile: acum puteți iniția, prelua și respinge apeluri vocale și video direct din WinZapp, fără să luați telefonul, cu o fereastră de apel accesibilă, comenzi rapide de la tastatură, setări audio proprii și istoricul în noua filă, Apeluri. Alte noutăți apărute: conversațiile blocate, căutarea în conversațiile arhivate, limbile turcă și română și mai multe îmbunătățiri de utilizare, precum și corecții pentru situațiile în care WinZapp cerea o nouă asociere fără să fie nevoie. În spate, codul programului a trecut printr-o reorganizare amplă: nu schimbă nimic în utilizare, dar face WinZapp mai ușor de întreținut și de corectat de acum înainte.
 
 NOUTĂȚI
-
-- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată.
 
 - Marcajele cu stea ale mesajelor se sincronizează acum cu WhatsApp. Fiecare schimbare este verificată pe dispozitivul asociat; refuzurile și rezultatele neverificate sunt anunțate separat. Marcajele cu stea locale vechi sunt păstrate până când alegeți "Sincronizează marcajele cu stea locale vechi cu WhatsApp" din meniul conversației și confirmați. Puteți opri un lot după cererea curentă.
 
