@@ -822,6 +822,7 @@
     "new_contact_phone_saved": "Contato salvo e sincronizado com o celular.",
     "new_contact_phone_failed": "Não foi possível salvar o contato no WhatsApp. Verifique a conexão e tente novamente.",
     "new_contact_phone_not_on_whatsapp": "Este número não está no WhatsApp, então não é possível sincronizá-lo com o celular. Use a guia de contato local ou confira o número.",
+    "new_contact_local_blocked": "Este número já é um contato sincronizado com o celular. Salve as alterações na guia de contato sincronizado.",
     "delete_contact_phone_confirm_msg": "Tem certeza de que deseja apagar o contato {name}? Ele será removido também do WhatsApp e da agenda do celular.",
     "delete_contact_phone_failed": "Não foi possível remover o contato do WhatsApp. Ele não foi apagado.",
     "no_results": "Nenhum resultado encontrado.",

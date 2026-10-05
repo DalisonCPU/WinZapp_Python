@@ -33,6 +33,7 @@ class _MW:
 class _Stub:
     _resolve_contact_phone_jid = ConversationDataDialog._resolve_contact_phone_jid
     _local_contact_entry = ConversationDataDialog._local_contact_entry
+    _contact_entry = ConversationDataDialog._contact_entry
     _on_delete_contact = ConversationDataDialog._on_delete_contact
     _finish_delete_contact = ConversationDataDialog._finish_delete_contact
     _on_edit_contact = ConversationDataDialog._on_edit_contact
@@ -123,3 +124,42 @@ class TestEdit:
         seen = self._edit(monkeypatch, phone_contacts.local_entry(JID, "Ana Silva"))
         assert seen["modes"] == (new_contact.MODE_LOCAL, new_contact.MODE_PHONE)
         assert seen["initial_mode"] == new_contact.MODE_LOCAL
+
+
+class TestAContactAddedOnThePhone:
+    """Saved and synced by WhatsApp itself: WinZapp never wrote its marker, but
+    the dialog must treat it as the real contact it is."""
+
+    ENTRY = {"isMyContact": True, "syncToAddressbook": True, "name": "Ana Silva"}
+
+    def test_it_is_the_contact_this_dialog_edits(self):
+        stub = _Stub(dict(self.ENTRY))
+        assert stub._local_contact_entry() is None
+        assert stub._contact_entry() == self.ENTRY
+
+    def test_a_number_that_is_not_in_the_phone_book_has_no_entry(self):
+        stub = _Stub({"isMyContact": True, "syncToAddressbook": False, "name": "Ana"})
+        assert stub._contact_entry() is None
+
+    def test_it_is_edited_only_as_a_synced_one(self, monkeypatch):
+        seen = {}
+
+        class _Fake:
+            def __init__(self, *args, **kwargs):
+                seen.update(kwargs)
+
+            def SetTitle(self, title): pass
+            def ShowModal(self): return wx.ID_CANCEL
+            def Destroy(self): pass
+
+        monkeypatch.setattr(new_contact, "NewContactDialog", _Fake)
+        _Stub(dict(self.ENTRY))._on_edit_contact(None)
+        assert seen["modes"] == (new_contact.MODE_PHONE,)
+        assert seen["prefill_name"] == "Ana"
+
+    def test_deleting_it_removes_it_from_whatsapp_too(self, monkeypatch):
+        stub = _Stub(dict(self.ENTRY))
+        shown = _answer(monkeypatch, wx.YES)
+        stub._on_delete_contact(None)
+        assert shown[0][0] == "delete_contact_phone_confirm_msg"
+        assert stub._mw.requests == [JID]

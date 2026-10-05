@@ -152,3 +152,60 @@ class TestMainWindowCalls:
         answers = []
         self._MW().remove_phone_synced_contact("5511999999999@s.whatsapp.net", answers.append)
         assert answers == [False]
+
+
+class TestWhichContactsAreInThePhoneBook:
+    def test_whatsapp_marking_a_contact_as_synced_counts(self):
+        """Added on the phone, or in WhatsApp Web: WinZapp never wrote its own
+        marker, but WhatsApp says it is saved and synced."""
+        assert pc.is_phone_synced({"isMyContact": True, "syncToAddressbook": True}) is True
+
+    def test_saved_in_whatsapp_only_does_not_count(self):
+        assert pc.is_phone_synced({"isMyContact": True, "syncToAddressbook": False}) is False
+        assert pc.is_phone_synced({"isMyContact": False, "syncToAddressbook": True}) is False
+        assert pc.is_phone_synced({"name": "Ana"}) is False
+
+    def test_the_lookup_is_tolerant_of_the_brazilian_ninth_digit(self):
+        entry = {"isMyContact": True, "syncToAddressbook": True}
+
+        class _MW:
+            contacts = {"551199999999@s.whatsapp.net": entry}
+
+            def _get_contact_tolerant(self, jid):
+                return self.contacts.get(jid.replace("5511999999999", "551199999999"))
+
+        assert pc.existing_contact(_MW(), "5511999999999@s.whatsapp.net") is entry
+
+    def test_a_window_without_the_tolerant_lookup_falls_back_to_a_plain_get(self):
+        entry = {"isMyContact": True}
+        mw = SimpleNamespace(contacts={"j": entry})
+        assert pc.existing_contact(mw, "j") is entry
+        assert pc.existing_contact(SimpleNamespace(), "j") is None
+
+    def test_a_synced_contact_leaves_only_the_synced_tab(self):
+        both = ("local", "phone")
+        synced = {"isMyContact": True, "syncToAddressbook": True}
+        assert pc.available_modes(synced, both, "phone") == ("phone",)
+        assert pc.available_modes(pc.synced_entry("j", "n"), both, "phone") == ("phone",)
+        assert pc.available_modes(pc.local_entry("j", "n"), both, "phone") == both
+        assert pc.available_modes(None, both, "phone") == both
+
+
+class TestASyncedContactReplacesTheLocalOne:
+    """One record per number: saving it as synced overwrites the local one, on
+    the phone JID and on the @lid copy, so no local-only copy is left."""
+
+    def test_the_local_record_becomes_the_synced_one(self, monkeypatch):
+        import main
+        from tests.test_local_contact_sync import LID, PHONE, _Mw
+        monkeypatch.setattr(main.wx, "CallAfter", lambda fn, *a, **k: fn(*a, **k))
+        mw = _Mw()
+        mw.save_local_contact(PHONE, pc.local_entry(PHONE, "Ana (local)"))
+        assert not pc.is_phone_synced(mw.contacts[PHONE])
+
+        mw.save_local_contact(PHONE, pc.synced_entry(PHONE, "Ana Silva"))
+
+        for jid in (PHONE, LID):
+            assert mw.contacts[jid]["name"] == "Ana Silva"
+            assert pc.is_phone_synced(mw.contacts[jid])
+        assert mw.db.upserted[PHONE][pc.SYNCED_KEY] is True

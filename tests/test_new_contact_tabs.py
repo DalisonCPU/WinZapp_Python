@@ -31,6 +31,7 @@ class _Notebook:
         self.selection, self.enabled = selection, True
 
     def GetSelection(self): return self.selection
+    def SetSelection(self, index): self.selection = index
     def Enable(self, on): self.enabled = on
 
 
@@ -45,6 +46,7 @@ class _MW:
 
     def __init__(self):
         self.local_saved, self.spoken, self.requests = [], [], []
+        self.contacts = {}
 
     def save_local_contact(self, jid, entry): self.local_saved.append((jid, entry))
     def output(self, text, **kwargs): self.spoken.append(text)
@@ -61,6 +63,7 @@ class _Dialog:
     _set_busy = NewContactDialog._set_busy
     _on_add = NewContactDialog._on_add
     _save_synced = NewContactDialog._save_synced
+    _jid_of = staticmethod(NewContactDialog._jid_of)
 
     def __init__(self, mode=MODE_PHONE):
         self._mw = _MW()
@@ -189,3 +192,29 @@ class TestSyncedTab:
         d._on_add(None)
         d._on_add(None)
         assert len(d._mw.requests) == 1
+
+
+SYNCED = {"isMyContact": True, "syncToAddressbook": True}
+
+
+class TestANumberAlreadyInThePhoneBook:
+    def test_the_local_tab_cannot_hide_it(self, boxes):
+        d = _Dialog(MODE_LOCAL)
+        d._mw.contacts["5511999999999@s.whatsapp.net"] = dict(SYNCED)
+        d.fill(MODE_LOCAL)
+        d._on_add(None)
+        assert d._mw.local_saved == [] and d._mw.requests == [] and d.ended == []
+        assert boxes == ["new_contact_local_blocked"]
+        assert d._notebook.selection == d._modes.index(MODE_PHONE)
+
+    def test_a_number_that_is_not_synced_still_saves_locally(self, boxes):
+        d = _Dialog(MODE_LOCAL)
+        d._mw.contacts["5511999999999@s.whatsapp.net"] = {"isMyContact": True,
+                                                         "syncToAddressbook": False}
+        d.fill(MODE_LOCAL)
+        d._on_add(None)
+        assert len(d._mw.local_saved) == 1 and d.ended == [wx.ID_OK]
+
+    def test_the_jid_a_typed_number_names(self):
+        assert NewContactDialog._jid_of("+55 (11) 99999-9999") == "5511999999999@s.whatsapp.net"
+        assert NewContactDialog._jid_of("") == ""

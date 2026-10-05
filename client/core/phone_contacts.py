@@ -34,7 +34,30 @@ def digits_of(phone: str) -> str:
 
 
 def is_phone_synced(contact) -> bool:
-    return bool(contact) and bool(contact.get(SYNCED_KEY))
+    """Whether this record is a contact that lives in the phone's address book:
+    one saved through WinZapp's synced tab (SYNCED_KEY), or one WhatsApp itself
+    reports as saved and synced (isMyContact + syncToAddressbook), e.g. added
+    on the phone."""
+    if not contact:
+        return False
+    return bool(contact.get(SYNCED_KEY)) or (
+        bool(contact.get("isMyContact")) and bool(contact.get("syncToAddressbook")))
+
+
+def existing_contact(main_window, jid: str):
+    """The record main_window.contacts holds for this phone JID, tolerant of the
+    Brazilian 8/9-digit forms; None when there is none."""
+    lookup = getattr(main_window, "_get_contact_tolerant", None)
+    if lookup is not None:
+        return lookup(jid)
+    return (getattr(main_window, "contacts", None) or {}).get(jid)
+
+
+def available_modes(contact, modes: tuple, synced_mode: str) -> tuple:
+    """The tabs a contact may be saved under. A number that is already a synced
+    contact has only the synced tab: a local copy next to it would hide the
+    real one behind a name only this WinZapp knows."""
+    return (synced_mode,) if is_phone_synced(contact) else tuple(modes)
 
 
 def synced_entry(jid: str, full_name: str) -> dict:

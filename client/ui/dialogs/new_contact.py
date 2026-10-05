@@ -37,7 +37,11 @@ class NewContactDialog(wx.Dialog):
         self._prefill_phone   = prefill_phone
         self._prefill_name    = prefill_name
         self._prefill_surname = prefill_surname
-        self._modes = tuple(modes)
+        # A number that is already a synced contact has only the synced tab.
+        self._modes = phone_contacts.available_modes(
+            phone_contacts.existing_contact(
+                main_window, self._jid_of(prefill_phone)) if prefill_phone else None,
+            tuple(modes), MODE_PHONE)
         self._initial_mode = resolve_initial_mode(self._modes, initial_mode)
         self._busy = False
         i18n = main_window.i18n
@@ -52,6 +56,11 @@ class NewContactDialog(wx.Dialog):
         self.SetMinSize((420, -1))
         self.Fit()
         self.CentreOnParent()
+
+    @staticmethod
+    def _jid_of(phone: str) -> str:
+        digits = phone_contacts.digits_of(phone)
+        return digits + "@s.whatsapp.net" if digits else ""
 
     # ── UI ────────────────────────────────────────────────────────────────────
 
@@ -173,6 +182,15 @@ class NewContactDialog(wx.Dialog):
 
         if mode == MODE_PHONE:
             self._save_synced(jid, first, surname, full_name)
+            return
+
+        if phone_contacts.is_phone_synced(phone_contacts.existing_contact(self._mw, jid)):
+            # Typed into the local tab, but the number is already in the phone's
+            # address book: send them to the synced tab instead of hiding it.
+            wx.MessageBox(i18n.t("new_contact_local_blocked"), i18n.t("app_name"),
+                          wx.OK | wx.ICON_INFORMATION, self)
+            if MODE_PHONE in self._modes:
+                self._notebook.SetSelection(self._modes.index(MODE_PHONE))
             return
 
         # Local: stored, persisted, mirrored onto the person's @lid record and
