@@ -1,3 +1,19 @@
+V2.1.0.0
+
+Esta versão traz a transcrição e a descrição com IA de mensagens de voz, imagens, vídeos, autocolantes e PDFs.
+
+NOVIDADES
+
+- Transcreva e descreva conteúdo com IA. O novo separador "Transcrições e Descrições" nas Definições ativa as funcionalidades de IA (começam desativadas) e recebe a chave de API de um ou mais fornecedores — Gemini, OpenAI, Claude, Groq e OpenRouter —, que são tentados pela ordem que definir; assim, quando um falha ou fica sem quota, responde o seguinte. No menu de contexto de uma mensagem, ou com Ctrl+Shift+I, "Transcrever" transforma uma mensagem de voz em texto, "Descrever" descreve uma fotografia ou um vídeo, "Descrever figurinha" descreve uma figurinha e "Converter em texto acessível" transforma um PDF em texto simples e legível. O resultado abre numa janela com o texto e, para fotografias e vídeos, pode fazer perguntas de acompanhamento nela. O WinZapp pergunta antes de enviar conteúdo a um fornecedor e volta a perguntar de cada vez nas conversas bloqueadas; as suas chaves ficam cifradas no seu computador e só são enviadas ao fornecedor a que pertencem. Um som de espera toca enquanto o fornecedor trabalha, e as respostas podem ser lidas em voz alta automaticamente. O texto segue o idioma da aplicação.
+
+CORREÇÕES
+
+- Conteúdo com IA: repor todas as chaves também limpa as autorizações de envio memorizadas, mesmo ao introduzir uma nova chave antes de aplicar. Transcrições e textos de PDF longos apresentam agora um erro de limite de texto, em vez de perderem o final silenciosamente; não é tentado outro fornecedor automaticamente por este limite.
+
+- Botão "Descrever" nas mensagens com multimédia. Numa foto, autocolante ou vídeo (e também em áudios e PDFs, quando as funcionalidades de IA estão ativas), aparece um botão logo a seguir a "Guardar como", acessível com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de multimédia, também a mostrar Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
+
+- Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
+
 V2.0.0.0
 
 A grande novidade desta versão são as chamadas: agora é possível fazer, atender e recusar chamadas de voz e de vídeo no próprio WinZapp, sem pegar no telemóvel, com uma janela de chamada acessível, atalhos de teclado, definições de áudio próprias e o histórico no novo separador Chamadas. Chegaram também as conversas trancadas, a pesquisa nas conversas arquivadas, os idiomas turco e romeno e várias melhorias de utilização, além de correções em situações em que o WinZapp pedia para emparelhar de novo sem necessidade. Por baixo, o código do programa passou por uma grande reorganização: não muda nada na utilização, mas torna o WinZapp mais fácil de manter e de corrigir daqui para a frente.
@@ -54,8 +70,6 @@ NOVIDADES
 
 - Escolher o que as notificações em segundo plano dizem. No separador Geral das Definições, "Conteúdo das notificações em segundo plano" oferece três níveis: som, nome da conversa ou grupo e texto da mensagem, como antes; som e nome da conversa ou grupo, sem o texto; ou apenas som, sem notificação no ecrã e sem nada lido. As notificações das conversas trancadas continuam sem nome nem conteúdo.
 
-- Transcreva e descreva conteúdo com IA. O novo separador "Transcrições e Descrições" nas Definições ativa as funcionalidades de IA (começam desativadas) e recebe a chave de API de um ou mais fornecedores — Gemini, OpenAI, Claude, Groq e OpenRouter —, que são tentados pela ordem que definir; assim, quando um falha ou fica sem quota, responde o seguinte. No menu de contexto de uma mensagem, ou com Ctrl+Shift+I, "Transcrever" transforma uma mensagem de voz em texto, "Descrever" descreve uma fotografia ou um vídeo, "Descrever figurinha" descreve uma figurinha e "Converter em texto acessível" transforma um PDF em texto simples e legível. O resultado abre numa janela com o texto e, para fotografias e vídeos, pode fazer perguntas de acompanhamento nela. O WinZapp pergunta antes de enviar conteúdo a um fornecedor e volta a perguntar de cada vez nas conversas bloqueadas; as suas chaves ficam cifradas no seu computador e só são enviadas ao fornecedor a que pertencem. Um som de espera toca enquanto o fornecedor trabalha, e as respostas podem ser lidas em voz alta automaticamente. O texto segue o idioma da aplicação.
-
 - Voltar aos resultados da pesquisa ao fechar uma conversa. Marcando "Manter a pesquisa de conversas ao abrir uma conversa" no separador Interface do utilizador das Definições, a pesquisa de conversas continua ativa quando abre uma conversa encontrada por ela, e o Esc devolve o foco a essa conversa nos resultados, em vez de voltar à lista completa. A opção vem desmarcada.
 
 - Reencaminhar mensagens de voz como mensagens de voz. O WhatsApp transforma em áudio comum todas as mensagens de voz reencaminhadas, o que as retira da reprodução em sequência das mensagens de voz na conversa de destino. Marcando "Reencaminhar mensagens de voz como mensagens de voz, em vez de áudio" no separador Interface do utilizador das Definições, a cópia chega como mensagem de voz e continua marcada como reencaminhada. A opção vem desmarcada.
@@ -95,8 +109,6 @@ MELHORIAS
 CORREÇÕES
 
 - Chamadas: corrigido o erro "cannot load module more than once per process" que podia aparecer ao iniciar uma chamada de voz ou de vídeo. O motor de chamadas do WhatsApp passa a ser iniciado uma única vez e partilhado, em vez de ser iniciado de novo a cada ação de chamada.
-
-- Conteúdo com IA: repor todas as chaves também limpa as autorizações de envio memorizadas, mesmo ao introduzir uma nova chave antes de aplicar. Transcrições e textos de PDF longos apresentam agora um erro de limite de texto, em vez de perderem o final silenciosamente; não é tentado outro fornecedor automaticamente por este limite.
 
 - Ao enviar mensagem a alguém que não está nos seus contactos e não tem nome no perfil do WhatsApp, a conversa passava a aparecer com o seu próprio nome em vez do número da pessoa. Agora continua a mostrar o número até o nome verdadeiro ser encontrado.
 
@@ -179,10 +191,6 @@ CORREÇÕES
 - Ao responder a uma mensagem mencionando alguém na resposta, esta chegava aos destinatários como uma mensagem nova, sem a citação, embora o WinZapp a mostrasse como resposta. Agora a citação segue junto com a menção.
 
 - Os avisos de atualização passam a aparecer também quando o WinZapp arranca com o Windows: nem a atualização do próprio WinZapp nem a do WPPConnect Server eram oferecidas nesse caso. O aviso do WPPConnect Server passa também a oferecer uma versão mais recente do que a testada com o WinZapp, como atualização recomendada que pode recusar, e não apenas quando o próprio WinZapp aumentava a versão exigida.
-
-- Botão "Descrever" nas mensagens com multimédia. Numa foto, autocolante ou vídeo (e também em áudios e PDFs, quando as funcionalidades de IA estão ativas), aparece um botão logo a seguir a "Guardar como", acessível com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de multimédia, também a mostrar Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
-
-- Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
 
 - Numa conversa cujas mensagens mais antigas só existem no telemóvel, o WinZapp continuava a pedir essas mensagens ao telemóvel ao chegar à primeira mensagem: nada chegava, o telemóvel podia mostrar um aviso de sincronização de cada vez e a lista ficava ocupada durante minutos. Agora o WinZapp deteta este caso, não pede nada e anuncia "Use o WhatsApp no telemóvel para ver as mensagens mais antigas."
 
