@@ -139,6 +139,10 @@ class NewContactDialog(wx.Dialog):
 
     def _set_busy(self, busy: bool, text: str = ""):
         self._busy = busy
+        if busy:
+            # The focus is on a control about to be disabled, and a disabled
+            # control with the focus leaves the keyboard nowhere.
+            self._cancel_btn.SetFocus()
         self._ok_btn.Enable(not busy)
         self._notebook.Enable(not busy)
         self._status.SetLabel(text)
@@ -191,6 +195,7 @@ class NewContactDialog(wx.Dialog):
                           wx.OK | wx.ICON_INFORMATION, self)
             if MODE_PHONE in self._modes:
                 self._notebook.SetSelection(self._modes.index(MODE_PHONE))
+                self._fields[MODE_PHONE]["name"].SetFocus()
             return
 
         # Local: stored, persisted, mirrored onto the person's @lid record and
@@ -205,7 +210,10 @@ class NewContactDialog(wx.Dialog):
         """Save in WhatsApp (synced to the phone), then keep the record here.
 
         The request runs off the main thread. The record is stored even when
-        the dialog was closed meanwhile: WhatsApp has the contact by then.
+        the dialog was closed meanwhile: WhatsApp has the contact by then. It
+        is filed under the JID WhatsApp answered, which may differ from the
+        typed number in the Brazilian 9th digit; a record this WinZapp already
+        had under the typed form is replaced, not left next to it.
         """
         mw = self._mw
         i18n = mw.i18n
@@ -213,19 +221,28 @@ class NewContactDialog(wx.Dialog):
         self._set_busy(True, saving)
         mw.output(saving)
 
-        def _done(ok, error_key):
-            if ok:
-                mw.save_local_contact(jid, phone_contacts.synced_entry(jid, full_name))
-                mw.output(i18n.t("new_contact_phone_saved"))
-            if not self:        # closed while the request was running
+        def _done(result):
+            saved_jid = result.jid or jid
+            if result.ok:
+                previous = phone_contacts.existing_contact(mw, jid)
+                previous_key = phone_contacts.key_of(mw, previous, "") if previous else ""
+                if previous_key and previous_key != saved_jid:
+                    mw.remove_local_contact(previous_key)
+                mw.save_local_contact(saved_jid, phone_contacts.saved_entry(
+                    saved_jid, full_name, result.synced))
+                mw.output(i18n.t("new_contact_phone_saved" if result.synced
+                                 else "new_contact_phone_saved_unconfirmed"))
+            # Closed while the request was running: gone, or no longer modal
+            # (ShowModal() has returned and the caller is about to destroy it).
+            if not self or not self.IsModal():
                 return
-            if ok:
-                self.result_jid  = jid
+            if result.ok:
+                self.result_jid  = saved_jid
                 self.result_name = full_name
                 self._set_busy(False)
                 self.EndModal(wx.ID_OK)
                 return
-            text = i18n.t(error_key)
+            text = i18n.t(result.error_key)
             self._set_busy(False, text)
             mw.output(text)
             wx.MessageBox(text, i18n.t("app_name"), wx.OK | wx.ICON_WARNING, self)

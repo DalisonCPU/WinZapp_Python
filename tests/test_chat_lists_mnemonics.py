@@ -2,18 +2,19 @@
 
 The two buttons on the chat screen and the buttons of the lists dialog each
 carry an Alt+letter. A mnemonic that repeats inside its window, or that
-repeats a menu-bar mnemonic or a global Alt shortcut, activates the wrong
-thing or nothing, and no screen reader says so. Which letter a locale picks is
-its own decision; this checks only that the picks do not collide.
+repeats a menu-bar mnemonic, a label of the chat screen or an Alt accelerator,
+activates the wrong thing or nothing, and no screen reader says so. Which
+letter a locale picks is its own decision; this checks only that the picks do
+not collide. The letters already taken are read from the real accelerator
+tables and labels (tests/mnemonics.py), not from a list kept here.
 """
 
-import json
-import re
 from types import SimpleNamespace
 
 import pytest
 
-from app_paths import resource_path
+from tests.locales import registered_locale_codes
+from tests.mnemonics import alt_letters, load_strings, mnemonic
 from ui.dialogs.chat_lists import _manage_title
 
 #: Buttons on the chat screen (WhatsAppListFilterMixin).
@@ -23,43 +24,39 @@ DIALOG_KEYS = ("wa_lists_reload", "wa_lists_create", "wa_lists_rename",
                "wa_lists_delete", "wa_lists_add", "wa_lists_remove")
 #: What the main window's menu bar opens with Alt.
 MENU_KEYS = ("menu_file", "menu_sync", "menu_help")
-#: Global Alt+letter shortcuts of the main window (the shortcut_* strings).
-RESERVED = set("bcelmrt")
+#: Labels of the chat screen whose mnemonic moves the focus.
+LABEL_KEYS = ("main_nav", "type_message", "messages")
 
 
-def _load(name):
-    with open(resource_path("languages", f"{name}.json"), "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-LOCALES = sorted(_load("language_map"))
-
-
-def _mnemonic(text):
-    found = re.search(r"&([^&])", text.replace("&&", ""))
-    return found.group(1).casefold() if found else None
-
-
-@pytest.fixture(params=LOCALES)
+@pytest.fixture(params=registered_locale_codes())
 def strings(request):
-    return _load(request.param)
+    return load_strings(request.param)
 
 
 def test_every_lists_button_has_a_mnemonic(strings):
-    missing = [k for k in set(MAIN_KEYS + DIALOG_KEYS) if _mnemonic(strings[k]) is None]
+    missing = [k for k in set(MAIN_KEYS + DIALOG_KEYS) if mnemonic(strings[k]) is None]
     assert not missing
 
 
 def test_the_dialog_buttons_do_not_share_a_letter(strings):
-    letters = [_mnemonic(strings[k]) for k in DIALOG_KEYS]
+    letters = [mnemonic(strings[k]) for k in DIALOG_KEYS]
     assert len(set(letters)) == len(letters), letters
 
 
-def test_the_chat_screen_buttons_do_not_collide_with_the_menu_or_shortcuts(strings):
-    letters = [_mnemonic(strings[k]) for k in MAIN_KEYS]
-    taken = {_mnemonic(strings[k]) for k in MENU_KEYS} | RESERVED
+def test_the_chat_screen_buttons_do_not_collide_with_anything_alt_already_does(
+        strings, monkeypatch):
+    letters = [mnemonic(strings[k]) for k in MAIN_KEYS]
+    taken = ({mnemonic(strings[k]) for k in MENU_KEYS + LABEL_KEYS}
+             | alt_letters(strings, monkeypatch))
     assert len(set(letters)) == len(letters), letters
-    assert not set(letters) & taken, (letters, taken)
+    assert not set(letters) & taken, (letters, sorted(t for t in taken if t))
+
+
+def test_alt_u_is_among_the_letters_read_from_the_accelerator_tables(monkeypatch):
+    """The one a hand-written list missed: Alt+U goes to the unread separator
+    of the open conversation. If the derivation stops seeing it, the collision
+    check above stops meaning anything."""
+    assert "u" in alt_letters(load_strings("pt-BR"), monkeypatch)
 
 
 def test_the_dialog_title_has_no_mnemonic_marker():
@@ -67,12 +64,6 @@ def test_the_dialog_title_has_no_mnemonic_marker():
     assert _manage_title(i18n) == "Manage WhatsApp lists"
 
 
-NEW_CONTACT_KEYS = ("contact_name", "contact_surname", "create_contact", "cancel")
-
-
-def test_the_save_to_phone_button_shares_no_letter_with_the_new_contact_dialog(strings):
-    """create_contact_phone is the main button of the synced tab; a letter it
-    shares with a field or another button would make Alt+letter ambiguous."""
-    letter = _mnemonic(strings["create_contact_phone"])
-    assert letter is not None
-    assert letter not in {_mnemonic(strings[k]) for k in NEW_CONTACT_KEYS}
+def test_the_dialog_title_keeps_a_literal_ampersand():
+    i18n = SimpleNamespace(t=lambda key: "&Manage R&&D lists")
+    assert _manage_title(i18n) == "Manage R&D lists"

@@ -10,6 +10,7 @@ import threading
 import time
 import wx
 from core import phone_contacts
+from main_window.message_rules import quote_is_of_my_message
 from core.api_client import api_get
 from traceback import format_exc
 from core.utils import (
@@ -96,15 +97,17 @@ class ContactsMixin:
     def save_phone_synced_contact(self, jid: str, first: str, last: str, on_done) -> None:
         """Save a contact in WhatsApp, synced to the phone's address book.
 
-        Runs the request on its own thread; *on_done(ok, error_key)* is called
-        on the wx thread (error_key is an i18n key, "" when it worked). The
-        caller stores the local record on success (save_local_contact()).
+        Runs the request on its own thread; *on_done(result)* is called on the
+        wx thread with a phone_contacts.SaveResult: whether it worked, the i18n
+        key of the error, the JID WhatsApp filed the contact under and whether
+        the sync with the phone was confirmed. The caller stores the local
+        record on success (save_local_contact()), under that JID.
         """
         base, token = f"{self.wpp_server}:{self.wpp_port}", self.token
 
         def _run():
-            ok, key = phone_contacts.save_contact(base, token, jid, first, last)
-            wx.CallAfter(on_done, ok, key)
+            result = phone_contacts.save_contact(base, token, jid, first, last)
+            wx.CallAfter(on_done, result)
 
         threading.Thread(target=_run, daemon=True, name="winzapp-save-phone-contact").start()
 
@@ -118,6 +121,23 @@ class ContactsMixin:
             wx.CallAfter(on_done, phone_contacts.remove_contact(base, token, jid))
 
         threading.Thread(target=_run, daemon=True, name="winzapp-remove-phone-contact").start()
+
+    def _clear_stale_phone_sync_marks(self, server_contacts, requested_at: float) -> None:
+        """WhatsApp's contact list is the truth about who is in the phone's
+        address book: a record still marked as synced that the list reports
+        otherwise (removed on the phone, say) loses the mark, on the phone JID
+        and on the @lid copy save_local_contact() made. See
+        phone_contacts.clear_stale_marks() for what is left alone."""
+        cleared = phone_contacts.clear_stale_marks(
+            self.contacts, server_contacts, requested_at)
+        for jid in cleared:
+            lid = self._lid_for_local_contact(jid)
+            lid_record = self.contacts.get(lid) if lid else None
+            if lid_record is not None and lid_record.get(phone_contacts.SYNCED_KEY):
+                lid_record[phone_contacts.SYNCED_KEY] = False
+        if cleared:
+            logging.info("[get_remote_contacts] %d contact(s) no longer in the "
+                         "phone's address book.", len(cleared))
 
     def remove_local_contact(self, jid: str) -> None:
         """Delete a local contact and the @lid copy save_local_contact() made.
@@ -216,6 +236,9 @@ class ContactsMixin:
             }
             
             response_data = []
+            # Before the request: a contact saved to the phone while this list
+            # is on its way is not in it yet, and must not read as removed.
+            requested_at = phone_contacts.now()
             for attempt in range(5):
                 try:
                     response = api_get(url, headers=headers, timeout=90)
@@ -317,6 +340,7 @@ class ContactsMixin:
                         if updated_fields:
                             logging.debug(f"[get_remote_contacts] Updated fields {updated_fields} for contact: {jid}")
                     contacts[jid] = self.contacts[jid]
+            self._clear_stale_phone_sync_marks(response_data, requested_at)
             self._schedule_save(contacts_dirty=True)
             return contacts
         except Exception as e:
@@ -574,20 +598,9 @@ class ContactsMixin:
             ):
                 return True
 
-        for ctx in ctx_candidates:
-            if "quotedMessage" not in ctx and not ctx.get("stanzaId"):
-                continue
-            participant = ctx.get("participant", "")
-            if participant:
-                if self._is_self_jid(participant):
-                    return True
-                continue
-            # No participant on the quote (typical for 1:1 chats) — resolve
-            # via the quoted message's own fromMe flag, if it's still in our
-            # local history for this chat.
-            stanza_id = ctx.get("stanzaId", "")
-            if not stanza_id:
-                continue
+        def _quoted_from_me(stanza_id):
+            # The quoted message's own fromMe flag, when it is still in our
+            # local history for this chat; None when it is not.
             chat = self.chats.get(remote_jid) or {}
             container = chat.get("messages")
             records = []
@@ -597,7 +610,14 @@ class ContactsMixin:
                     records = inner["records"]
             for m in records:
                 if isinstance(m, dict) and m.get("key", {}).get("id") == stanza_id:
-                    if m.get("key", {}).get("fromMe", False):
-                        return True
-                    break
+                    return bool(m.get("key", {}).get("fromMe", False))
+            return None
+
+        for ctx in ctx_candidates:
+            if "quotedMessage" not in ctx and not ctx.get("stanzaId"):
+                continue
+            # Only a certain answer counts here: a quote that cannot be
+            # resolved must not break through a mute on a guess.
+            if quote_is_of_my_message(ctx, self._is_self_jid, _quoted_from_me) is True:
+                return True
         return False

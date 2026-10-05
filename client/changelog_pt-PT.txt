@@ -8,13 +8,13 @@ NOVIDADES
 
 - Listas personalizadas do WhatsApp: atualizar e filtrar pelas suas listas, criar ou mudar o nome de uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os restantes membros são preservados. Alterações não confirmadas são comunicadas sem repetição automática.
 
-- Contactos sincronizados com o telemóvel: em "Adicionar contacto" (dados do contacto e nova conversa) há agora dois separadores, contacto local (só no WinZapp) e contacto sincronizado com o telemóvel, que guarda o nome no WhatsApp e na agenda do telemóvel. O separador sincronizado abre por predefinição, e apagar um contacto sincronizado também o remove do WhatsApp e do telemóvel
+- Contactos sincronizados com o telemóvel: ao adicionar um contacto (em "Detalhes da conversa", em "Nova conversa" ou a partir de uma mensagem de contacto) há agora dois separadores, "Contacto local do WinZapp" (só no WinZapp) e "Contacto sincronizado com o telemóvel", que guarda o nome no WhatsApp e na agenda do telemóvel. O separador sincronizado abre por predefinição, um número que já está na agenda do telemóvel mostra só esse separador, e apagar um contacto sincronizado também o remove do WhatsApp e do telemóvel
 
-- Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que te responde, como o Alt+Shift+M faz com as menções. Premir de novo recua pelas respostas e, depois da mais antiga, volta à mais recente. Também consta da lista de atalhos do F1
+- Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que te responde, como o Alt+Shift+M faz com as menções. Premir de novo recua pelas respostas e, depois da mais antiga, volta à mais recente. Também consta de "Atalhos de teclado" (F1)
 
 CORREÇÕES
 
-- Correções em listas e menções: os botões das listas do WhatsApp, no ecrã de conversas e na janela de listas, passam a ter teclas de atalho. Uma pessoa mencionada pelo nome juntamente com @todos mantém a sua ligação na lista de menções, e a notificação de uma menção a si usa a palavra escolhida em "Como se referir a mim?" em vez de dizer sempre "Eu"
+- Menções: uma pessoa mencionada pelo nome juntamente com @todos mantém a sua ligação nas menções da mensagem, e uma menção a si, na notificação e na pré-visualização da lista de conversas, usa a palavra escolhida em "Como se referir a mim?" em vez de uma palavra fixa
 
 - Conteúdo com IA: repor todas as chaves também limpa as autorizações de envio memorizadas, mesmo ao introduzir uma nova chave antes de aplicar. Transcrições e textos de PDF longos apresentam agora um erro de limite de texto, em vez de perderem o final silenciosamente; não é tentado outro fornecedor automaticamente por este limite.
 

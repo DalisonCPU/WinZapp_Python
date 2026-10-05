@@ -1156,7 +1156,9 @@ class ChatListMixin:
                     if not isinstance(jid, str):
                         continue
                     if self._is_self_jid(jid):
-                        name = "eu"
+                        # "Como se referir a mim?", as the message list and
+                        # the notification say it; not a fixed "eu".
+                        name = self.self_reference_label()
                     else:
                         if hasattr(self, "conversations_panel"):
                             name = self.conversations_panel._get_participant_name(

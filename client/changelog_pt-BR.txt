@@ -8,13 +8,13 @@ NOVIDADES
 
 - Listas personalizadas do WhatsApp: atualizar e filtrar por suas listas, criar ou renomear uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os demais membros são preservados. Alterações não confirmadas são informadas sem repetição automática.
 
-- Contatos sincronizados com o celular: em "Adicionar contato" (dados do contato e nova conversa) agora há duas guias, contato local (só no WinZapp) e contato sincronizado com o celular, que salva o nome no WhatsApp e na agenda do celular. A guia sincronizada abre por padrão, e apagar um contato sincronizado também o remove do WhatsApp e do celular
+- Contatos sincronizados com o celular: ao adicionar um contato (em "Dados da conversa", em "Nova conversa" ou a partir de uma mensagem de contato) agora há duas abas, "Contato local do WinZapp" (só no WinZapp) e "Contato sincronizado com o celular", que salva o nome no WhatsApp e na agenda do celular. A aba sincronizada abre por padrão, um número que já está na agenda do celular mostra só essa aba, e apagar um contato sincronizado também o remove do WhatsApp e do celular
 
-- Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que responde a você, como o Alt+Shift+M faz com as menções. Pressionar de novo volta pelas respostas e, depois da mais antiga, retorna à mais recente. Ele também aparece na lista de atalhos do F1
+- Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que responde a você, como o Alt+Shift+M faz com as menções. Pressionar de novo volta pelas respostas e, depois da mais antiga, retorna à mais recente. Ele também aparece em "Atalhos de teclado" (F1)
 
 CORREÇÕES
 
-- Correções em listas e menções: os botões das listas do WhatsApp, na tela de conversas e na janela de listas, agora têm teclas de atalho. Uma pessoa mencionada pelo nome junto com @todos mantém seu link na lista de menções, e a notificação de uma menção a você usa a palavra escolhida em "Como se referir a mim?" em vez de sempre dizer "Eu"
+- Menções: uma pessoa mencionada pelo nome junto com @todos mantém seu link nas menções da mensagem, e uma menção a você, na notificação e na prévia da lista de conversas, usa a palavra escolhida em "Como se referir a mim?" em vez de uma palavra fixa
 
 - Mídia com IA: redefinir todas as chaves também limpa as autorizações de envio lembradas, mesmo ao inserir uma nova chave antes de aplicar. Transcrições e textos de PDF longos agora informam um erro de limite de texto, em vez de perder o final silenciosamente; outro provedor não é tentado automaticamente por esse limite.
 

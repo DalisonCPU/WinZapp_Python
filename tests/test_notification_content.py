@@ -26,6 +26,7 @@ _is_bad_contact_name() (tests/test_bad_contact_name.py):
 import pytest
 
 from core.notification_manager import format_notification_body, format_notification_title
+from main import MainWindow
 from main_window.contacts import ContactsMixin
 
 
@@ -270,3 +271,45 @@ class TestFormatNotificationTitleGroupName:
         msg = _msg("conversation", key={"remoteJid": "g@g.us"})
         title = format_notification_title(msg, _MW(), _FakeI18n())
         assert "[unknown-group]" in title
+
+
+class TestChatListPreviewOfAMentionOfTheUser:
+    """The same fixed "eu" lived in the chat-list preview: with "Você" chosen
+    the toast said "@Você" and the row of the same message said "@eu"."""
+
+    class _MW:
+        _counts_as_last_message = classmethod(MainWindow._counts_as_last_message.__func__)
+        _last_msg_preview = MainWindow._last_msg_preview
+        _PREVIEW_MESSAGE_TYPES = MainWindow._PREVIEW_MESSAGE_TYPES
+        self_reference_label = ContactsMixin.self_reference_label
+        _is_self_jid = staticmethod(lambda jid: jid == "5511@s.whatsapp.net")
+        _lid_to_phone = {}
+
+        def __init__(self, **ui):
+            self.settings = {"user_interface": {
+                "show_delivery_status_in_chat_list": False, **ui}}
+            self.i18n = _WordsI18n()
+
+    @staticmethod
+    def _chat():
+        message = {
+            "key": {"fromMe": False, "id": "abc"},
+            "messageType": "extendedTextMessage",
+            "message": {"extendedTextMessage": {
+                "text": "oi @5511 tudo bem?",
+                "contextInfo": {"mentionedJid": ["5511@s.whatsapp.net"]}}},
+            "messageTimestamp": 1_700_000_000,
+        }
+        return {"remoteJid": "5522@s.whatsapp.net",
+                "messages": {"messages": {"records": [message]}}}
+
+    def test_first_person_is_the_default(self):
+        assert "oi @Eu tudo bem?" in self._MW()._last_msg_preview(self._chat())
+
+    def test_voce_mode(self):
+        preview = self._MW(self_reference_mode="voce")._last_msg_preview(self._chat())
+        assert "oi @Você tudo bem?" in preview
+
+    def test_a_custom_word(self):
+        mw = self._MW(self_reference_mode="custom", self_reference_custom_word="Chefe")
+        assert "oi @Chefe tudo bem?" in mw._last_msg_preview(self._chat())

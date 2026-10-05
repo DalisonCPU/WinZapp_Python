@@ -8,6 +8,7 @@ ConversationsPanel.__init__/init_UI is available here.
 import pyperclip
 import wx
 from core.utils import format_number
+from main_window.message_rules import quote_is_of_my_message
 
 
 def jump_to_older_message(panel, indices, found_key):
@@ -461,25 +462,28 @@ class MessageAccelsMixin:
     def _is_reply_to_me(self, msg) -> bool:
         """Whether *msg*, written by someone else, quotes one of MY messages.
 
-        Same reading of the quote as _get_quoted_sender(): a participant on the
-        quote says who wrote the quoted message; without one (Baileys leaves it
-        empty for 1:1 replies) the quoted message's own fromMe decides, and when
-        it is not loaded a 1:1 reply from the other party can only be to me,
-        while a group reply carries no such guarantee and does not count."""
+        The rule is message_rules.quote_is_of_my_message(), shared with the
+        notification side. Where it cannot tell (no participant on the quote
+        and the quoted message not loaded) this reads it as the message list
+        does (_get_quoted_sender()): a 1:1 reply from the other party is to
+        me, while a group reply carries no such guarantee and does not count.
+        """
         if not isinstance(msg, dict) or (msg.get("key") or {}).get("fromMe"):
             return False
         ctx = self._get_context_info(msg)
         if not ctx:
             return False
-        participant = ctx.get("participant") or ""
-        if participant:
-            return bool(self.main_window._is_self_jid(participant))
-        stanza_id = ctx.get("stanzaId") or ""
-        if stanza_id:
+
+        def _quoted_from_me(stanza_id):
             for other in self._sorted_messages:
                 if isinstance(other, dict) and (other.get("key") or {}).get("id") == stanza_id:
                     return bool(other["key"].get("fromMe"))
-        return not (self.conversation or {}).get("remoteJid", "").endswith("@g.us")
+            return None
+
+        answer = quote_is_of_my_message(ctx, self.main_window._is_self_jid, _quoted_from_me)
+        if answer is None:
+            return not (self.conversation or {}).get("remoteJid", "").endswith("@g.us")
+        return answer
 
     def _on_accel_replies(self, event):
         """Alt+Shift+P: jump to the previous message that replies to me."""

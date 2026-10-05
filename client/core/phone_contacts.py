@@ -6,15 +6,24 @@ route (WPP.contact.save with syncAddressBook), which is the action WhatsApp
 Web's own "add contact" runs, and ends up in the phone's address book.
 
 Plain functions over an injectable ``post``, no wx and no network of their
-own, so the request shapes and the error mapping are tested directly.
+own, so the request shapes, the error mapping and the record rules are tested
+directly.
 """
 
 import re
+import time
+from collections import namedtuple
 
 from core.api_client import api_post
 
-#: Set on the contact record of a phone-synced contact, next to isSaved.
+#: Set on the record of a contact that lives in the phone's address book.
+#: Persisted as contacts.synced_to_phone (core/database.py).
 SYNCED_KEY = "syncedToPhone"
+
+#: When WinZapp itself saved the contact to the phone (time.time()). In memory
+#: only: it lets a contact list that was requested BEFORE the save, and so
+#: still says "not a contact", be told apart from WhatsApp's real answer.
+SYNCED_AT_KEY = "_syncedToPhoneAt"
 
 #: Shortest number WhatsApp can have; below it nothing is sent.
 MIN_DIGITS = 7
@@ -28,16 +37,55 @@ ERR_FAILED = "new_contact_phone_failed"
 # it has nothing left to do.
 _ALREADY_GONE = {"contact_not_found", "number_is_not_your_contact"}
 
+_PHONE_SUFFIXES = ("@s.whatsapp.net", "@c.us")
+
+#: What save_contact() answers. *jid* is the JID WhatsApp filed the contact
+#: under (it may differ from the typed number in the Brazilian 9th digit);
+#: *synced* is whether WhatsApp confirmed the sync with the phone.
+SaveResult = namedtuple("SaveResult", "ok error_key jid synced")
+
+
+def now() -> float:
+    return time.time()
+
 
 def digits_of(phone: str) -> str:
     return re.sub(r"\D", "", phone or "")
 
 
+def wire_id(jid: str) -> str:
+    """What identifies *jid* to the server routes, or "" when it cannot.
+
+    A phone number travels as bare digits. An @lid travels whole: its digits
+    are not a phone number, and sending them as one would save or remove a
+    stranger whose number happens to be those digits.
+    """
+    jid = (jid or "").strip()
+    local, at, domain = jid.partition("@")
+    local = local.split(":")[0]
+    if at and domain == "lid":
+        return f"{local}@lid" if local.isdigit() else ""
+    if at and f"@{domain}" not in _PHONE_SUFFIXES:
+        return ""       # a group, a broadcast, a newsletter: never a contact
+    digits = digits_of(local)
+    return digits if len(digits) >= MIN_DIGITS else ""
+
+
+def jid_from_server(server_id, fallback: str) -> str:
+    """The JID form WinZapp keys contacts by, out of the id a route answers."""
+    if not isinstance(server_id, str) or "@" not in server_id:
+        return fallback
+    local, _, domain = server_id.partition("@")
+    if domain == "c.us":
+        return f"{local}@s.whatsapp.net"
+    return server_id if domain in ("s.whatsapp.net", "lid") else fallback
+
+
 def is_phone_synced(contact) -> bool:
     """Whether this record is a contact that lives in the phone's address book:
-    one saved through WinZapp's synced tab (SYNCED_KEY), or one WhatsApp itself
-    reports as saved and synced (isMyContact + syncToAddressbook), e.g. added
-    on the phone."""
+    one marked so (SYNCED_KEY: saved through WinZapp's synced tab, or restored
+    from the database), or one WhatsApp itself reports as saved and synced
+    (isMyContact + syncToAddressbook), e.g. added on the phone."""
     if not contact:
         return False
     return bool(contact.get(SYNCED_KEY)) or (
@@ -53,6 +101,19 @@ def existing_contact(main_window, jid: str):
     return (getattr(main_window, "contacts", None) or {}).get(jid)
 
 
+def key_of(main_window, record, default: str) -> str:
+    """The JID *record* is stored under in main_window.contacts.
+
+    existing_contact() finds a record under the other 8/9-digit form of the
+    JID it was asked for; whoever then deletes "the contact" has to delete
+    that key, or the record stays behind with its buttons and its name.
+    """
+    for jid, candidate in (getattr(main_window, "contacts", None) or {}).items():
+        if candidate is record:
+            return jid
+    return default
+
+
 def available_modes(contact, modes: tuple, synced_mode: str) -> tuple:
     """The tabs a contact may be saved under. A number that is already a synced
     contact has only the synced tab: a local copy next to it would hide the
@@ -60,14 +121,55 @@ def available_modes(contact, modes: tuple, synced_mode: str) -> tuple:
     return (synced_mode,) if is_phone_synced(contact) else tuple(modes)
 
 
-def synced_entry(jid: str, full_name: str) -> dict:
-    """The contact record a successful save leaves in WinZapp."""
-    return {"remoteJid": jid, "name": full_name, "pushName": full_name,
-            "isSaved": True, SYNCED_KEY: True}
-
-
 def local_entry(jid: str, full_name: str) -> dict:
     return {"remoteJid": jid, "name": full_name, "pushName": full_name, "isSaved": True}
+
+
+def synced_entry(jid: str, full_name: str) -> dict:
+    """The contact record a successful, confirmed save leaves in WinZapp."""
+    return {**local_entry(jid, full_name), "isMyContact": True,
+            "syncToAddressbook": True, SYNCED_KEY: True, SYNCED_AT_KEY: now()}
+
+
+def saved_entry(jid: str, full_name: str, synced: bool) -> dict:
+    """The record for what WhatsApp answered: synced with the phone, or saved
+    in WhatsApp without the sync being confirmed (then not marked as synced,
+    so saving it again from the synced tab is offered instead of assumed)."""
+    if synced:
+        return synced_entry(jid, full_name)
+    return {**local_entry(jid, full_name), "isMyContact": True, "syncToAddressbook": False}
+
+
+def clear_stale_marks(contacts: dict, server_contacts, requested_at: float) -> list:
+    """Apply WhatsApp's answer to the records still marked as synced.
+
+    A contact removed on the phone keeps its mark here (nothing else clears
+    it), so the list WhatsApp just sent is the truth: a marked record it
+    reports as not saved, or saved without the sync, loses the mark and those
+    two flags. Records saved to the phone at or after *requested_at* are left
+    alone: that list was asked for before WhatsApp knew about them. Entries
+    that carry no answer (neither flag present) change nothing.
+
+    Returns the JIDs whose mark was cleared.
+    """
+    cleared = []
+    for server in server_contacts or ():
+        if not isinstance(server, dict):
+            continue
+        if "isMyContact" not in server or "syncToAddressbook" not in server:
+            continue
+        record = contacts.get(server.get("remoteJid") or "")
+        if not record or not record.get(SYNCED_KEY):
+            continue
+        if server.get("isMyContact") and server.get("syncToAddressbook"):
+            continue
+        if record.get(SYNCED_AT_KEY, 0) >= requested_at:
+            continue
+        record[SYNCED_KEY] = False
+        record["isMyContact"] = bool(server.get("isMyContact"))
+        record["syncToAddressbook"] = bool(server.get("syncToAddressbook"))
+        cleared.append(server["remoteJid"])
+    return cleared
 
 
 def _url(base: str, token: str, route: str) -> str:
@@ -78,13 +180,17 @@ def _headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
-def _error_of(resp) -> str:
-    """The i18n key for a refused request."""
+def _body(resp) -> dict:
     try:
         body = resp.json()
     except Exception:
-        body = {}
-    code = body.get("code", "") if isinstance(body, dict) else ""
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _error_of(resp) -> str:
+    """The i18n key for a refused save."""
+    code = _body(resp).get("code", "")
     if code == "contact_invalid":
         return ERR_INVALID
     if resp.status_code == 400 and not code:
@@ -93,44 +199,38 @@ def _error_of(resp) -> str:
     return ERR_FAILED
 
 
-def _code_of(resp) -> str:
-    try:
-        body = resp.json()
-    except Exception:
-        return ""
-    return body.get("code", "") if isinstance(body, dict) else ""
-
-
-def save_contact(base: str, token: str, phone: str, first: str, last: str = "",
-                 post=api_post) -> tuple:
+def save_contact(base: str, token: str, jid: str, first: str, last: str = "",
+                 post=api_post) -> SaveResult:
     """Save the contact in WhatsApp, synced to the phone.
 
-    Returns ``(True, "")`` or ``(False, i18n_key)``. Blocks for the length of
-    the request: call it off the main thread.
+    Blocks for the length of the request: call it off the main thread.
     """
-    digits = digits_of(phone)
-    if len(digits) < MIN_DIGITS:
-        return False, ERR_INVALID
-    payload = {"phone": digits, "name": first, "lastName": last, "syncAddressBook": True}
+    target = wire_id(jid)
+    if not target:
+        return SaveResult(False, ERR_INVALID, jid, False)
+    payload = {"phone": target, "name": first, "lastName": last, "syncAddressBook": True}
     try:
         resp = post(_url(base, token, "save-contact"), json=payload,
                     headers=_headers(token), timeout=20)
     except Exception:
-        return False, ERR_FAILED
-    if resp.ok:
-        return True, ""
-    return False, _error_of(resp)
+        return SaveResult(False, ERR_FAILED, jid, False)
+    if not resp.ok:
+        return SaveResult(False, _error_of(resp), jid, False)
+    answer = _body(resp).get("response")
+    answer = answer if isinstance(answer, dict) else {}
+    return SaveResult(True, "", jid_from_server(answer.get("id"), jid),
+                      bool(answer.get("syncToAddressbook")))
 
 
-def remove_contact(base: str, token: str, phone: str, post=api_post) -> bool:
+def remove_contact(base: str, token: str, jid: str, post=api_post) -> bool:
     """Remove the contact from WhatsApp and the phone. True when it is gone,
     including when it was already not a contact."""
-    digits = digits_of(phone)
-    if len(digits) < MIN_DIGITS:
+    target = wire_id(jid)
+    if not target:
         return False
     try:
-        resp = post(_url(base, token, "remove-contact"), json={"phone": digits},
+        resp = post(_url(base, token, "remove-contact"), json={"phone": target},
                     headers=_headers(token), timeout=20)
     except Exception:
         return False
-    return bool(resp.ok) or _code_of(resp) in _ALREADY_GONE
+    return bool(resp.ok) or _body(resp).get("code", "") in _ALREADY_GONE

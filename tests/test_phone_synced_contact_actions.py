@@ -7,9 +7,12 @@ fails the contact stays in WinZapp, which is what is still true.
 
 from types import SimpleNamespace
 
+import pytest
 import wx
 
+import main
 from core import phone_contacts
+from tests.test_local_contact_sync import _Mw as _RealContactsWindow
 from ui.dialogs import new_contact
 from ui.dialogs.conversation_data_dialog import ConversationDataDialog
 
@@ -89,7 +92,7 @@ class TestDelete:
         stub._on_delete_contact(None)
         stub._mw.on_done(False)
         assert stub._mw.removed_local == [] and stub.repopulated == 0
-        assert stub._mw.spoken == ["delete_contact_phone_failed"]
+        assert stub._mw.spoken == ["delete_contact_phone_removing", "delete_contact_phone_failed"]
         assert shown[-1][0] == "delete_contact_phone_failed"
 
     def test_declining_the_confirmation_changes_nothing(self, monkeypatch):
@@ -163,3 +166,76 @@ class TestAContactAddedOnThePhone:
         stub._on_delete_contact(None)
         assert shown[0][0] == "delete_contact_phone_confirm_msg"
         assert stub._mw.requests == [JID]
+
+    def test_the_wait_is_announced(self, monkeypatch):
+        stub = _Stub(dict(self.ENTRY))
+        _answer(monkeypatch, wx.YES)
+        stub._on_delete_contact(None)
+        assert stub._mw.spoken == ["delete_contact_phone_removing"]
+
+    def test_a_second_press_while_removing_asks_nothing_and_sends_nothing(self, monkeypatch):
+        stub = _Stub(dict(self.ENTRY))
+        shown = _answer(monkeypatch, wx.YES)
+        stub._on_delete_contact(None)
+        stub._on_delete_contact(None)
+        assert len(shown) == 1 and stub._mw.requests == [JID]
+
+    def test_after_a_failure_it_can_be_tried_again(self, monkeypatch):
+        stub = _Stub(dict(self.ENTRY))
+        _answer(monkeypatch, wx.YES)
+        stub._on_delete_contact(None)
+        stub._mw.on_done(False)
+        stub._on_delete_contact(None)
+        assert stub._mw.requests == [JID, JID]
+
+
+JID_8 = "551199999999@s.whatsapp.net"      # JID without the 9th digit
+
+
+class TestTheRecordFiledUnderTheOtherDigitForm:
+    """The chat is 5511999999999 and the record sits under 551199999999 (or
+    the reverse). The tolerant lookup finds it, so Edit/Delete are shown;
+    deleting has to remove THAT key, or the contact stays as a ghost: gone
+    from WhatsApp and the phone, still named and still deletable here."""
+
+    class _Window(_RealContactsWindow):
+        def __init__(self, entry):
+            super().__init__(phone=JID)
+            self.contacts = {JID_8: entry}
+            self._phone_to_lid, self._lid_to_phone = {}, {}
+            self.requests, self.spoken = [], []
+
+        def output(self, text, **kwargs): self.spoken.append(text)
+
+        def remove_phone_synced_contact(self, jid, on_done):
+            self.requests.append(jid)
+            self.on_done = on_done
+
+    @pytest.fixture(autouse=True)
+    def _inline_call_after(self, monkeypatch):
+        monkeypatch.setattr(main.wx, "CallAfter", lambda fn, *a, **k: fn(*a, **k))
+
+    def _stub(self, entry):
+        stub = _Stub(entry)
+        stub._mw = self._Window(entry)
+        return stub
+
+    def test_a_synced_one_is_removed_everywhere(self, monkeypatch):
+        stub = self._stub({**phone_contacts.synced_entry(JID_8, "Ana Silva")})
+        assert stub._contact_entry() is not None
+        _answer(monkeypatch, wx.YES)
+
+        stub._on_delete_contact(None)
+        assert stub._mw.requests == [JID_8]        # the id WhatsApp knows it by
+        stub._mw.on_done(True)
+
+        assert stub._mw.contacts == {} and stub._contact_entry() is None
+        assert JID_8 in stub._mw.db.deleted
+
+    def test_one_added_on_the_phone_too(self, monkeypatch):
+        stub = self._stub({"isMyContact": True, "syncToAddressbook": True, "name": "Ana"})
+        _answer(monkeypatch, wx.YES)
+        stub._on_delete_contact(None)
+        stub._mw.on_done(True)
+        assert stub._mw.contacts == {} and stub._contact_entry() is None
+

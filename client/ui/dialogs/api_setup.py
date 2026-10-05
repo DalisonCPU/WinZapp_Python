@@ -228,6 +228,7 @@ _CUSTOM_SRC_FILES = [
     "src/tests/util/logger.test.ts",
     "src/tests/dto/sync.test.ts",
     "src/tests/middleware/errorHandler.test.ts",
+    "src/tests/controller/contactSaveController.test.ts",
     "src/controller/callController.ts",
     "src/controller/chatListsController.ts",
     "src/controller/contactSaveController.ts",
