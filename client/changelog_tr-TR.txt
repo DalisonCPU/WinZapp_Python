@@ -10,6 +10,8 @@ YENİLİKLER
 
 DÜZELTMELER
 
+- Liste ve bahsetme düzeltmeleri: WhatsApp listelerinin düğmelerinin, sohbetler ekranında ve listeler penceresinde, artık klavye kısayolları var. @tümü ile birlikte adıyla anılan kişi bahsetmeler listesinde bağlantısını korur ve size yapılan bir bahsetme bildirimi her zaman "Ben" demek yerine "Kendimden nasıl bahsedilsin?" ayarında seçilen sözcüğü kullanır
+
 - Yapay zekâ işlemleri: tüm anahtarlar sıfırlandığında, kaydetmeden önce yeni bir anahtar girilse de hatırlanmış gönderim onayları temizlenir. Uzun ses dökümleri ve PDF metinleri artık sonları sessizce kesilmek yerine metin sınırı hatası verir; bu sınır için başka bir sağlayıcı otomatik olarak denenmez.
 
 - Medya mesajlarında "Betimle" düğmesi. Bir fotoğrafta, çıkartmada veya videoda (yapay zekâ özellikleri açıkken ses ve PDF'lerde de) "Farklı kaydet"in hemen ardından Tab ile ulaşılabilen ve Ctrl+Shift+I kısayoluyla aynı işi yapan bir düğme görünür; bağlam menüsünde öğe artık diğer medya eylemleriyle birlikte durur ve Ctrl+Shift+I kısayolunu gösterir. Düğme ve öğe yalnızca betimlenebilen mesajlarda görünür.

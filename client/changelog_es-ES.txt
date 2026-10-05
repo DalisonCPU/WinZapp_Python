@@ -10,6 +10,8 @@ NOVEDADES
 
 CORRECCIONES
 
+- Correcciones en listas y menciones: los botones de las listas de WhatsApp, en la pantalla de chats y en la ventana de listas, ahora tienen atajos de teclado. Una persona mencionada por su nombre junto a @todos conserva su enlace en la lista de menciones, y la notificación de una mención tuya usa la palabra elegida en "¿Cómo debo referirme a mí?" en lugar de decir siempre "Yo"
+
 - Contenido con IA: restablecer todas las claves también borra los consentimientos de envío recordados, incluso al introducir una nueva clave antes de aplicar. Las transcripciones y los textos de PDF largos ahora indican un error de límite de texto en vez de perder el final sin avisar; no se prueba otro proveedor automáticamente por este límite.
 
 - Botón "Describir" en los mensajes con contenido multimedia. En una foto, un sticker o un vídeo (y también en audios y PDF, cuando las funciones de IA están activadas), aparece un botón justo después de "Guardar como", accesible con Tab, que hace lo mismo que el atajo Ctrl+Shift+I; en el menú contextual, el elemento queda junto a las demás acciones multimedia y también muestra Ctrl+Shift+I. El botón y el elemento solo aparecen en los mensajes que se pueden describir.

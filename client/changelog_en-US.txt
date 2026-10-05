@@ -10,6 +10,8 @@ WHAT'S NEW
 
 FIXES
 
+- Fixes for lists and mentions: the buttons for WhatsApp lists, on the chats screen and in the lists window, now have keyboard shortcuts. A person mentioned by name next to @all keeps their link in the mentions list, and a notification of a mention of you uses the word chosen in "How should I be referred to?" instead of always saying "Me"
+
 - AI media: resetting all keys also clears remembered sending consent, even when a new key is entered before applying. Long transcripts and PDF text now report a text-limit error instead of silently losing their endings; another provider is not tried automatically for this limit.
 
 - "Describe" button on media messages. On a photo, sticker or video (and on audio and PDFs too, when the AI features are on), a button appears right after "Save as", reachable with Tab, that does the same as the Ctrl+Shift+I shortcut; in the context menu the item now sits with the other media actions, also showing Ctrl+Shift+I. The button and the item only appear on messages that can be described.

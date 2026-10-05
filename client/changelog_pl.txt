@@ -10,6 +10,8 @@ NOWOŚCI
 
 POPRAWKI
 
+- Poprawki list i wzmianek: przyciski list WhatsApp, na ekranie czatów i w oknie list, mają teraz skróty klawiaturowe. Osoba wspomniana z imienia obok @wszyscy zachowuje swój link na liście wzmianek, a powiadomienie o wzmiance o Tobie używa słowa wybranego w "Jak mam się do Ciebie zwracać?" zamiast zawsze mówić "Ja"
+
 - Treści AI: resetowanie wszystkich kluczy usuwa też zapamiętane zgody na wysyłanie, nawet po wpisaniu nowego klucza przed zastosowaniem zmian. Długie transkrypcje i teksty PDF zgłaszają teraz błąd limitu tekstu zamiast tracić końcówkę bez ostrzeżenia; ten limit nie powoduje automatycznej próby u innego dostawcy.
 
 - Przycisk „Opisz” przy wiadomościach z multimediami. Przy zdjęciu, naklejce lub wideo (a także przy nagraniach audio i plikach PDF, gdy funkcje AI są włączone) zaraz po „Zapisz jako” pojawia się przycisk dostępny klawiszem Tab, który robi to samo co skrót Ctrl+Shift+I; w menu kontekstowym pozycja znajduje się teraz wśród pozostałych akcji multimediów i także pokazuje Ctrl+Shift+I. Przycisk i pozycja pojawiają się tylko przy wiadomościach, które można opisać.
