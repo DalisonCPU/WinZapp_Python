@@ -65,3 +65,14 @@ def test_the_chat_screen_buttons_do_not_collide_with_the_menu_or_shortcuts(strin
 def test_the_dialog_title_has_no_mnemonic_marker():
     i18n = SimpleNamespace(t=lambda key: "Mana&ge WhatsApp lists")
     assert _manage_title(i18n) == "Manage WhatsApp lists"
+
+
+NEW_CONTACT_KEYS = ("contact_name", "contact_surname", "create_contact", "cancel")
+
+
+def test_the_save_to_phone_button_shares_no_letter_with_the_new_contact_dialog(strings):
+    """create_contact_phone is the main button of the synced tab; a letter it
+    shares with a field or another button would make Alt+letter ambiguous."""
+    letter = _mnemonic(strings["create_contact_phone"])
+    assert letter is not None
+    assert letter not in {_mnemonic(strings[k]) for k in NEW_CONTACT_KEYS}

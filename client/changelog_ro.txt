@@ -8,6 +8,8 @@ NOUTĂȚI
 
 - Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată.
 
+- Contacte sincronizate cu telefonul: la "Adăugați contact" (datele contactului și conversația nouă) există acum două file, contact local (doar în WinZapp) și contact sincronizat cu telefonul, care salvează numele în WhatsApp și în agenda telefonului. Fila sincronizată se deschide implicit, iar ștergerea unui contact sincronizat îl elimină și din WhatsApp și de pe telefon
+
 CORECTĂRI
 
 - Corectări la liste și mențiuni: butoanele listelor WhatsApp, pe ecranul conversațiilor și în fereastra listelor, au acum comenzi rapide de la tastatură. O persoană menționată pe nume alături de @toți își păstrează linkul în lista de mențiuni, iar notificarea unei mențiuni a ta folosește cuvântul ales în "Cum să se facă referire la mine?" în loc să spună mereu "Eu"

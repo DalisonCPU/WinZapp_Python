@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core import phone_contacts
 from core.api_client import api_get
 from traceback import format_exc
 from core.utils import (
@@ -91,6 +92,32 @@ class ContactsMixin:
             logging.exception("[save_local_contact] Failed to persist contact")
         self._refresh_views_after_contact_change(jid, lid)
         return jid
+
+    def save_phone_synced_contact(self, jid: str, first: str, last: str, on_done) -> None:
+        """Save a contact in WhatsApp, synced to the phone's address book.
+
+        Runs the request on its own thread; *on_done(ok, error_key)* is called
+        on the wx thread (error_key is an i18n key, "" when it worked). The
+        caller stores the local record on success (save_local_contact()).
+        """
+        base, token = f"{self.wpp_server}:{self.wpp_port}", self.token
+
+        def _run():
+            ok, key = phone_contacts.save_contact(base, token, jid, first, last)
+            wx.CallAfter(on_done, ok, key)
+
+        threading.Thread(target=_run, daemon=True, name="winzapp-save-phone-contact").start()
+
+    def remove_phone_synced_contact(self, jid: str, on_done) -> None:
+        """Remove a phone-synced contact from WhatsApp and the phone;
+        *on_done(ok)* is called on the wx thread. The caller drops the local
+        record (remove_local_contact()) only when it worked."""
+        base, token = f"{self.wpp_server}:{self.wpp_port}", self.token
+
+        def _run():
+            wx.CallAfter(on_done, phone_contacts.remove_contact(base, token, jid))
+
+        threading.Thread(target=_run, daemon=True, name="winzapp-remove-phone-contact").start()
 
     def remove_local_contact(self, jid: str) -> None:
         """Delete a local contact and the @lid copy save_local_contact() made.

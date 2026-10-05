@@ -8,6 +8,8 @@ NOVIDADES
 
 - Listas personalizadas do WhatsApp: atualizar e filtrar por suas listas, criar ou renomear uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os demais membros são preservados. Alterações não confirmadas são informadas sem repetição automática.
 
+- Contatos sincronizados com o celular: em "Adicionar contato" (dados do contato e nova conversa) agora há duas guias, contato local (só no WinZapp) e contato sincronizado com o celular, que salva o nome no WhatsApp e na agenda do celular. A guia sincronizada abre por padrão, e apagar um contato sincronizado também o remove do WhatsApp e do celular
+
 CORREÇÕES
 
 - Correções em listas e menções: os botões das listas do WhatsApp, na tela de conversas e na janela de listas, agora têm teclas de atalho. Uma pessoa mencionada pelo nome junto com @todos mantém seu link na lista de menções, e a notificação de uma menção a você usa a palavra escolhida em "Como se referir a mim?" em vez de sempre dizer "Eu"

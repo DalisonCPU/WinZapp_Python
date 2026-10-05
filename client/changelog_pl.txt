@@ -8,6 +8,8 @@ NOWOŚCI
 
 - Własne listy WhatsApp: odświeżanie i filtrowanie według list, tworzenie lub zmiana nazwy listy oraz dodawanie i usuwanie wybranych czatów. Edycja zależy od obsługi konta WhatsApp. Czaty zamknięte w sejfie lub niedostępne lokalnie nie pojawiają się w wyborze; pozostali członkowie są zachowywani. Niepotwierdzone zmiany są zgłaszane bez automatycznego ponawiania.
 
+- Kontakty synchronizowane z telefonem: w "Dodaj kontakt" (dane kontaktu i nowa rozmowa) są teraz dwie karty, kontakt lokalny (tylko w WinZappie) i kontakt zsynchronizowany z telefonem, który zapisuje nazwę w WhatsAppie i w książce adresowej telefonu. Karta synchronizowana otwiera się domyślnie, a usunięcie kontaktu zsynchronizowanego usuwa go też z WhatsAppa i z telefonu
+
 POPRAWKI
 
 - Poprawki list i wzmianek: przyciski list WhatsApp, na ekranie czatów i w oknie list, mają teraz skróty klawiaturowe. Osoba wspomniana z imienia obok @wszyscy zachowuje swój link na liście wzmianek, a powiadomienie o wzmiance o Tobie używa słowa wybranego w "Jak mam się do Ciebie zwracać?" zamiast zawsze mówić "Ja"

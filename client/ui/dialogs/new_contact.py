@@ -1,24 +1,45 @@
 """
 new_contact.py — WinZapp "Novo contato" dialog.
 
-Collects name, surname and phone number.  Stores the contact locally in
-main_window.contacts so it appears in future searches, then returns the
-WhatsApp JID via result_jid / result_name so the caller can navigate there.
+Collects name, surname and phone number in one of two tabs:
+
+* "phone" (the default): the contact is saved in WhatsApp and synced to the
+  phone's address book (core/phone_contacts.py, server route save-contact);
+* "local": the contact lives only inside WinZapp, in main_window.contacts.
+
+Either way it is stored in main_window.contacts so it appears in future
+searches, and the WhatsApp JID is returned via result_jid / result_name so the
+caller can navigate there.
 """
 
-import re
 import wx
+
+from core import phone_contacts
+
+MODE_LOCAL = "local"
+MODE_PHONE = "phone"
+
+
+def resolve_initial_mode(modes: tuple, initial: str) -> str:
+    """The tab the dialog opens on: *initial* when it exists, else the last
+    one (the phone-synced tab, which is also the default)."""
+    return initial if initial in modes else modes[-1]
 
 
 class NewContactDialog(wx.Dialog):
     """Dialog for adding a new WhatsApp contact."""
 
     def __init__(self, main_window, parent=None, prefill_phone: str = "",
-                 prefill_name: str = "", prefill_surname: str = ""):
+                 prefill_name: str = "", prefill_surname: str = "",
+                 initial_mode: str = MODE_PHONE,
+                 modes: tuple = (MODE_LOCAL, MODE_PHONE)):
         self._mw = main_window
         self._prefill_phone   = prefill_phone
         self._prefill_name    = prefill_name
         self._prefill_surname = prefill_surname
+        self._modes = tuple(modes)
+        self._initial_mode = resolve_initial_mode(self._modes, initial_mode)
+        self._busy = False
         i18n = main_window.i18n
         super().__init__(
             parent or main_window,
@@ -28,42 +49,56 @@ class NewContactDialog(wx.Dialog):
         self.result_jid:  str = ""
         self.result_name: str = ""
         self._build_ui(i18n)
-        self.SetMinSize((380, -1))
+        self.SetMinSize((420, -1))
         self.Fit()
         self.CentreOnParent()
 
     # ── UI ────────────────────────────────────────────────────────────────────
 
+    def _build_page(self, notebook, i18n, mode):
+        """One tab: what it does, then name, surname and phone."""
+        page = wx.Panel(notebook)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        hint = wx.StaticText(page, label=i18n.t(
+            "new_contact_phone_hint" if mode == MODE_PHONE else "new_contact_local_hint"))
+        hint.Wrap(380)
+        sizer.Add(hint, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        fields = {}
+        for key, label in (("name", "contact_name"), ("surname", "contact_surname"),
+                           ("phone", "phone_label")):
+            sizer.Add(wx.StaticText(page, label=i18n.t(label)), 0, wx.LEFT | wx.TOP, 10)
+            fields[key] = wx.TextCtrl(page, style=wx.TE_DONTWRAP)
+            sizer.Add(fields[key], 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        sizer.AddSpacer(10)
+        page.SetSizer(sizer)
+        fields["name"].SetValue(self._prefill_name)
+        fields["surname"].SetValue(self._prefill_surname)
+        fields["phone"].SetValue(self._prefill_phone)
+        return page, fields
+
     def _build_ui(self, i18n):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Name
-        sizer.Add(wx.StaticText(panel, label=i18n.t("contact_name")), 0,
-                  wx.LEFT | wx.TOP, 10)
-        self._name_field = wx.TextCtrl(panel, style=wx.TE_DONTWRAP)
-        sizer.Add(self._name_field, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        self._notebook = wx.Notebook(panel)
+        self._fields = {}
+        for mode in self._modes:
+            page, self._fields[mode] = self._build_page(self._notebook, i18n, mode)
+            self._notebook.AddPage(
+                page, i18n.t("new_contact_tab_phone" if mode == MODE_PHONE
+                             else "new_contact_tab_local"))
+        self._notebook.SetSelection(self._modes.index(self._initial_mode))
+        sizer.Add(self._notebook, 1, wx.EXPAND | wx.ALL, 10)
 
-        # Surname
-        sizer.Add(wx.StaticText(panel, label=i18n.t("contact_surname")), 0,
-                  wx.LEFT | wx.TOP, 10)
-        self._surname_field = wx.TextCtrl(panel, style=wx.TE_DONTWRAP)
-        sizer.Add(self._surname_field, 0,
-                  wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
-
-        # Phone
-        sizer.Add(wx.StaticText(panel, label=i18n.t("phone_label")), 0,
-                  wx.LEFT | wx.TOP, 10)
-        self._phone_field = wx.TextCtrl(panel, style=wx.TE_DONTWRAP)
-        sizer.Add(self._phone_field, 0,
-                  wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        self._status = wx.StaticText(panel, label="")
+        sizer.Add(self._status, 0, wx.LEFT | wx.RIGHT, 10)
 
         # Buttons
         btn_sizer = wx.StdDialogButtonSizer()
-        ok_btn     = wx.Button(panel, wx.ID_OK,     label=i18n.t("create_contact"))
-        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label=i18n.t("cancel"))
-        btn_sizer.AddButton(ok_btn)
-        btn_sizer.AddButton(cancel_btn)
+        self._ok_btn = wx.Button(panel, wx.ID_OK)
+        self._cancel_btn = wx.Button(panel, wx.ID_CANCEL, label=i18n.t("cancel"))
+        btn_sizer.AddButton(self._ok_btn)
+        btn_sizer.AddButton(self._cancel_btn)
         btn_sizer.Realize()
         sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 10)
 
@@ -72,24 +107,46 @@ class NewContactDialog(wx.Dialog):
         outer.Add(panel, 1, wx.EXPAND)
         self.SetSizer(outer)
 
-        ok_btn.Bind(wx.EVT_BUTTON, self._on_add)
+        self._ok_btn.Bind(wx.EVT_BUTTON, self._on_add)
+        self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
+        self._refresh_ok_label()
+        self._fields[self._initial_mode]["name"].SetFocus()
 
-        if self._prefill_name:
-            self._name_field.SetValue(self._prefill_name)
-        if self._prefill_surname:
-            self._surname_field.SetValue(self._prefill_surname)
-        if self._prefill_phone:
-            self._phone_field.SetValue(self._prefill_phone)
-        self._name_field.SetFocus()
+    def _mode(self) -> str:
+        return self._modes[self._notebook.GetSelection()]
+
+    def _refresh_ok_label(self):
+        key = "create_contact_phone" if self._mode() == MODE_PHONE else "create_contact"
+        self._ok_btn.SetLabel(self._mw.i18n.t(key))
+
+    def _on_tab_changed(self, event):
+        """What was typed follows the person to the other tab."""
+        old, new = event.GetOldSelection(), event.GetSelection()
+        if 0 <= old < len(self._modes) and 0 <= new < len(self._modes) and old != new:
+            for key, field in self._fields[self._modes[old]].items():
+                self._fields[self._modes[new]][key].ChangeValue(field.GetValue())
+        self._refresh_ok_label()
+        event.Skip()
+
+    def _set_busy(self, busy: bool, text: str = ""):
+        self._busy = busy
+        self._ok_btn.Enable(not busy)
+        self._notebook.Enable(not busy)
+        self._status.SetLabel(text)
+        self.Layout()
 
     # ── Add contact ───────────────────────────────────────────────────────────
 
     def _on_add(self, event):
+        if self._busy:
+            return
         i18n = self._mw.i18n
+        mode = self._mode()
+        fields = self._fields[mode]
 
-        first   = self._name_field.GetValue().strip()
-        surname = self._surname_field.GetValue().strip()
-        phone   = re.sub(r"\D", "", self._phone_field.GetValue())
+        first   = fields["name"].GetValue().strip()
+        surname = fields["surname"].GetValue().strip()
+        phone   = phone_contacts.digits_of(fields["phone"].GetValue())
 
         if not first:
             wx.MessageBox(
@@ -98,41 +155,62 @@ class NewContactDialog(wx.Dialog):
                 wx.OK | wx.ICON_WARNING,
                 self,
             )
-            self._name_field.SetFocus()
+            fields["name"].SetFocus()
             return
 
-        if not phone or len(phone) < 7:
+        if not phone or len(phone) < phone_contacts.MIN_DIGITS:
             wx.MessageBox(
                 i18n.t("create_contact_error"),
                 i18n.t("app_name"),
                 wx.OK | wx.ICON_WARNING,
                 self,
             )
-            self._phone_field.SetFocus()
+            fields["phone"].SetFocus()
             return
 
         full_name = f"{first} {surname}".strip()
         jid       = phone + "@s.whatsapp.net"
 
-        # Store locally so future searches find this contact. This contact
-        # only ever lives inside WinZapp/WhatsApp's own contact list — there
-        # used to be a "sync to phone" checkbox here that called an
-        # add-new-contact API endpoint, but that endpoint never actually
-        # existed anywhere in the server (not in WinZapp's patches, not in
-        # the underlying wppconnect-server library), and WhatsApp Web itself
-        # has no capability to write to a phone's native address book (its
-        # own "save contact" feature just opens an external Google
-        # Contacts/OS link, not an API call) — so it silently did nothing.
-        entry = {
-            "remoteJid":  jid,
-            "name":       full_name,
-            "pushName":   full_name,
-            "isSaved":    True,
-        }
-        # Stored, persisted, mirrored onto the person's @lid record and shown
-        # everywhere at once (MainWindow.save_local_contact()).
-        self._mw.save_local_contact(jid, entry)
+        if mode == MODE_PHONE:
+            self._save_synced(jid, first, surname, full_name)
+            return
 
+        # Local: stored, persisted, mirrored onto the person's @lid record and
+        # shown everywhere at once (MainWindow.save_local_contact()). It only
+        # lives inside WinZapp.
+        self._mw.save_local_contact(jid, phone_contacts.local_entry(jid, full_name))
         self.result_jid  = jid
         self.result_name = full_name
         self.EndModal(wx.ID_OK)
+
+    def _save_synced(self, jid, first, surname, full_name):
+        """Save in WhatsApp (synced to the phone), then keep the record here.
+
+        The request runs off the main thread. The record is stored even when
+        the dialog was closed meanwhile: WhatsApp has the contact by then.
+        """
+        mw = self._mw
+        i18n = mw.i18n
+        saving = i18n.t("new_contact_phone_saving")
+        self._set_busy(True, saving)
+        mw.output(saving)
+
+        def _done(ok, error_key):
+            if ok:
+                mw.save_local_contact(jid, phone_contacts.synced_entry(jid, full_name))
+                mw.output(i18n.t("new_contact_phone_saved"))
+            if not self:        # closed while the request was running
+                return
+            if ok:
+                self.result_jid  = jid
+                self.result_name = full_name
+                self._set_busy(False)
+                self.EndModal(wx.ID_OK)
+                return
+            text = i18n.t(error_key)
+            self._set_busy(False, text)
+            mw.output(text)
+            wx.MessageBox(text, i18n.t("app_name"), wx.OK | wx.ICON_WARNING, self)
+            self._fields[MODE_PHONE]["phone"].SetFocus()
+
+        mw.save_phone_synced_contact(jid, first, surname, _done)

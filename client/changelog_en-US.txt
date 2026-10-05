@@ -8,6 +8,8 @@ WHAT'S NEW
 
 - WhatsApp custom lists: refresh and filter by your lists, create or rename a list, and add or remove selected chats. List editing depends on WhatsApp account support. Locked and locally unavailable chats are excluded from selection; other memberships remain unchanged. Unverified changes are reported without automatic retries.
 
+- Contacts synced with the phone: in "Add contact" (contact data and new conversation) there are now two tabs, local contact (only in WinZapp) and contact synced with the phone, which saves the name in WhatsApp and in the phone's address book. The synced tab opens by default, and deleting a synced contact also removes it from WhatsApp and the phone
+
 FIXES
 
 - Fixes for lists and mentions: the buttons for WhatsApp lists, on the chats screen and in the lists window, now have keyboard shortcuts. A person mentioned by name next to @all keeps their link in the mentions list, and a notification of a mention of you uses the word chosen in "How should I be referred to?" instead of always saying "Me"
