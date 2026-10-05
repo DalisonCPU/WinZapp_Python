@@ -900,6 +900,7 @@
   "ui_self_reference_other": "Diğer",
   "ui_self_reference_custom_label": "Özel kelime",
   "ui_show_delivery_status_in_chat_list": "Sohbet listesinde son mesajın iletim durumunu göster",
+  "ui_keep_pinned_chat_order": "Sabitli sohbetlerin sırasını koru",
   "ui_preserve_typed_text_as_caption": "Ek eklerken yazılan mesajı açıklama olarak koru",
   "ui_bulk_action_shortcuts": "Sohbet ve mesaj seçerken kısayolları toplu işlemlerle değiştir",
   "ui_confirm_mark_all_read": "Tüm sohbetleri okundu olarak işaretlemeden önce onay iste",

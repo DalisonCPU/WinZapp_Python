@@ -550,6 +550,11 @@ class SettingsDialog(wx.Dialog):
         )
         ui_sizer.Add(self._show_delivery_status_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
 
+        self._keep_pinned_order_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_keep_pinned_chat_order")
+        )
+        ui_sizer.Add(self._keep_pinned_order_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
+
         self._preserve_typed_caption_cb = wx.CheckBox(
             self._ui_page, label=i18n.t("ui_preserve_typed_text_as_caption")
         )
@@ -1650,6 +1655,11 @@ class SettingsDialog(wx.Dialog):
             "show_delivery_status_in_chat_list", True
         )
         self._show_delivery_status_cb.SetValue(bool(show_delivery_status))
+
+        keep_pinned_order = self.main_window.settings.get("user_interface", {}).get(
+            "keep_pinned_chat_order", False
+        )
+        self._keep_pinned_order_cb.SetValue(bool(keep_pinned_order))
 
         preserve_typed_caption = self.main_window.settings.get("user_interface", {}).get(
             "preserve_typed_text_as_attachment_caption", True
@@ -2992,6 +3002,10 @@ class SettingsDialog(wx.Dialog):
         self.main_window.settings.setdefault("user_interface", {})[
             "show_delivery_status_in_chat_list"
         ] = self._show_delivery_status_cb.GetValue()
+        old_keep_pinned_order = ui_settings.get("keep_pinned_chat_order", False)
+        self.main_window.settings.setdefault("user_interface", {})[
+            "keep_pinned_chat_order"
+        ] = self._keep_pinned_order_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
             "preserve_typed_text_as_attachment_caption"
         ] = self._preserve_typed_caption_cb.GetValue()
@@ -3330,6 +3344,8 @@ class SettingsDialog(wx.Dialog):
 
         # Persist and propagate
         self.main_window.save_settings()
+        from core.pinned_chat_order import refresh_after_order_setting_change
+        refresh_after_order_setting_change(self.main_window, old_keep_pinned_order)
         self._offer_to_delete_profile_snapshots()
         # Reload sound objects so per-event enabled/path changes (and the new
         # alert-tone defaults) take effect immediately, without a restart.
@@ -3527,6 +3543,7 @@ class SettingsDialog(wx.Dialog):
         self._self_ref_other_rb.SetLabel(i18n.t("ui_self_reference_other"))
         self._self_ref_custom_label.SetLabel(i18n.t("ui_self_reference_custom_label"))
         self._show_delivery_status_cb.SetLabel(i18n.t("ui_show_delivery_status_in_chat_list"))
+        self._keep_pinned_order_cb.SetLabel(i18n.t("ui_keep_pinned_chat_order"))
         self._show_link_previews_cb.SetLabel(i18n.t("ui_show_link_previews_label"))
         self._show_yesterday_label_cb.SetLabel(i18n.t("ui_show_yesterday_label"))
         self._forwarded_prefix_cb.SetLabel(i18n.t("ui_forwarded_prefix_label"))

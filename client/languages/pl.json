@@ -900,6 +900,7 @@
     "ui_self_reference_other": "Inaczej",
     "ui_self_reference_custom_label": "Własne słowo",
     "ui_show_delivery_status_in_chat_list": "Pokaż status dostarczenia ostatniej wiadomości na liście czatów",
+    "ui_keep_pinned_chat_order": "Zachowuj kolejność przypiętych czatów",
     "ui_preserve_typed_text_as_caption": "Zachowaj wpisaną wiadomość jako podpis przy załączaniu",
     "ui_bulk_action_shortcuts": "Zastąp skróty akcjami masowymi podczas zaznaczania czatów i wiadomości",
     "ui_confirm_mark_all_read": "Pytaj o potwierdzenie przed oznaczeniem wszystkich czatów jako przeczytane",
