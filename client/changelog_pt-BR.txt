@@ -54,6 +54,12 @@ NOVIDADES
 
 - Transcreva e descreva mídia com IA. A nova aba "Transcrições e Descrições" nas Configurações liga os recursos de IA (eles começam desligados) e recebe a chave de API de um ou mais provedores — Gemini, OpenAI, Claude, Groq e OpenRouter —, que são tentados na ordem que você definir; assim, quando um falha ou fica sem cota, o próximo responde. No menu de contexto de uma mensagem, ou com Ctrl+Shift+I, "Transcrever" transforma uma mensagem de voz em texto, "Descrever" descreve uma foto ou um vídeo, "Descrever figurinha" descreve uma figurinha e "Converter em texto acessível" transforma um PDF em texto simples e legível. O resultado abre em uma janela com o texto e, para fotos e vídeos, dá para fazer perguntas de acompanhamento nela. O WinZapp pergunta antes de enviar mídia a um provedor e pergunta de novo a cada vez nas conversas bloqueadas; suas chaves ficam criptografadas no seu computador e só são enviadas ao provedor a que pertencem. Um som de espera toca enquanto o provedor trabalha, e as respostas podem ser lidas em voz alta automaticamente. O texto segue o idioma do aplicativo.
 
+- Voltar para os resultados da pesquisa ao fechar uma conversa. Marcando "Manter a pesquisa de conversas ao abrir uma conversa" na aba Interface do usuário das Configurações, a pesquisa de conversas continua ativa quando você abre uma conversa encontrada por ela, e o Esc devolve o foco a essa conversa nos resultados, em vez de voltar para a lista completa. A opção vem desmarcada.
+
+- Encaminhar mensagens de voz como mensagens de voz. O WhatsApp transforma em áudio comum toda mensagem de voz encaminhada, o que a tira da reprodução em sequência das mensagens de voz na conversa de destino. Marcando "Encaminhar mensagens de voz como mensagens de voz, em vez de áudio" na aba Interface do usuário das Configurações, a cópia chega como mensagem de voz e continua marcada como encaminhada. A opção vem desmarcada.
+
+- Baixar atualizações em segundo plano. Marcando "Baixar atualizações em segundo plano, sem a janela de progresso" na aba Geral das Configurações, uma atualização que você aceitou, do WinZapp ou da WPPConnect, é baixada sem a janela de progresso, e você continua usando o programa normalmente, conectado. Só quando ela está pronta o WinZapp avisa que vai instalar: para uma atualização do próprio WinZapp, ele fecha e abre de novo; para uma da WPPConnect, fica offline apenas pelos instantes de trocar a versão e reiniciá-la, em vez de durante todo o download e a instalação. Se você estiver numa ligação, o aviso espera ela terminar. A opção vale para todas as contas e vem desmarcada.
+
 MELHORIAS
 
 - Verificação ortográfica: o som de erro agora também toca quando você digita um sinal de pontuação (vírgula, ponto, interrogação etc.) logo depois de uma palavra errada, e não só o espaço, e quando o cursor chega a uma palavra errada com as setas, Ctrl+setas, Home, End ou o mouse.
@@ -82,9 +88,9 @@ MELHORIAS
 
 - Pesquisa na conversa com F3 e Shift+F3. Agora dá para ir ao próximo resultado com F3 e ao anterior com Shift+F3 de qualquer lugar da conversa aberta, inclusive da lista de mensagens, sem precisar voltar ao campo de pesquisa; o foco acompanha o resultado e o leitor de tela anuncia a posição. Enter e Shift+Enter continuam funcionando como alternativa, mas só dentro do campo de pesquisa, porque na lista de mensagens eles já têm outras funções. Os botões "Resultado anterior" e "Próximo resultado" passam a anunciar Shift+F3 e F3, e a ajuda de atalhos foi atualizada.
 
-CORREÇÕES
+- Encaminhar agora confirma quando deu certo. Antes só a falha era avisada; agora, ao terminar, aparece uma caixa dizendo "Mensagem encaminhada." ou quantas mensagens foram encaminhadas.
 
-- Histórico: nas conversas em que o próprio WhatsApp Web informa que as mensagens mais antigas só podem ser vistas no celular, o WinZapp não pede mais histórico ao celular. O pedido era aceito, mas nada chegava, e só causava notificações de sincronização no celular. O histórico já baixado é mantido.
+CORREÇÕES
 
 - Mídia com IA: redefinir todas as chaves também limpa as autorizações de envio lembradas, mesmo ao inserir uma nova chave antes de aplicar. Transcrições e textos de PDF longos agora informam um erro de limite de texto, em vez de perder o final silenciosamente; outro provedor não é tentado automaticamente por esse limite.
 
@@ -173,6 +179,8 @@ CORREÇÕES
 - Botão "Descrever" nas mensagens com mídia. Numa foto, figurinha ou vídeo (e também em áudios e PDFs, quando os recursos de IA estão ligados), aparece um botão logo depois de "Salvar como...", alcançável com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de mídia, também mostrando Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
 
 - Modelo "Automático (recomendado)" na janela de cada provedor de IA (Transcrições e Descrições). Marcada por padrão nos provedores em que você ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que ele recomenda, que acompanha as atualizações; desmarque-a para escolher ou digitar um modelo fixo.
+
+- Numa conversa cujas mensagens mais antigas só existem no celular, o WinZapp continuava pedindo essas mensagens ao celular ao chegar à primeira mensagem: nada chegava, o celular podia mostrar um aviso de sincronização a cada vez e a lista ficava ocupada por minutos. Agora o WinZapp detecta esse caso, não pede nada e anuncia "Use o WhatsApp no celular para ver as mensagens mais antigas."
 
 V1.1.1.0
 
