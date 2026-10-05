@@ -10,6 +10,8 @@ NOVIDADES
 
 - Contactos sincronizados com o telemóvel: em "Adicionar contacto" (dados do contacto e nova conversa) há agora dois separadores, contacto local (só no WinZapp) e contacto sincronizado com o telemóvel, que guarda o nome no WhatsApp e na agenda do telemóvel. O separador sincronizado abre por predefinição, e apagar um contacto sincronizado também o remove do WhatsApp e do telemóvel
 
+- Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que te responde, como o Alt+Shift+M faz com as menções. Premir de novo recua pelas respostas e, depois da mais antiga, volta à mais recente. Também consta da lista de atalhos do F1
+
 CORREÇÕES
 
 - Correções em listas e menções: os botões das listas do WhatsApp, no ecrã de conversas e na janela de listas, passam a ter teclas de atalho. Uma pessoa mencionada pelo nome juntamente com @todos mantém a sua ligação na lista de menções, e a notificação de uma menção a si usa a palavra escolhida em "Como se referir a mim?" em vez de dizer sempre "Eu"

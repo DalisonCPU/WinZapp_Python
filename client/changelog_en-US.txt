@@ -10,6 +10,8 @@ WHAT'S NEW
 
 - Contacts synced with the phone: in "Add contact" (contact data and new conversation) there are now two tabs, local contact (only in WinZapp) and contact synced with the phone, which saves the name in WhatsApp and in the phone's address book. The synced tab opens by default, and deleting a synced contact also removes it from WhatsApp and the phone
 
+- New shortcut Alt+Shift+P in the messages list: jump to the previous message that replies to you, like Alt+Shift+M does for mentions. Repeated presses go back through them and wrap to the newest. It is also listed in the F1 shortcuts
+
 FIXES
 
 - Fixes for lists and mentions: the buttons for WhatsApp lists, on the chats screen and in the lists window, now have keyboard shortcuts. A person mentioned by name next to @all keeps their link in the mentions list, and a notification of a mention of you uses the word chosen in "How should I be referred to?" instead of always saying "Me"
