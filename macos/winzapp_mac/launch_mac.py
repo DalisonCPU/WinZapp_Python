@@ -15,7 +15,8 @@ applicationDidFinishLaunching: (before stop:). wxPython 4.2.x ships
 wxWidgets 3.2, so the same event is posted here, from an observer of the
 same notification. Posted to the end of the queue, like wx's own wake-up
 events (wxGUIEventLoop::WakeUp), it is harmless if the loop has already
-stopped: the main loop later dispatches it and nothing handles it.
+stopped: the main loop later dispatches it and nothing handles it. With
+wxWidgets 3.3.2 or later wx posts it itself, and only the timing remains.
 
 The [STARTUP_TIMING] lines bracket each phase, so log.log shows whether the
 wait is gone: "OnInit reached" should follow "macOS finished launching"
@@ -23,13 +24,20 @@ within milliseconds.
 """
 
 import logging
+import re
 import time
 
 import wx
 
-_orig_app_init = wx.App.__init__
-_orig_on_pre_init = wx.App.OnPreInit
-_orig_on_init = wx.App.OnInit
+# wx.App's methods as install() found them. Read there, not at import:
+# another module (accessibility_mac) wraps OnPreInit too, and a copy taken
+# at import would drop its wrapper if that module installs first.
+_orig = {}
+_installed = False
+
+# The first wxWidgets with the second dummy event in applicationDidFinishLaunching:.
+FIXED_IN = (3, 3, 2)
+_post_needed = True
 
 # Times of the wx.App() being constructed; one App per process.
 _timing = {"started": None, "launched": None}
@@ -47,6 +55,19 @@ def _app():
 
 def _since_start():
     return time.perf_counter() - (_timing["started"] or time.perf_counter())
+
+
+def wxwidgets_version(version_text):
+    """(major, minor, release) of the wxWidgets in wx.version()'s text
+    ("4.2.4 osx-cocoa (phoenix) wxWidgets 3.2.8"), or None. wx.VERSION is
+    wxPython's own version, not wxWidgets'."""
+    match = re.search(r"wxWidgets (\d+)\.(\d+)\.(\d+)", version_text or "")
+    return tuple(int(part) for part in match.groups()) if match else None
+
+
+def wx_posts_its_own_wake_event(version_text):
+    version = wxwidgets_version(version_text)
+    return version is not None and version >= FIXED_IN
 
 
 def post_wake_event():
@@ -69,9 +90,10 @@ def _watch_launch():
         try:
             _unwatch(holder.pop("token", None))
             _timing["launched"] = time.perf_counter()
-            post_wake_event()
-            logging.info("[STARTUP_TIMING] wx.App: +%.3fs macOS finished launching; wake-up event posted",
-                         _since_start())
+            if _post_needed:
+                post_wake_event()
+            logging.info("[STARTUP_TIMING] wx.App: +%.3fs macOS finished launching%s", _since_start(),
+                         "; wake-up event posted" if _post_needed else "")
         except Exception:
             logging.exception("[launch_mac] could not post the launch wake-up event")
 
@@ -91,7 +113,7 @@ def _unwatch(token):
     try:
         _center().removeObserver_(token)
     except Exception:
-        pass
+        logging.debug("[launch_mac] could not remove the launch observer", exc_info=True)
 
 
 def app_init(self, *args, **kwargs):
@@ -100,7 +122,7 @@ def app_init(self, *args, **kwargs):
     logging.info("[STARTUP_TIMING] wx.App: construction started")
     token = _watch_launch()
     try:
-        _orig_app_init(self, *args, **kwargs)
+        _orig["app_init"](self, *args, **kwargs)
     finally:
         # Normally already gone (the observer removes itself); this covers a
         # constructor that failed before macOS finished launching.
@@ -112,7 +134,7 @@ def on_pre_init(self):
     # Called after wxEntryStart(), right before CallOnInit() enters [NSApp run].
     logging.info("[STARTUP_TIMING] wx.App: +%.3fs toolkit initialised, waiting for macOS to finish launching",
                  _since_start())
-    return _orig_on_pre_init(self)
+    return _orig["on_pre_init"](self)
 
 
 def on_init(self):
@@ -123,10 +145,20 @@ def on_init(self):
     else:
         logging.info("[STARTUP_TIMING] wx.App: +%.3fs OnInit reached, %.3fs after launch finished",
                      _since_start(), time.perf_counter() - launched)
-    return _orig_on_init(self)
+    return _orig["on_init"](self)
 
 
 def install():
+    global _installed, _post_needed
+    if _installed:
+        return
+    _installed = True
+    if wx_posts_its_own_wake_event(wx.version()):
+        _post_needed = False
+        logging.info("[launch_mac] %s posts its own launch wake-up event; only timing it", wx.version())
+    _orig["app_init"] = wx.App.__init__
+    _orig["on_pre_init"] = wx.App.OnPreInit
+    _orig["on_init"] = wx.App.OnInit
     wx.App.__init__ = app_init
     wx.App.OnPreInit = on_pre_init
     wx.App.OnInit = on_init

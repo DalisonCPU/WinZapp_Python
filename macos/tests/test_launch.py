@@ -72,9 +72,9 @@ class _Stub:
 
 def test_finishing_launch_posts_one_wake_up_event_at_the_end_of_the_queue(appkit, monkeypatch):
     center, app = appkit
-    monkeypatch.setattr(launch_mac, "_orig_app_init", _wx_app_init(center, []))
-    monkeypatch.setattr(launch_mac, "_orig_on_pre_init", lambda self: None)
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: True)
+    monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, []))
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     launch_mac.app_init(_Stub())
     assert len(app.posted) == 1
     event, at_start = app.posted[0]
@@ -84,9 +84,9 @@ def test_finishing_launch_posts_one_wake_up_event_at_the_end_of_the_queue(appkit
 
 def test_the_observer_is_removed_after_launch(appkit, monkeypatch):
     center, app = appkit
-    monkeypatch.setattr(launch_mac, "_orig_app_init", _wx_app_init(center, []))
-    monkeypatch.setattr(launch_mac, "_orig_on_pre_init", lambda self: None)
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: True)
+    monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, []))
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     launch_mac.app_init(_Stub())
     assert center.observers == {}
     center.post("NSApplicationDidFinishLaunchingNotification")   # a second one changes nothing
@@ -99,7 +99,7 @@ def test_the_observer_is_removed_when_construction_fails(appkit, monkeypatch):
     def failing_init(self, *a, **k):
         raise SystemExit("This program needs access to the screen.")
 
-    monkeypatch.setattr(launch_mac, "_orig_app_init", failing_init)
+    monkeypatch.setitem(launch_mac._orig, "app_init", failing_init)
     with pytest.raises(SystemExit):
         launch_mac.app_init(_Stub())
     assert center.observers == {}
@@ -114,9 +114,9 @@ def test_a_failed_post_never_reaches_appkit(appkit, monkeypatch, caplog):
 
     monkeypatch.setattr(app, "postEvent_atStart_", broken_post)
     steps = []
-    monkeypatch.setattr(launch_mac, "_orig_app_init", _wx_app_init(center, steps))
-    monkeypatch.setattr(launch_mac, "_orig_on_pre_init", lambda self: None)
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: True)
+    monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, steps))
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     with caplog.at_level(logging.INFO):
         launch_mac.app_init(_Stub())
     assert steps == ["init", True]                      # start-up carried on
@@ -125,9 +125,9 @@ def test_a_failed_post_never_reaches_appkit(appkit, monkeypatch, caplog):
 
 def test_each_phase_of_wx_app_is_timed_in_order(appkit, monkeypatch, caplog):
     center, app = appkit
-    monkeypatch.setattr(launch_mac, "_orig_app_init", _wx_app_init(center, []))
-    monkeypatch.setattr(launch_mac, "_orig_on_pre_init", lambda self: None)
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: True)
+    monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, []))
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     with caplog.at_level(logging.INFO):
         launch_mac.app_init(_Stub())
     lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("[STARTUP_TIMING] wx.App:")]
@@ -139,21 +139,66 @@ def test_each_phase_of_wx_app_is_timed_in_order(appkit, monkeypatch, caplog):
     assert "after launch finished" in lines[3]
 
 
-def test_oninit_still_returns_what_wx_returns(appkit, monkeypatch):
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: False)
+def test_oninit_still_returns_what_wx_returns(monkeypatch):
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: False)
     assert launch_mac.on_init(_Stub()) is False
-    monkeypatch.setattr(launch_mac, "_orig_on_init", lambda self: True)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     assert launch_mac.on_init(_Stub()) is True
 
 
-def test_install_wraps_wx_app_and_keeps_the_originals(monkeypatch):
+def _fresh_install(monkeypatch):
     monkeypatch.setattr(wx.App, "__init__", wx.App.__init__)
     monkeypatch.setattr(wx.App, "OnPreInit", wx.App.OnPreInit)
     monkeypatch.setattr(wx.App, "OnInit", wx.App.OnInit)
+    monkeypatch.setattr(launch_mac, "_orig", {})
+    monkeypatch.setattr(launch_mac, "_installed", False)
+    monkeypatch.setattr(launch_mac, "_post_needed", True)
+
+
+def test_install_wraps_wx_app_and_keeps_the_originals(monkeypatch):
+    _fresh_install(monkeypatch)
+    original_init = wx.App.__init__
     launch_mac.install()
     launch_mac.install()          # installing twice wraps once
     assert wx.App.__init__ is launch_mac.app_init
     assert wx.App.OnPreInit is launch_mac.on_pre_init
     assert wx.App.OnInit is launch_mac.on_init
-    assert launch_mac._orig_app_init is not launch_mac.app_init
-    assert launch_mac._orig_on_init is not launch_mac.on_init
+    assert launch_mac._orig["app_init"] is original_init
+
+
+def test_installing_after_another_onpreinit_wrapper_keeps_it(monkeypatch):
+    # accessibility_mac wraps OnPreInit the same way; whichever of the two
+    # installs first, both must still run.
+    _fresh_install(monkeypatch)
+    calls = []
+    monkeypatch.setattr(wx.App, "OnPreInit", lambda self: calls.append("other"))
+    launch_mac.install()
+    wx.App.OnPreInit(_Stub())
+    assert calls == ["other"]
+
+
+@pytest.mark.parametrize("text, wx_posts", [
+    ("4.2.4 osx-cocoa (phoenix) wxWidgets 3.2.8", False),
+    ("4.3.0 osx-cocoa (phoenix) wxWidgets 3.3.1", False),
+    ("4.3.0 osx-cocoa (phoenix) wxWidgets 3.3.2", True),
+    ("5.0.0 osx-cocoa (phoenix) wxWidgets 3.4.0", True),
+    ("garbled", False),
+])
+def test_the_workaround_is_only_for_wxwidgets_before_3_3_2(text, wx_posts):
+    assert launch_mac.wx_posts_its_own_wake_event(text) is wx_posts
+
+
+def test_a_fixed_wxwidgets_is_timed_but_not_woken(appkit, monkeypatch, caplog):
+    center, app = appkit
+    _fresh_install(monkeypatch)
+    monkeypatch.setattr(wx, "version", lambda: "4.3.0 osx-cocoa (phoenix) wxWidgets 3.3.2")
+    with caplog.at_level(logging.INFO):
+        launch_mac.install()
+    monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, []))
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
+    monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
+    with caplog.at_level(logging.INFO):
+        launch_mac.app_init(_Stub())
+    assert app.posted == []
+    assert "macOS finished launching" in caplog.text
+    assert caplog.text.count("posts its own launch wake-up event") == 1
