@@ -82,8 +82,11 @@ def test_messages_lists_and_chats_list_get_the_minimum():
     assert panel.conversations_list.min_size == (-1, 92)
 
 
-def test_panel_without_lists_is_left_alone():
-    layout_mac.keep_lists_tall(types.SimpleNamespace())
+def test_panel_without_lists_is_left_alone(caplog):
+    with caplog.at_level("DEBUG"):
+        layout_mac.keep_lists_tall(types.SimpleNamespace())
+    assert "no _message_list_controls" in caplog.text
+    assert "no conversations_list" in caplog.text
 
 
 def test_inner_layout_is_synchronous_and_the_outer_one_follows(call_after):

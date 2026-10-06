@@ -47,9 +47,14 @@ def keep_lists_tall(panel):
     """Give the Chats list and every messages-list control (classic and
     listbox, only one of them shown) a minimum height of MIN_ROWS rows."""
     controls = list(getattr(panel, "_message_list_controls", {}).values())
+    if not controls:
+        # Renamed upstream: say so instead of silently losing the fix.
+        logging.debug("[layout_mac] no _message_list_controls; messages list min height not set")
     chats = getattr(panel, "conversations_list", None)
     if chats is not None:
         controls.append(chats)
+    else:
+        logging.debug("[layout_mac] no conversations_list; Chats list min height not set")
     for control in controls:
         control.SetMinSize((-1, min_list_height(control)))
 
