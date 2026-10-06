@@ -31,6 +31,7 @@ and adapts WinZapp's UI to how Mac apps and VoiceOver behave:
 | `strings_mac.py` | Mac wording: a string that describes Windows has a Mac variant beside it in `client/languages` (`<key>_macos`), used in its place on the Mac. |
 | `focus_mac.py` | WinZapp's quiet-hours gate follows macOS Focus (Developer ID builds with the Communication Notifications entitlement). |
 | `updater_mac.py` | Signed release builds update from the macOS release feed named in their Info.plist; without one the updater is off. |
+| `version_mac.py` | A release build runs as its Info.plist release tag (About, update checks), not the unstamped `client/version.py`. |
 
 ## Building
 
@@ -99,12 +100,19 @@ one of our tags and its commit must not install.
 
 **The running version is the official tag the app was built from**
 (Info.plist `WinZappReleaseTag`, written by `build_app.py` before signing,
-next to `WinZappSourceCommit`). It is never `client/version.py`, which says
-`2.0.0.0` in every tagged commit (CI stamps it only at build), so an old
-genuine release would otherwise count as newer. A build without a valid
+next to `WinZappSourceCommit`). It is never `client/version.py`, which is
+the unstamped placeholder in every tagged commit (CI stamps it only at
+build), so an old genuine release would otherwise count as newer. A build without a valid
 `WinZappReleaseTag` (a development build) offers and installs no update, and
 the log says why. Versions compare as integers; an alpha or beta is older
-than the stable of the same number; an equal tag is not newer.
+than the stable of the same number; an equal tag is not newer. The same tag,
+without its `v`, is the version the whole app shows and uses: `version_mac`
+sets `version.__version__` from it at startup (About, the update check's
+User-Agent, `UpdateChecker`'s "is it newer" check), and `build_app.py`
+writes its numbers (no `alpha`/`beta`, which Apple's integer format does
+not allow) as `CFBundleShortVersionString`. Without it, the unstamped `version.py` of the
+tag's checkout would make `UpdateChecker` offer the running release on every
+check.
 
 **What is verified, in this order.** Any failure, or any answer that is not a
 clean 200, is a refusal: nothing is installed. Offline, a timeout, an HTTP
