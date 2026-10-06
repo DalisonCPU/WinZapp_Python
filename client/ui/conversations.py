@@ -50,6 +50,7 @@ from ui.accessible import (
     AccessibleAudioSlider,
     AccessibleSaveAs,
     AccessibleShowInFolder,
+    AccessibleDescribeButton,
     AccessibleConversationDataButton,
     AccessibleVoiceCallButton,
     AccessibleVideoCallButton,
@@ -129,6 +130,7 @@ from ui.conversation_panel.transfer_gauge import (  # noqa: F401
 )
 from ui.conversation_panel.accelerators import AcceleratorsMixin
 from ui.conversation_panel.conversation_navigation import ConversationNavigationMixin
+from ui.conversation_panel.chat_lists import WhatsAppListFilterMixin
 from ui.conversation_panel.composer import ComposerMixin
 from ui.conversation_panel.voice_recording import VoiceRecordingMixin
 from ui.conversation_panel.system_audio_recording import SystemAudioRecordingMixin
@@ -141,6 +143,7 @@ from ui.conversation_panel.media_files import MediaFilesMixin
 from ui.conversation_panel.links import LinksMixin
 from ui.conversation_panel.mentions import MentionsMixin
 from ui.conversation_panel.unread_separator import UnreadSeparatorMixin
+from ui.conversation_panel.typing_row import TypingRowMixin, sync_typing_row
 from ui.conversation_panel.history_loading import HistoryLoadingMixin
 from ui.conversation_panel.chat_selection import ChatSelectionMixin
 from ui.conversation_panel.message_rows import MessageRowsMixin
@@ -150,6 +153,7 @@ from ui.conversation_panel.message_rendering import MessageRenderingMixin
 from ui.conversation_panel.conversation_info import ConversationInfoMixin
 from ui.conversation_panel.forwarding import ForwardingMixin
 from ui.conversation_panel.message_actions import MessageActionsMixin
+from ui.conversation_panel.message_stars import StarActionsMixin
 from ui.conversation_panel.message_accels import MessageAccelsMixin
 from ui.conversation_panel.bookmarks import BookmarksMixin
 from ui.conversation_panel.message_search import MessageSearchMixin
@@ -158,11 +162,13 @@ from ui.conversation_panel.attachments import AttachmentsMixin
 from ui.conversation_panel.contact_messages import ContactMessagesMixin
 from ui.conversation_panel.bulk_messages import BulkMessagesMixin
 from ui.conversation_panel.panel_visibility import ConversationPanelVisibilityMixin
+from ui.conversation_panel.ai_actions import AIActionsMixin
 
 
 class ConversationsPanel(
     AcceleratorsMixin,
     ConversationNavigationMixin,
+    WhatsAppListFilterMixin,
     ConversationPanelVisibilityMixin,
     ComposerMixin,
     VoiceRecordingMixin,
@@ -176,6 +182,7 @@ class ConversationsPanel(
     LinksMixin,
     MentionsMixin,
     UnreadSeparatorMixin,
+    TypingRowMixin,
     HistoryLoadingMixin,
     ChatSelectionMixin,
     MessageRowsMixin,
@@ -185,6 +192,7 @@ class ConversationsPanel(
     ConversationInfoMixin,
     ForwardingMixin,
     MessageActionsMixin,
+    StarActionsMixin,
     MessageAccelsMixin,
     BookmarksMixin,
     MessageSearchMixin,
@@ -192,6 +200,7 @@ class ConversationsPanel(
     AttachmentsMixin,
     ContactMessagesMixin,
     BulkMessagesMixin,
+    AIActionsMixin,
     wx.Panel,
 ):
     # Windows' native SysListView32 (the classic wx.ListCtrl) reads each item's
@@ -240,6 +249,13 @@ class ConversationsPanel(
         # nao — ver _on_conversation_focused() e
         # _restore_conversation_selection().
         self._last_list_focus_jid = ""
+
+        # The "X is typing..." last row of the messages list — only in the
+        # control, never in _sorted_messages (see conversation_panel/typing_row.py).
+        self._typing_row_list = None
+        self._typing_row_text = ""
+        self._typing_row_chat = None
+        self._typing_row_dismissed = set()
 
         # ── Audio / video player state ──────────────────────────────────────
         self._sorted_messages = []
@@ -554,6 +570,8 @@ class ConversationsPanel(
         self._filter_radio.Bind(wx.EVT_RADIOBOX, self._on_filter_changed)
         outer_sizer.Add(self._filter_radio, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
 
+        self._build_wa_list_controls(outer_sizer)
+
         # ── Conversations list ──────────────────────────────────────────────
         self.conversations_label = wx.StaticText(self, label=i18n.t("conversations"))
         outer_sizer.Add(self.conversations_label, 0, wx.LEFT, 5)
@@ -765,6 +783,16 @@ class ConversationsPanel(
         self._media_action_sizer.Add(self._action_save_as_btn, 0, wx.TOP, 2)
         self._action_save_as_btn.Hide()
 
+        # Describe / transcribe (Ctrl+Shift+I) sits right after Save as in the
+        # Tab order; ai_actions.py decides when it is shown and what it says.
+        self._action_describe_btn = wx.Button(
+            self._media_action_slot, label=i18n.t("ai_describe_image_menu")
+        )
+        self._action_describe_btn.SetAccessible(AccessibleDescribeButton())
+        self._action_describe_btn.Bind(wx.EVT_BUTTON, self._on_ai_describe_button)
+        self._media_action_sizer.Add(self._action_describe_btn, 0, wx.TOP, 2)
+        self._action_describe_btn.Hide()
+
         self._action_show_in_folder_btn = wx.Button(
             self._media_action_slot, label=i18n.t("show_in_folder")
         )
@@ -873,6 +901,7 @@ class ConversationsPanel(
         self.message_field.Bind(wx.EVT_TEXT,       self.on_change_message_field)
         self.message_field.Bind(wx.EVT_TEXT_ENTER, self.on_send_message)
         self.message_field.Bind(wx.EVT_KEY_DOWN,   self._on_message_field_key_down)
+        self.message_field.Bind(wx.EVT_LEFT_UP,    self._cue_spelling_at_caret_on_click)
         self.message_field.Bind(wx.EVT_CHAR,       self._on_message_field_char)
         self.message_field.Bind(wx.EVT_TEXT_PASTE, self._on_text_field_paste)
         conv_sizer.Add(self.message_field, 0, wx.EXPAND | wx.ALL, 5)
@@ -1132,6 +1161,10 @@ class ConversationsPanel(
             if total:
                 for index, msg in enumerate(self._sorted_messages):
                     new_list.Append((self._render_message_line(msg, index=index, total=total),))
+            # The typing row lived in the old control (which is cleared the
+            # next time it is switched to); add it back to this one.
+            self._typing_row_list = None
+            sync_typing_row(self)
         finally:
             new_list.Thaw()
 
@@ -1156,6 +1189,7 @@ class ConversationsPanel(
 
     def refresh_labels(self):
         """Update all translatable labels and column headers after a language change."""
+        self._refresh_wa_list_labels()
         i18n = self.main_window.i18n
         self._spell_checker.set_language(
             self.main_window.settings.get("general", {}).get("language")

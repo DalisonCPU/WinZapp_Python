@@ -126,6 +126,8 @@ class MessageListMixin:
                 self._action_open_btn.Show()
                 self.conversation_panel.Layout()
 
+        self._update_ai_describe_button(msg)
+
         if self._saved_media_path(msg):
             self._action_show_in_folder_btn.Show()
 
@@ -334,7 +336,10 @@ class MessageListMixin:
         #   conversation as read, once.
         # - Focus moving PAST the separator dismisses the row itself. Merely
         #   landing on it does not — see _should_dismiss_unread_separator().
-        if self._unread_sep_idx >= 0:
+        # `idx < len(...)`: the typing row (typing_row.py) sits past the last
+        # message and is not one — landing on it reads nothing, so it must not
+        # mark the conversation read.
+        if self._unread_sep_idx >= 0 and idx < len(self._sorted_messages):
             if idx >= self._unread_sep_idx:
                 # Mark as read immediately (first time focus arrives) — but
                 # not while populate_messages() is still running

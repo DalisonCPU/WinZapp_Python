@@ -267,8 +267,10 @@ from main_window.window_chrome import WindowChromeMixin
 from main_window.connection import ConnectionMixin
 from main_window.sync import SyncMixin
 from main_window.updates import UpdatesMixin
+from main_window.wpp_background_update import WppBackgroundUpdateMixin
 from main_window.window_lifecycle import WindowLifecycleMixin
 from main_window.chat_list import ChatListMixin
+from main_window.chat_lists import WhatsAppListsMixin
 from main_window.calls import CallsMixin
 from main_window.identity import IdentityMixin
 from main_window.message_events import MessageEventsMixin
@@ -292,6 +294,7 @@ from main_window.history import HistoryMixin
 from main_window.read_state import ReadStateMixin
 from main_window.chat_actions import ChatActionsMixin
 from main_window.message_actions import MessageActionsMixin
+from main_window.message_stars import MessageStarsMixin
 from main_window.quick_audio_devices import QuickAudioDevicesMixin
 
 
@@ -311,8 +314,10 @@ class MainWindow(
     ConnectionMixin,
     SyncMixin,
     UpdatesMixin,
+    WppBackgroundUpdateMixin,
     WindowLifecycleMixin,
     ChatListMixin,
+    WhatsAppListsMixin,
     CallsMixin,
     IdentityMixin,
     MessageEventsMixin,
@@ -336,6 +341,7 @@ class MainWindow(
     ReadStateMixin,
     ChatActionsMixin,
     MessageActionsMixin,
+    MessageStarsMixin,
     QuickAudioDevicesMixin,
     wx.Frame,
 ):
@@ -1636,27 +1642,38 @@ def _startup_critical_error_text(crash_path: str, tb: str) -> tuple[str, str]:
     top-level except-block catches an error during startup — translated
     into the user's selected language when possible.
 
-    Falls back to the original hardcoded Portuguese only when no usable
-    i18n is available at all (a crash before MainWindow even constructs
-    self.i18n, or i18n.t() itself raising) — this dialog is the one thing
+    A crash before MainWindow even constructs self.i18n (or i18n.t() itself
+    raising) falls back to the install-wide language (startup_i18n), and only
+    when that fails too to hardcoded English — this dialog is the one thing
     standing between the user and a silent exit, so it must never crash
     trying to be helpful.
     """
     frame = _last_partial_frame
+    candidates = []
     if frame is not None and getattr(frame, "i18n", None) is not None:
+        candidates.append(lambda: frame.i18n)
+    candidates.append(_startup_i18n)
+    for get_i18n in candidates:
         try:
-            title = frame.i18n.t("startup_critical_title")
-            message = frame.i18n.t("startup_critical_message").format(
+            i18n = get_i18n()
+            title = i18n.t("startup_critical_title")
+            message = i18n.t("startup_critical_message").format(
                 path=crash_path, details=tb[:800]
             )
             return title, message
         except Exception:
             pass
     return (
-        "WinZapp — Erro de inicialização",
-        f"O WinZapp encontrou um erro crítico ao iniciar e não pôde continuar.\n\n"
-        f"Detalhes foram salvos em:\n{crash_path}\n\n{tb[:800]}",
+        "WinZapp — Startup error",
+        f"WinZapp encountered a critical error during startup and could not continue.\n\n"
+        f"Details were saved to:\n{crash_path}\n\n{tb[:800]}",
     )
+
+
+def _startup_i18n():
+    """I18n in the global UI language, for messages shown before MainWindow."""
+    from startup_i18n import startup_i18n
+    return startup_i18n()
 
 
 def _write_crash_log(tb: str) -> str:
@@ -1822,14 +1839,15 @@ if __name__ == "__main__":
         _mode = _startup["mode"]
         if _mode == "error":
             ctypes.windll.user32.MessageBoxW(
-                0, f"WinZapp: {_startup.get('reason', 'nieprawidłowe konto')}",
+                0, _startup_i18n().t("startup_invalid_account").format(
+                    account=_startup.get("account_id", "")),
                 "WinZapp", 0x10)
             sys.exit(2)
         elif _mode == "manager":
             # Global manager mode: no account/data_path, no Node (plan sekcja F).
             # TODO(Zad 4.5/4.6): show the account manager. For now, inform+exit.
             ctypes.windll.user32.MessageBoxW(
-                0, "WinZapp: brak kont do uruchomienia (menedżer kont w budowie).",
+                0, _startup_i18n().t("startup_account_manager_unavailable"),
                 "WinZapp", 0x40)
             sys.exit(0)
         elif _mode == "first_run":

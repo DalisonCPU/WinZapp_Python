@@ -24,6 +24,7 @@ docstring for why this dialog cannot be exercised against a stub.
 """
 
 import pytest
+import wx
 
 from core.i18n import I18n
 from core.sound_system import DEFAULT_PACK_ID
@@ -192,3 +193,82 @@ def test_fixed_quick_reactions_box_sits_on_the_reactions_tab_and_reaches_the_rea
     assert dialog.main_window.settings["reactions"]["fixed_quick_reactions"] is True
 
     assert make_dialog(dialog.main_window.settings)._fixed_quick_reactions_cb.GetValue() is True
+
+
+def test_show_typing_row_box_sits_on_the_ui_tab_and_apply_refreshes_the_open_chat(make_dialog):
+    """Pinned by name as well as by the parse above: the key
+    ui/conversation_panel/typing_row.py reads on every presence update (on by
+    default). Apply must also refresh the open conversation, so a row already
+    showing goes away at once instead of at the next presence event."""
+    assert ("_show_typing_row_cb", "user_interface", "show_typing_row") in CHECKBOXES
+
+    class _ConversationsPanel:
+        def __init__(self):
+            self.refreshed = 0
+
+        def refresh_typing_row(self):
+            self.refreshed += 1
+
+    dialog = make_dialog({})
+    panel = _ConversationsPanel()
+    dialog.main_window.conversations_panel = panel
+    box = dialog._show_typing_row_cb
+    assert box.GetParent() is dialog._ui_page
+    assert box.GetValue() is True
+
+    box.SetValue(False)
+    assert dialog._apply_values() is True
+    assert dialog.main_window.settings["user_interface"]["show_typing_row"] is False
+    assert panel.refreshed == 1
+
+    assert make_dialog(dialog.main_window.settings)._show_typing_row_cb.GetValue() is False
+
+
+class TestTheUserInterfacePageScrolls:
+    """Settings > User interface holds more options than a screen is tall. On a
+    plain panel the sizer squeezed the bottom ones to a height of zero, and
+    NVDA, which finds a control's group box by geometry, read "Posição para
+    anunciar itens selecionados" on the checkbox after the group instead of on
+    its radio buttons. The mechanism is pinned without a dialog in
+    test_settings_ui_page_scrolls.py; this is the real page."""
+
+    @staticmethod
+    def _small(dlg):
+        """The dialog far shorter than the page, with that page in front."""
+        notebook = dlg._notebook
+        for index in range(notebook.GetPageCount()):
+            if notebook.GetPage(index) is dlg._ui_page:
+                notebook.SetSelection(index)
+        dlg.SetSize((760, 420))
+        dlg.Layout()
+        dlg._ui_page.Layout()
+        dlg._ui_page.FitInside()
+        return dlg._ui_page
+
+    def test_the_page_is_a_scrolled_panel(self, make_dialog):
+        from wx.lib.scrolledpanel import ScrolledPanel
+        assert isinstance(make_dialog()._ui_page, ScrolledPanel)
+
+    def test_no_option_is_squeezed_out_of_existence(self, make_dialog):
+        page = self._small(make_dialog())
+        flat = [child for child in page.GetChildren()
+                if child.IsShown() and child.GetSize().height <= 0]
+        assert not flat, [child.GetLabel() for child in flat]
+
+    def test_every_radio_button_sits_inside_a_group_box(self, make_dialog):
+        from tests.test_settings_ui_page_scrolls import group_box_of
+        page = self._small(make_dialog())
+        boxes = [child for child in page.GetChildren() if isinstance(child, wx.StaticBox)]
+        radios = [child for child in page.GetChildren() if isinstance(child, wx.RadioButton)]
+        assert boxes and radios
+        outside = [radio.GetLabel() for radio in radios if group_box_of(radio, boxes) is None]
+        assert not outside
+
+    def test_the_reported_group_and_the_checkbox_after_it(self, make_dialog):
+        from tests.test_settings_ui_page_scrolls import group_box_of
+        dlg = make_dialog()
+        page = self._small(dlg)
+        boxes = [child for child in page.GetChildren() if isinstance(child, wx.StaticBox)]
+        for radio in (dlg._selected_announce_start_rb, dlg._selected_announce_end_rb):
+            assert group_box_of(radio, boxes) is dlg._selected_announce_box
+        assert group_box_of(dlg._show_yesterday_label_cb, boxes) is None

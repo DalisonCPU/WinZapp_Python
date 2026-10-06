@@ -464,11 +464,10 @@ class SettingsMixin:
                 msg   = self.i18n.t("settings_load_failed")
                 title = self.i18n.t("error").format(app_name=self.app_name)
             else:
-                from core.i18n import _load_translations
-                _pt   = _load_translations("pt-BR")
-                msg   = _pt.get("settings_load_failed",
-                                "Erro ao carregar o arquivo de configuração:")
-                title = _pt.get("error", "{app_name} Erro").format(app_name=self.app_name)
+                from startup_i18n import startup_i18n
+                _i18n = startup_i18n()
+                msg   = _i18n.t("settings_load_failed")
+                title = _i18n.t("error").format(app_name=self.app_name)
             if hasattr(self, "error_sound"):
                 self.error_sound.play()
             if not self.background_mode:
@@ -1062,7 +1061,8 @@ class SettingsMixin:
             # delivery status, the yesterday label), and its fingerprint has
             # not changed — so it has to be cleared or the rebuild is skipped.
             self._chats_ui_fp = None
-            self.add_chats_to_ui()
+            # An imported pin-order choice changes sorting as well as text.
+            self._schedule_set_chats()
 
         _step("chat list", _rebuild_chat_list)
 

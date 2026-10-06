@@ -122,6 +122,7 @@ class AcceleratorsMixin:
         self.Bind(wx.EVT_MENU, self._on_accel_bulk_unread_chats,   id=self.ID_BULK_UNREAD_CHATS)
 
     def create_accel_conversation(self):
+        self.ID_AI_ACTION = wx.NewIdRef()  # transcribe/describe the focused media (Ctrl+Shift+I)
         # ── Navigation / recording ──────────────────────────────────────────
         self.ID_CTRL_R          = wx.NewIdRef()  # record voice            (Ctrl+R)
         self.ID_CTRL_SHIFT_G    = wx.NewIdRef()  # record, other mode      (Ctrl+Shift+G)
@@ -155,6 +156,8 @@ class AcceleratorsMixin:
         self.ID_CTRL_SHIFT_L    = wx.NewIdRef()  # clear conversation      (Ctrl+Shift+L)
         # ── Search / unread jump ─────────────────────────────────────────────
         self.ID_CTRL_SHIFT_F    = wx.NewIdRef()  # open search panel       (Ctrl+Shift+F)
+        self.ID_F3              = wx.NewIdRef()  # next search result      (F3)
+        self.ID_SHIFT_F3        = wx.NewIdRef()  # previous search result  (Shift+F3)
         self.ID_ALT_3           = wx.NewIdRef()  # jump to unread sep      (Alt+3)
         self.ID_ALT_U           = wx.NewIdRef()  # jump to unread sep      (Alt+U)
         # ── Message bookmarks ────────────────────────────────────────────────
@@ -167,6 +170,7 @@ class AcceleratorsMixin:
         self.ID_ALT_SHIFT_R     = wx.NewIdRef()  # reply privately         (Alt+Shift+R)
         self.ID_ALT_SHIFT_E     = wx.NewIdRef()  # recent reactions        (Alt+Shift+E)
         self.ID_ALT_SHIFT_M     = wx.NewIdRef()  # mentions                (Alt+Shift+M)
+        self.ID_ALT_SHIFT_P     = wx.NewIdRef()  # replies to me           (Alt+Shift+P)
         self.ID_ALT_SHIFT_C     = wx.NewIdRef()  # copy phone number       (Alt+Shift+C)
         self.ID_ALT_SHIFT_V     = wx.NewIdRef()  # converse with           (Alt+Shift+V)
         self.ID_CTRL_SHIFT_V    = wx.NewIdRef()  # voice call              (Ctrl+Shift+V)
@@ -228,6 +232,7 @@ class AcceleratorsMixin:
             self.main_window.i18n.t("messages"), "M")
 
         accel_tbl = wx.AcceleratorTable([
+            (CS,               ord("I"),          self.ID_AI_ACTION),
             (wx.ACCEL_ALT,     ord(focus_field_letter), self.ID_ALT_FOCUS_FIELD),
             (wx.ACCEL_ALT,     ord(focus_list_letter),  self.ID_ALT_FOCUS_LIST),
             (wx.ACCEL_CTRL,    ord("R"),         self.ID_CTRL_R),
@@ -259,6 +264,11 @@ class AcceleratorsMixin:
             (CS,               ord("M"),          self.ID_CTRL_SHIFT_M),
             (CS,               ord("L"),          self.ID_CTRL_SHIFT_L),
             (CS,               ord("F"),          self.ID_CTRL_SHIFT_F),
+            # F3 / Shift+F3 step through search results from anywhere in the
+            # open conversation, the messages list included, where Enter and
+            # Shift+Enter already mean something else.
+            (wx.ACCEL_NORMAL,  wx.WXK_F3,         self.ID_F3),
+            (wx.ACCEL_SHIFT,   wx.WXK_F3,         self.ID_SHIFT_F3),
             (wx.ACCEL_ALT,     ord("3"),          self.ID_ALT_3),
             (wx.ACCEL_ALT,     ord("U"),          self.ID_ALT_U),
             (wx.ACCEL_ALT,     ord("u"),          self.ID_ALT_U),
@@ -267,6 +277,7 @@ class AcceleratorsMixin:
             (AS,               ord("R"),          self.ID_ALT_SHIFT_R),
             (AS,               ord("E"),          self.ID_ALT_SHIFT_E),
             (AS,               ord("M"),          self.ID_ALT_SHIFT_M),
+            (AS,               ord("P"),          self.ID_ALT_SHIFT_P),
             (AS,               ord("C"),          self.ID_ALT_SHIFT_C),
             (AS,               ord("V"),          self.ID_ALT_SHIFT_V),
             (CS,               ord("V"),          self.ID_CTRL_SHIFT_V),
@@ -310,6 +321,7 @@ class AcceleratorsMixin:
         self.Bind(wx.EVT_MENU, self.on_add_attachment,             id=self.ID_CTRL_SHIFT_A)
         self.Bind(wx.EVT_MENU, self._on_action_save_as,            id=self.ID_CTRL_SHIFT_S)
         self.Bind(wx.EVT_MENU, self._on_accel_reply,               id=self.ID_ALT_R)
+        self.Bind(wx.EVT_MENU, self._on_ai_action,                id=self.ID_AI_ACTION)
         self.Bind(wx.EVT_MENU, self._on_accel_message_data,        id=self.ID_ALT_SHIFT_D)
         self.Bind(wx.EVT_MENU, self._on_accel_forward,             id=self.ID_CTRL_SHIFT_E)
         self.Bind(wx.EVT_MENU, self._on_ctrl_shift_p,              id=self.ID_CTRL_SHIFT_P)
@@ -326,11 +338,14 @@ class AcceleratorsMixin:
         self.Bind(wx.EVT_MENU, self._on_accel_toggle_read,         id=self.ID_CTRL_SHIFT_M)
         self.Bind(wx.EVT_MENU, self._on_accel_clear,               id=self.ID_CTRL_SHIFT_L)
         self.Bind(wx.EVT_MENU, self._on_accel_open_search,         id=self.ID_CTRL_SHIFT_F)
+        self.Bind(wx.EVT_MENU, self._on_search_next,               id=self.ID_F3)
+        self.Bind(wx.EVT_MENU, self._on_search_prev,               id=self.ID_SHIFT_F3)
         self.Bind(wx.EVT_MENU, self._on_accel_jump_unread,         id=self.ID_ALT_3)
         self.Bind(wx.EVT_MENU, self._on_accel_jump_unread,         id=self.ID_ALT_U)
         self.Bind(wx.EVT_MENU, self._on_accel_reply_private,       id=self.ID_ALT_SHIFT_R)
         self.Bind(wx.EVT_MENU, self._on_accel_recent_reactions,    id=self.ID_ALT_SHIFT_E)
         self.Bind(wx.EVT_MENU, self._on_accel_mentions,            id=self.ID_ALT_SHIFT_M)
+        self.Bind(wx.EVT_MENU, self._on_accel_replies,             id=self.ID_ALT_SHIFT_P)
         self.Bind(wx.EVT_MENU, self._on_accel_copy_number_speak,   id=self.ID_ALT_SHIFT_C)
         self.Bind(wx.EVT_MENU, self._on_accel_alt_shift_v,         id=self.ID_ALT_SHIFT_V)
         self.Bind(wx.EVT_MENU, self._on_accel_voice_call,          id=self.ID_CTRL_SHIFT_V)

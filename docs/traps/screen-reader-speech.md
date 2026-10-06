@@ -27,6 +27,13 @@ typing/recording presence. A structural test fails if a new
 `messages_list.DeleteAllItems` appears in the panel's modules. Focus is restored
 only when the control does not already hold it on the right row.
 
+The control may hold one row past `_sorted_messages`: the temporary
+"X is typing..." row (`ui/conversation_panel/typing_row.py`), always last and
+never a message. Count the control's message rows with `message_row_count()`
+and add a message row with `append_message_row()`, never
+`messages_list.Append()` (a structural test guards it), or a message row lands
+below the typing row and the row's removal deletes that message instead.
+
 ## Switching to a chat panel: hidden conversation, chat list focus, no work (2026-10-02)
 
 PR #339 made an open conversation visible only in the panel it was opened
@@ -47,6 +54,15 @@ pane visible and never loads anything.**
   is Show/Hide + `restore_selection()` + the `[panel-switch]` log line: no
   `populate_messages`, no `navigate_to_conversation`, no request, no thread, no
   `wx.CallAfter`. Do not add one: that is the delay.
+- **Staying is not switching.** Alt+1 inside a main conversation, Alt+4 inside
+  an archived one (and the locked panel's own entry, and choosing the panel you
+  are in from the navigation list) change no panel, so they must not hide the
+  pane: the focus goes to that chat list and the conversation stays on screen.
+  `show_chat_panel()` reads `_detail_on_screen()` *before* anything is hidden
+  and `panel_layout(..., keep=True)` keeps the pane only in the panel the
+  conversation belongs to; the navigation list hides the content panels first,
+  so it reads it before and passes `keep=`. Coming from Status or Calls, or
+  from the other chat panel, is a real switch and hides it as above.
 - **Explicit reveal.** The conversation comes back only on an explicit ask:
   Alt+M, Alt+2, Alt+3 (frame-level `_on_global_*`, the chat list's
   `_on_list_*` handlers, the archived and locked lists' Alt+M), all through

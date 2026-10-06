@@ -32,6 +32,8 @@ _FILE = "app.json"
 # connection block is namespaced with its original keys.
 _DEFAULTS: dict[str, Any] = {
     "language": "",
+    # Only preferences and consent; credentials have a separate encrypted store.
+    "ai_media": {},
     "updates_enabled": True,
     # Opt-in to the alpha channel (one build per commit landed on main, see
     # .github/workflows/alpha-release.yml). Global rather than per-account for
@@ -39,6 +41,10 @@ _DEFAULTS: dict[str, Any] = {
     # can't be on a different build of WinZapp than its siblings. Off by
     # default; alpha builds are untested by definition.
     "alpha_updates_enabled": False,
+    # Download WinZapp and WPPConnect Server updates with no progress window
+    # and only interrupt the app to install (update_background.py). Global for
+    # the same reason as the two above: the install and its api/ are shared.
+    "background_update_downloads": False,
     "show_tray_icon": True,
     "autostart": False,
     # install-wide one-time setup prompts (asked once per install, NOT per
@@ -59,6 +65,7 @@ _DEFAULTS: dict[str, Any] = {
 
 # Which legacy general.* keys are global (the rest stay per-account).
 _GENERAL_GLOBAL = ("language", "updates_enabled", "alpha_updates_enabled",
+                   "background_update_downloads",
                    "show_tray_icon", "autostart",
                    "first_run", "hotkey_first_run_asked", "api_type_first_run_asked",
                    "switch_behavior")
@@ -110,6 +117,15 @@ class AppSettings:
         with app_settings_lock(self.global_dir):
             data = self._read_unlocked()
             data[key] = value
+            self._write(data)
+
+    def update(self, key: str, transform) -> None:
+        """Atomic update for nested install-wide preferences across accounts."""
+        if key not in _DEFAULTS:
+            raise KeyError(f"{key!r} is not a global setting")
+        with app_settings_lock(self.global_dir):
+            data = self._read_unlocked()
+            data[key] = transform(data.get(key, _DEFAULTS[key]))
             self._write(data)
 
     def all(self) -> dict:

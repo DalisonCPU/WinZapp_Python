@@ -329,6 +329,8 @@ class ChatLockMixin:
                 cp.close_conversation_for_panel_switch()
         self._chat_lock_unlocked = False
         self._cancel_chat_lock_timeout()
+        if hasattr(self, "_invalidate_star_sync_for_lock"):
+            self._invalidate_star_sync_for_lock()
         self._refresh_chat_lock_navigation()
         self._schedule_set_chats()
         self.output(self.i18n.t("chat_lock_chat_locked"), interrupt=True)
@@ -542,8 +544,12 @@ class ChatLockMixin:
     def lock_chat_vault(self, *, silent=False, show_conversations=True):
         self._cancel_chat_lock_timeout()
         self._chat_lock_unlocked = False
+        if hasattr(self, "_invalidate_star_sync_for_lock"):
+            self._invalidate_star_sync_for_lock()
         cp = getattr(self, "conversations_panel", None)
         panel = getattr(self, "locked_conversations_panel", None)
+        if cp is not None and hasattr(cp, "close_ai_media"):
+            cp.close_ai_media(locked_only=True)
         # Only a vault that closes under the user's eyes (the locked list on
         # screen, or a locked chat open in view) sends them to the main list;
         # a timeout firing in Status, Calls or the main list changes nothing.

@@ -194,6 +194,9 @@ class WindowLifecycleMixin:
         without going through wx's Show() path).
         """
         self.lock_chat_vault(silent=True, show_conversations=False)
+        cp = getattr(self, "conversations_panel", None)
+        if cp is not None and hasattr(cp, "close_ai_media"):
+            cp.close_ai_media()
         if self.tray_icon is not None:
             try:
                 import ctypes
@@ -224,6 +227,9 @@ class WindowLifecycleMixin:
         if getattr(self, "tray_icon", None) is None:
             return
         self.lock_chat_vault(silent=True, show_conversations=False)
+        cp = getattr(self, "conversations_panel", None)
+        if cp is not None and hasattr(cp, "close_ai_media"):
+            cp.close_ai_media()
         try:
             import ctypes
             ctypes.windll.user32.ShowWindow(self.GetHandle(), 0)  # SW_HIDE
@@ -418,6 +424,9 @@ class WindowLifecycleMixin:
         off the UI thread and needs the teardown to complete before it replies.
         See tests/test_shutdown_wait.py.
         """
+        cp = getattr(self, "conversations_panel", None)
+        if cp is not None and hasattr(cp, "close_ai_media"):
+            cp.close_ai_media()
         try:
             self.Hide()
         except Exception:
@@ -464,6 +473,9 @@ class WindowLifecycleMixin:
             if getattr(self, "_shutting_down", False):
                 return False  # another path already owns teardown
             self._shutting_down = True
+        cp = getattr(self, "conversations_panel", None)
+        if cp is not None and hasattr(cp, "close_ai_media"):
+            wx.CallAfter(cp.close_ai_media)
         try:
             # Stop the presence keep-alive timer before tearing down
             if hasattr(self, "_presence_timer") and self._presence_timer.IsRunning():
@@ -493,6 +505,11 @@ class WindowLifecycleMixin:
                 self._update_checker.stop()
             if getattr(self, "_wpp_update_checker", None) is not None:
                 self._wpp_update_checker.stop()
+            # A WPPConnect update being built in the background runs npm and
+            # Node of its own; they must not outlive the app.
+            cancel_wpp_build = getattr(self, "cancel_wpp_background_update", None)
+            if cancel_wpp_build is not None:
+                cancel_wpp_build()
             self._stop_wpp_server()
             self._flush_pending_debounced_saves()
             if hasattr(self, "db") and self.db is not None:

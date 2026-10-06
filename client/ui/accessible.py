@@ -79,17 +79,17 @@ class AccessibleSearchInConversation(wx.Accessible):
 
 
 class AccessibleSearchNextResult(wx.Accessible):
-    """Reports Enter as the keyboard shortcut for the next-result button."""
+    """Reports F3 as the keyboard shortcut for the next-result button."""
 
     def GetKeyboardShortcut(self, childId):
-        return (wx.ACC_OK, "Enter")
+        return (wx.ACC_OK, "F3")
 
 
 class AccessibleSearchPrevResult(wx.Accessible):
-    """Reports Shift+Enter as the keyboard shortcut for the previous-result button."""
+    """Reports Shift+F3 as the keyboard shortcut for the previous-result button."""
 
     def GetKeyboardShortcut(self, childId):
-        return (wx.ACC_OK, "Shift+Enter")
+        return (wx.ACC_OK, "Shift+F3")
 
 
 class AccessibleStatusPrev(wx.Accessible):
@@ -149,6 +149,13 @@ class AccessibleSaveAs(wx.Accessible):
         return (wx.ACC_OK, "Ctrl+Shift+S")
 
 
+class AccessibleDescribeButton(wx.Accessible):
+    """Reports Ctrl+Shift+I as the shortcut for the AI action button."""
+
+    def GetKeyboardShortcut(self, childId):
+        return (wx.ACC_OK, "Ctrl+Shift+I")
+
+
 class AccessibleShowInFolder(wx.Accessible):
     """Reports Ctrl+Enter as the shortcut for the Show-in-folder button."""
 
@@ -161,6 +168,15 @@ class AccessibleStatusCopyText(wx.Accessible):
 
     def GetKeyboardShortcut(self, childId):
         return (wx.ACC_OK, "Ctrl+C")
+
+
+class AccessibleAskQuestion(wx.Accessible):
+    """Reports Ctrl+Enter as the shortcut that sends the question in the AI
+    result window. Enter itself stays a newline in the question field, so the
+    shortcut is announced here and not written into the field's label."""
+
+    def GetKeyboardShortcut(self, childId):
+        return (wx.ACC_OK, "Ctrl+Enter")
 
 
 class AccessibleReadMoreButton(wx.Accessible):

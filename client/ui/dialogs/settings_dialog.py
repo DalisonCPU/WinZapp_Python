@@ -1,6 +1,7 @@
 import ctypes
 import os
 import wx
+from wx.lib.scrolledpanel import ScrolledPanel
 from core.chat_lock_vault import AUTO_LOCK_MINUTE_OPTIONS
 from core.i18n import LANGUAGE_NAMES
 from core.combo_search import bind_incremental_search
@@ -21,6 +22,7 @@ from core.reaction_shortcuts import (
     fixed_quick_reactions,
 )
 from ui.dialogs.emoji_picker import choose_reaction_emoji
+from ui.dialogs.ai_settings_page import AISettingsPage
 
 # Win32 modifier constants for RegisterHotKey
 _MOD_ALT     = 0x0001
@@ -371,6 +373,14 @@ class SettingsDialog(wx.Dialog):
         self._alpha_updates_check.SetToolTip(i18n.t("alpha_updates_tooltip"))
         gen_sizer.Add(self._alpha_updates_check, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
+        # Off by default: an accepted update (WinZapp's or the WPPConnect
+        # Server's) downloads with no progress window, and the app is only
+        # interrupted once it is ready to install (update_background.py).
+        self._background_updates_check = wx.CheckBox(
+            self._general_page, label=i18n.t("background_updates_label")
+        )
+        gen_sizer.Add(self._background_updates_check, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
         self._hotkey_label = wx.StaticText(self._general_page, label=i18n.t("global_hotkey_label"))
         gen_sizer.Add(
             self._hotkey_label,
@@ -407,7 +417,14 @@ class SettingsDialog(wx.Dialog):
         self._notebook.AddPage(self._general_page, i18n.t("tab_general"))
 
         # ── User Interface tab ───────────────────────────────────────────────
-        self._ui_page = wx.Panel(self._notebook)
+        # Scrollable, like the AI page: this tab holds more options than a
+        # screen is tall. On a plain panel the sizer then squeezes whatever is
+        # past the bottom edge down to a height of zero, and NVDA, which
+        # decides by geometry which group box a control sits in, no longer
+        # finds the radio buttons inside their box and finds the NEXT control
+        # inside it instead: "Posição para anunciar itens selecionados" was
+        # read on the checkbox after the group and not on its radio buttons.
+        self._ui_page = ScrolledPanel(self._notebook)
         ui_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Both labels are kept on self: they name the edit fields below them
@@ -499,6 +516,14 @@ class SettingsDialog(wx.Dialog):
 
         ui_sizer.Add(msg_list_mode_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
+        # The temporary "X is typing..." last row of the messages list
+        # (ui/conversation_panel/typing_row.py). Read on every presence
+        # update; Apply refreshes the open conversation at once.
+        self._show_typing_row_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_show_typing_row")
+        )
+        ui_sizer.Add(self._show_typing_row_cb, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
 
         self._self_ref_box = wx.StaticBox(
             self._ui_page, label=i18n.t("ui_self_reference_label")
@@ -540,6 +565,11 @@ class SettingsDialog(wx.Dialog):
             self._ui_page, label=i18n.t("ui_show_delivery_status_in_chat_list")
         )
         ui_sizer.Add(self._show_delivery_status_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
+
+        self._keep_pinned_order_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_keep_pinned_chat_order")
+        )
+        ui_sizer.Add(self._keep_pinned_order_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
 
         self._preserve_typed_caption_cb = wx.CheckBox(
             self._ui_page, label=i18n.t("ui_preserve_typed_text_as_caption")
@@ -600,6 +630,13 @@ class SettingsDialog(wx.Dialog):
             self._escape_clears_selection_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
         )
 
+        self._keep_search_after_open_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_keep_search_after_open")
+        )
+        ui_sizer.Add(
+            self._keep_search_after_open_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
+        )
+
         self._auto_focus_next_audio_cb = wx.CheckBox(
             self._ui_page, label=i18n.t("ui_auto_focus_next_audio")
         )
@@ -647,6 +684,13 @@ class SettingsDialog(wx.Dialog):
         )
         ui_sizer.Add(
             self._forwarded_prefix_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
+        )
+
+        self._forward_voice_as_voice_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_forward_voice_as_voice")
+        )
+        ui_sizer.Add(
+            self._forward_voice_as_voice_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 8
         )
 
         self._conversation_video_media_viewer_dialog_cb = wx.CheckBox(
@@ -729,6 +773,8 @@ class SettingsDialog(wx.Dialog):
         )
 
         self._ui_page.SetSizer(ui_sizer)
+        # scrollIntoView: Tab brings the focused option on screen.
+        self._ui_page.SetupScrolling(scroll_x=False, rate_y=15, scrollIntoView=True)
         self._notebook.AddPage(self._ui_page, i18n.t("tab_ui"))
 
         # ── Accessibility tab ────────────────────────────────────────────────
@@ -1409,6 +1455,13 @@ class SettingsDialog(wx.Dialog):
         else:
             self._chat_lock_page.Hide()
 
+        # Appended after everything else: Connection's established index (4)
+        # and every other page stay stable whether the optional hidden-vault
+        # page is present or not. The page is found with FindPage(), never by
+        # index, for the same reason.
+        self._ai_page = AISettingsPage(self._notebook, self.main_window, on_change=self._mark_dirty)
+        self._notebook.AddPage(self._ai_page, i18n.t("tab_ai_accessibility"))
+
         # ── Button row ───────────────────────────────────────────────────────
         btn_sizer = wx.StdDialogButtonSizer()
         self._ok_btn = wx.Button(self, wx.ID_OK, label=i18n.t("ok"))
@@ -1551,6 +1604,11 @@ class SettingsDialog(wx.Dialog):
         )
         self._alpha_updates_check.SetValue(alpha_updates)
 
+        background_updates = self.main_window.settings.get("general", {}).get(
+            "background_update_downloads", False
+        )
+        self._background_updates_check.SetValue(background_updates)
+
         hk = self.main_window.settings.get("general", {}).get("global_hotkey")
         if hk and isinstance(hk, dict) and hk.get("vk"):
             from main_window.win32_helpers import _vk_mod_to_str
@@ -1611,10 +1669,20 @@ class SettingsDialog(wx.Dialog):
         self._show_listbox_count_cb.SetValue(bool(show_listbox_count))
         self._sync_listbox_count_visibility()
 
+        show_typing_row = self.main_window.settings.get("user_interface", {}).get(
+            "show_typing_row", True
+        )
+        self._show_typing_row_cb.SetValue(bool(show_typing_row))
+
         show_delivery_status = self.main_window.settings.get("user_interface", {}).get(
             "show_delivery_status_in_chat_list", True
         )
         self._show_delivery_status_cb.SetValue(bool(show_delivery_status))
+
+        keep_pinned_order = self.main_window.settings.get("user_interface", {}).get(
+            "keep_pinned_chat_order", False
+        )
+        self._keep_pinned_order_cb.SetValue(bool(keep_pinned_order))
 
         preserve_typed_caption = self.main_window.settings.get("user_interface", {}).get(
             "preserve_typed_text_as_attachment_caption", True
@@ -1655,6 +1723,11 @@ class SettingsDialog(wx.Dialog):
         )
         self._escape_clears_selection_cb.SetValue(bool(escape_clears_selection))
 
+        keep_search_after_open = self.main_window.settings.get("user_interface", {}).get(
+            "keep_search_after_open", False
+        )
+        self._keep_search_after_open_cb.SetValue(bool(keep_search_after_open))
+
         auto_focus_next_audio = self.main_window.settings.get("user_interface", {}).get(
             "auto_focus_next_audio", True
         )
@@ -1682,6 +1755,11 @@ class SettingsDialog(wx.Dialog):
             "forwarded_prefix_enabled", False
         )
         self._forwarded_prefix_cb.SetValue(bool(forwarded_prefix_enabled))
+
+        forward_voice_as_voice = self.main_window.settings.get("user_interface", {}).get(
+            "forward_voice_as_voice", False
+        )
+        self._forward_voice_as_voice_cb.SetValue(bool(forward_voice_as_voice))
 
         conversation_video_media_viewer_dialog = self.main_window.settings.get(
             "user_interface", {}
@@ -2879,6 +2957,10 @@ class SettingsDialog(wx.Dialog):
         if not self._validate():
             return False
 
+        if not self._ai_page.apply():
+            self._notebook.SetSelection(self._notebook.FindPage(self._ai_page))
+            return False
+
         # Language
         old_lang = self.main_window.i18n.language
         sel = self._lang_combo.GetSelection()
@@ -2941,8 +3023,15 @@ class SettingsDialog(wx.Dialog):
         ui_settings["message_list_mode"] = new_message_list_mode
         ui_settings["show_listbox_item_count"] = new_show_listbox_count
         self.main_window.settings.setdefault("user_interface", {})[
+            "show_typing_row"
+        ] = self._show_typing_row_cb.GetValue()
+        self.main_window.settings.setdefault("user_interface", {})[
             "show_delivery_status_in_chat_list"
         ] = self._show_delivery_status_cb.GetValue()
+        old_keep_pinned_order = ui_settings.get("keep_pinned_chat_order", False)
+        self.main_window.settings.setdefault("user_interface", {})[
+            "keep_pinned_chat_order"
+        ] = self._keep_pinned_order_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
             "preserve_typed_text_as_attachment_caption"
         ] = self._preserve_typed_caption_cb.GetValue()
@@ -2968,6 +3057,9 @@ class SettingsDialog(wx.Dialog):
             "escape_clears_selection"
         ] = self._escape_clears_selection_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
+            "keep_search_after_open"
+        ] = self._keep_search_after_open_cb.GetValue()
+        self.main_window.settings.setdefault("user_interface", {})[
             "auto_focus_next_audio"
         ] = self._auto_focus_next_audio_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
@@ -2982,6 +3074,9 @@ class SettingsDialog(wx.Dialog):
         self.main_window.settings.setdefault("user_interface", {})[
             "forwarded_prefix_enabled"
         ] = self._forwarded_prefix_cb.GetValue()
+        self.main_window.settings.setdefault("user_interface", {})[
+            "forward_voice_as_voice"
+        ] = self._forward_voice_as_voice_cb.GetValue()
         self.main_window.settings.setdefault("reactions", {})[
             "fixed_quick_reactions"
         ] = self._fixed_quick_reactions_cb.GetValue()
@@ -3183,6 +3278,9 @@ class SettingsDialog(wx.Dialog):
         self.main_window.settings.setdefault("general", {})["alpha_updates_enabled"] = (
             self._alpha_updates_check.GetValue()
         )
+        self.main_window.settings.setdefault("general", {})["background_update_downloads"] = (
+            self._background_updates_check.GetValue()
+        )
 
         # Account switch behavior
         new_switch_behavior = (
@@ -3272,6 +3370,8 @@ class SettingsDialog(wx.Dialog):
 
         # Persist and propagate
         self.main_window.save_settings()
+        from core.pinned_chat_order import refresh_after_order_setting_change
+        refresh_after_order_setting_change(self.main_window, old_keep_pinned_order)
         self._offer_to_delete_profile_snapshots()
         # Reload sound objects so per-event enabled/path changes (and the new
         # alert-tone defaults) take effect immediately, without a restart.
@@ -3296,6 +3396,10 @@ class SettingsDialog(wx.Dialog):
         listbox_count_changed = new_show_listbox_count != old_show_listbox_count
         if cp is not None and (message_list_mode_changed or listbox_count_changed):
             cp.apply_message_list_mode(new_message_list_mode)
+        # Show or remove the typing row at once if "show typing row" changed;
+        # a no-op otherwise (it only writes when the row's text changes).
+        if cp is not None and hasattr(cp, "refresh_typing_row"):
+            cp.refresh_typing_row()
 
         # Re-render the open conversation's message list, and the conversation
         # list's last-message previews (which also embed the self-reference
@@ -3356,6 +3460,8 @@ class SettingsDialog(wx.Dialog):
         self._notebook.SetPageText(13, i18n.t("tab_reactions"))
         if self._chat_lock_tab_shown:
             self._notebook.SetPageText(14, i18n.t("locked_chats"))
+        self._ai_page.refresh_labels()
+        self._notebook.SetPageText(self._notebook.FindPage(self._ai_page), i18n.t("tab_ai_accessibility"))
         self._chat_lock_intro.SetLabel(i18n.t("chat_lock_settings_intro"))
         self._chat_lock_unlock_btn.SetLabel(
             i18n.t("chat_lock_settings_unlock")
@@ -3440,6 +3546,7 @@ class SettingsDialog(wx.Dialog):
         self._tray_icon_check.SetLabel(i18n.t("tray_show_icon"))
         self._updates_check.SetLabel(i18n.t("updates_label"))
         self._alpha_updates_check.SetLabel(i18n.t("alpha_updates_label"))
+        self._background_updates_check.SetLabel(i18n.t("background_updates_label"))
         self._alpha_updates_check.SetToolTip(i18n.t("alpha_updates_tooltip"))
         self._language_label.SetLabel(i18n.t("language_label"))
         self._switch_behavior_box.SetLabel(i18n.t("acc_switch_behavior_label"))
@@ -3460,15 +3567,18 @@ class SettingsDialog(wx.Dialog):
         self._msg_list_mode_classic_rb.SetLabel(i18n.t("ui_message_list_mode_classic"))
         self._msg_list_mode_listbox_rb.SetLabel(i18n.t("ui_message_list_mode_listbox"))
         self._show_listbox_count_cb.SetLabel(i18n.t("ui_show_listbox_item_count"))
+        self._show_typing_row_cb.SetLabel(i18n.t("ui_show_typing_row"))
         self._self_ref_box.SetLabel(i18n.t("ui_self_reference_label"))
         self._self_ref_eu_rb.SetLabel(i18n.t("ui_self_reference_eu"))
         self._self_ref_voce_rb.SetLabel(i18n.t("ui_self_reference_voce"))
         self._self_ref_other_rb.SetLabel(i18n.t("ui_self_reference_other"))
         self._self_ref_custom_label.SetLabel(i18n.t("ui_self_reference_custom_label"))
         self._show_delivery_status_cb.SetLabel(i18n.t("ui_show_delivery_status_in_chat_list"))
+        self._keep_pinned_order_cb.SetLabel(i18n.t("ui_keep_pinned_chat_order"))
         self._show_link_previews_cb.SetLabel(i18n.t("ui_show_link_previews_label"))
         self._show_yesterday_label_cb.SetLabel(i18n.t("ui_show_yesterday_label"))
         self._forwarded_prefix_cb.SetLabel(i18n.t("ui_forwarded_prefix_label"))
+        self._forward_voice_as_voice_cb.SetLabel(i18n.t("ui_forward_voice_as_voice"))
         self._conversation_video_media_viewer_dialog_cb.SetLabel(
             i18n.t("ui_conversation_video_media_viewer_dialog_label")
         )
@@ -3507,6 +3617,7 @@ class SettingsDialog(wx.Dialog):
         self._warn_system_audio_cb.SetLabel(i18n.t("ui_warn_system_audio_recording"))
         self._space_selects_cb.SetLabel(i18n.t("ui_space_selects_in_selection_mode"))
         self._escape_clears_selection_cb.SetLabel(i18n.t("ui_escape_clears_selection"))
+        self._keep_search_after_open_cb.SetLabel(i18n.t("ui_keep_search_after_open"))
         self._auto_focus_next_audio_cb.SetLabel(i18n.t("ui_auto_focus_next_audio"))
         self._selected_announce_box.SetLabel(i18n.t("ui_selected_announce_position_label"))
         self._selected_announce_start_rb.SetLabel(i18n.t("ui_selected_announce_position_start"))
@@ -3587,6 +3698,8 @@ class SettingsDialog(wx.Dialog):
         show = self._msg_list_mode_listbox_rb.GetValue()
         self._show_listbox_count_cb.Show(show)
         self._ui_page.Layout()
+        # The page scrolls: what it scrolls over just changed height.
+        self._ui_page.FitInside()
         self.Layout()
 
     def _on_message_list_mode_toggle(self, event):

@@ -16,6 +16,7 @@ from core.message_edit import (
     edit_window_open,
 )
 from core.message_queue import PendingMessage
+from ui.conversation_panel.typing_row import append_message_row, message_row_count
 from app_paths import data_path
 from ui.conversation_panel.media_paths import discard_local_media_cache
 from core.utils import to_editor_line_endings
@@ -73,17 +74,14 @@ class MessageActionsMixin:
     def _on_menu_star(self, msg: dict):
         if self._reject_system_event_action(msg):
             return
-        msg["starred"] = not msg.get("starred")
         jid = self.conversation.get("remoteJid", "")
         if jid:
-            self.main_window._schedule_save()
-            self._persist_message_local_flag(jid, msg)
-            self._repaint_or_repopulate([msg.get("key", {}).get("id", "")])
+            self._sync_message_stars(jid, [msg], not bool(msg.get("starred")))
 
     def _on_menu_pin_message(self, msg: dict):
         """Pin/unpin a message via WhatsApp's own message-pin feature.
 
-        Unlike _on_menu_star (a local-only flag), this is visible to every
+        Unlike a private star, this is visible to every
         other participant in the chat, so it goes through the WPPConnect API
         — applied optimistically like conversation pin/unpin
         (_sync_pin_to_server), and rolled back if the server rejects it.
@@ -540,6 +538,8 @@ class MessageActionsMixin:
         """
         if not msg_ids:
             return
+        if hasattr(self, "close_ai_media"):
+            self.close_ai_media(message_ids=msg_ids)
         # Stop playback before touching the list — a currently-playing audio
         # message may not even be in _sorted_messages any more (pagination
         # can scroll it out while it keeps playing in the background), so
@@ -796,8 +796,8 @@ class MessageActionsMixin:
         }
         self._clear_empty_placeholder()
         self._sorted_messages.append(virtual_msg)
-        self.messages_list.Append((self._render_message_line(virtual_msg),))
-        last = self.messages_list.GetItemCount() - 1
+        append_message_row(self, self._render_message_line(virtual_msg))
+        last = message_row_count(self) - 1   # the row just sent, not the typing row
         if last >= 0:
             self.messages_list.EnsureVisible(last)
 

@@ -13,6 +13,7 @@ Where to look (and where new code goes):
   Mixins (methods of ConversationsPanel)
     accelerators             accelerator tables (list and open conversation)
     conversation_navigation  open/close/restore a conversation, chat-list filter
+    chat_lists               native WhatsApp custom-list filter and manager entry
     panel_visibility         which panel an open conversation belongs to, and showing it only there
     composer                 message field: spell check, link preview, keys, paste
     text_sending             sending/editing text, pending rows, cancelled sends
@@ -23,9 +24,11 @@ Where to look (and where new code goes):
     message_rendering        a message record -> its row text
     message_rows             writing rows into the list one by one, never clearing it
     unread_separator         the unread-messages separator row
+    typing_row               the temporary "X is typing..." last row (not a message)
     history_loading          loading older history into the open conversation
     message_menu             message context menu and read-only actions
     message_actions          star, pin, delete, cancel, edit, resend
+    message_stars            sequential star jobs, explicit old-star migration
     message_accels           accelerator handlers for messages
     bulk_messages            bulk actions on selected messages
     forwarding               forwarding messages
@@ -33,6 +36,7 @@ Where to look (and where new code goes):
     attachments              attaching files and contacts
     contact_messages         contact (vCard) and location messages
     media_files              opening/saving/downloading media, transfer progress
+    ai_actions               transcribe/describe a message's media with the person's AI providers
     audio_playback           voice/audio playback, chaining, speed, seek
     links                    links panel of the focused message
     mentions                 @mentions panel and suggestions
