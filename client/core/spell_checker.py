@@ -1,9 +1,9 @@
 """Small adapter around the Windows spell-checking service.
 
 WinZapp's message editor remains an ordinary ``wx.TextCtrl``. This module
-checks the text after the user appends a word boundary and reports a detected
-error through a callback. It neither changes the message nor exposes custom
-UI Automation text attributes.
+supplies spelling suggestions and reports detected errors through the
+application's sound callback. It neither changes the message nor replaces
+the editor's accessibility interfaces.
 
 ``comtypes`` is optional at import time so a missing Windows component can
 never prevent WinZapp from starting. Spell checking is simply unavailable
@@ -18,6 +18,7 @@ import unicodedata
 import ctypes
 from ctypes import POINTER, c_int, c_ulong, wintypes
 from typing import Callable
+from core.text_offsets import text_index
 
 
 try:
@@ -183,6 +184,9 @@ IID_IENUM_SPELLING_ERROR = GUID(
 IID_ISPELLING_ERROR = GUID(
     "{B7C82D61-FBE8-4B47-9B27-6C0D2E0DE0A3}"
 ) if comtypes is not None else None
+IID_IENUM_STRING = GUID(
+    "{00000101-0000-0000-C000-000000000046}"
+) if comtypes is not None else None
 
 S_FALSE = 1
 CORRECTIVE_ACTION_DELETE = 3
@@ -225,6 +229,23 @@ if comtypes is not None:
         ]
 
 
+    class IEnumString(IUnknown):
+        """The COM string enumerator returned by ISpellChecker.Suggest."""
+
+        _iid_ = IID_IENUM_STRING
+        _methods_ = [
+            COMMETHOD(
+                [], HRESULT, "Next",
+                (['in'], c_ulong, "count"),
+                (['out'], POINTER(wintypes.LPWSTR), "value"),
+                (['out'], POINTER(c_ulong), "fetched"),
+            ),
+            COMMETHOD([], HRESULT, "Skip", (['in'], c_ulong, "count")),
+            COMMETHOD([], HRESULT, "Reset"),
+            COMMETHOD([], HRESULT, "Clone", (['out'], POINTER(POINTER(IUnknown)), "value")),
+        ]
+
+
     class ISpellChecker(IUnknown):
         _iid_ = IID_ISPELL_CHECKER
         _methods_ = [
@@ -237,7 +258,7 @@ if comtypes is not None:
             COMMETHOD(
                 [], HRESULT, "Suggest",
                 (['in'], wintypes.LPCWSTR, "word"),
-                (['out'], POINTER(POINTER(IUnknown)), "value"),
+                (['out'], POINTER(POINTER(IEnumString)), "value"),
             ),
             COMMETHOD([], HRESULT, "Add", (['in'], wintypes.LPCWSTR, "word")),
             COMMETHOD([], HRESULT, "Ignore", (['in'], wintypes.LPCWSTR, "word")),
@@ -271,7 +292,6 @@ if comtypes is not None:
                 (['out'], POINTER(POINTER(IEnumSpellingError)), "value"),
             ),
         ]
-
 
     class ISpellCheckerFactory(IUnknown):
         _iid_ = IID_ISPELL_CHECKER_FACTORY
@@ -489,6 +509,8 @@ class WindowsSpellChecker:
         self._checker = None
         self._initialized = False
 
+        self._caret_word = None
+
     def _play_error_sound(self) -> None:
         """Notify the host, falling back to the old Windows system cue."""
         if self._on_error is not None:
@@ -570,8 +592,77 @@ class WindowsSpellChecker:
             if action == CORRECTIVE_ACTION_DELETE:
                 continue
             if length > 0:
-                errors.append((start, start + length))
+                # The Windows API reports UTF-16 units, not Python indices.
+                errors.append((text_index(text, start), text_index(text, start + length)))
         return errors
+
+    @staticmethod
+    def _suggestion_value(value) -> str:
+        """Unwrap the string value returned by comtypes' IEnumString."""
+        if isinstance(value, (tuple, list)):
+            for item in value:
+                item = _unwrap_out(item)
+                if isinstance(item, str):
+                    return item
+                if hasattr(item, "value") and isinstance(item.value, str):
+                    return item.value
+            return ""
+        value = _unwrap_out(value)
+        if isinstance(value, str):
+            return value
+        if hasattr(value, "value") and isinstance(value.value, str):
+            return value.value
+        return ""
+
+    def suggestions_for_word(self, word: str, limit: int = 5) -> list[str]:
+        """Return Windows' replacement suggestions for *word*.
+
+        The checker is optional, so a missing dictionary, COM failure, or an
+        older test double simply produces an empty list.  The small fallback
+        to ``Next()`` keeps the method friendly to the fake enumerators used
+        by the unit tests while the real IEnumString uses ``Next(1)``.
+        """
+        word = str(word or "")
+        if not word or limit <= 0:
+            return []
+        checker = self._get_checker()
+        if checker is None:
+            return []
+        try:
+            enumeration = _unwrap_out(checker.Suggest(word))
+        except (COMError, OSError, RuntimeError, TypeError, AttributeError):
+            return []
+        suggestions = []
+        while enumeration is not None and len(suggestions) < limit:
+            try:
+                try:
+                    result = enumeration.Next(1)
+                except TypeError:
+                    result = enumeration.Next()
+            except COMError as error:
+                if getattr(error, "hresult", None) == S_FALSE:
+                    break
+                break
+            except (OSError, RuntimeError, TypeError, AttributeError):
+                break
+            value = self._suggestion_value(result)
+            if not value:
+                break
+            if value != word and value not in suggestions:
+                suggestions.append(value)
+        return suggestions
+
+    def suggestions_at(self, text: str, index: int, limit: int = 5):
+        """Return ``(start, end, suggestions)`` when the caret touches an error."""
+        text = text or ""
+        span = word_span_at(text, index)
+        if span is None:
+            return None
+        start, end = span
+        if not any(s < end and start < e for s, e in self.errors_for_text(text)):
+            return None
+        suggestions = self.suggestions_for_word(text[start:end], limit=limit)
+        return (start, end, suggestions) if suggestions else None
 
     def text_changed(self, text: str) -> list[tuple[int, int]]:
         """Check after appended whitespace and cue a just-completed error."""

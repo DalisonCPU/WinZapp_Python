@@ -4,6 +4,8 @@ Esta versão traz a transcrição e a descrição com IA de mensagens de voz, im
 
 NOVIDADES
 
+- O submenu de contexto "Ortografia" do campo de mensagem oferece sugestões do dicionário do Windows. O editor mantém a navegação padrão do leitor de tela e o som de erro ortográfico do WinZapp.
+
 - Transcreva e descreva mídia com IA. A nova aba "Transcrições e Descrições" nas Configurações liga os recursos de IA (eles começam desligados) e recebe a chave de API de um ou mais provedores — Gemini, OpenAI, Claude, Groq e OpenRouter —, que são tentados na ordem que você definir; assim, quando um falha ou fica sem cota, o próximo responde. No menu de contexto de uma mensagem, ou com Ctrl+Shift+I, "Transcrever" transforma uma mensagem de voz em texto, "Descrever" descreve uma foto ou um vídeo, "Descrever figurinha" descreve uma figurinha e "Converter em texto acessível" transforma um PDF em texto simples e legível. O resultado abre em uma janela com o texto e, para fotos e vídeos, dá para fazer perguntas de acompanhamento nela. O WinZapp pergunta antes de enviar mídia a um provedor e pergunta de novo a cada vez nas conversas bloqueadas; suas chaves ficam criptografadas no seu computador e só são enviadas ao provedor a que pertencem. Um som de espera toca enquanto o provedor trabalha, e as respostas podem ser lidas em voz alta automaticamente. O texto segue o idioma do aplicativo.
 
 - Listas personalizadas do WhatsApp: atualizar e filtrar por suas listas, criar ou renomear uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os demais membros são preservados. Alterações não confirmadas são informadas sem repetição automática.

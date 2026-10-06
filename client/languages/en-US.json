@@ -394,6 +394,7 @@
     "spell_check_mode_windows_macos": "Follow the macOS setting (default)",
     "spell_check_mode_on": "Always on",
     "spell_check_mode_off": "Always off",
+    "spell_orthography": "Spelling",
     "search_normalization_label": "Unicode &normalization in searches",
     "search_normalization_off": "Off (default): searching matches exactly what you type",
     "search_normalization_nfd": "Ignore accents: \"reuniao\" finds \"reunião\"",

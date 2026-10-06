@@ -394,6 +394,7 @@
     "spell_check_mode_windows_macos": "Zgodnie z ustawieniem systemu macOS (domyślnie)",
     "spell_check_mode_on": "Zawsze włączone",
     "spell_check_mode_off": "Zawsze wyłączone",
+    "spell_orthography": "Pisownia",
     "search_normalization_label": "&Normalizacja Unicode w wyszukiwaniu",
     "search_normalization_off": "Wyłączona (domyślnie): wyszukiwanie dopasowuje dokładnie to, co wpiszesz",
     "search_normalization_nfd": "Ignoruj znaki diakrytyczne: \"wiadomosc\" znajdzie \"wiadomość\"",

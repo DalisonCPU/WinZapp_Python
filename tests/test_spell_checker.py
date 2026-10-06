@@ -174,3 +174,36 @@ def test_value_index_converts_native_positions():
     assert value_index("ab\ncd", 4) == 4
     assert value_index("ab\ncd", 4, 2) == 3
     assert value_index("ab\ncd", 99, 2) == 5
+
+
+class _SuggestionEnumerator:
+    def __init__(self, values):
+        self.values = iter(values)
+
+    def Next(self, count=1):
+        try:
+            return next(self.values)
+        except StopIteration:
+            return ""
+
+
+def test_suggestions_for_word_reads_windows_replacements_and_deduplicates():
+    checker = WindowsSpellChecker()
+    checker._get_checker = lambda: type(
+        "FakeChecker", (), {
+            "Suggest": lambda _self, _word: _SuggestionEnumerator(
+                ["correct", "correct", "correction", ""]
+            )
+        }
+    )()
+
+    assert checker.suggestions_for_word("corect") == ["correct", "correction"]
+
+
+def test_suggestions_at_requires_the_caret_to_touch_a_spelling_error():
+    checker = WindowsSpellChecker()
+    checker.errors_for_text = lambda _text: [(3, 9)]
+    checker.suggestions_for_word = lambda word, limit=5: ["correct"]
+
+    assert checker.suggestions_at("ab corect", 4) == (3, 9, ["correct"])
+    assert checker.suggestions_at("ab corect", 0) is None

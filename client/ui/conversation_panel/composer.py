@@ -21,9 +21,9 @@ from core.utils import (
 )
 from core.spell_checker import (
     spell_check_active,
-    value_index,
     windows_spellcheck_enabled,
 )
+from core.text_offsets import native_offset, text_index
 
 
 # Keys that move the caret in the message field; each may land on a
@@ -62,22 +62,105 @@ class ComposerMixin:
         return spell_check_active(general, windows_spellcheck_enabled())
 
     def _play_spelling_error_sound(self):
-        """Play the currently configured spelling-error Sound Event."""
-        self.main_window.spelling_error_sound.play()
+        """Use only WinZapp's sound, without affecting screen-reader speech."""
+        try:
+            self.main_window.spelling_error_sound.play()
+        except Exception:
+            pass
 
     def _cue_spelling_at_caret(self, *_):
-        """Play the error sound if the caret just arrived at a misspelled word."""
+        """Play the error sound on arrival at a misspelled word."""
         spell_checker = getattr(self, "_spell_checker", None)
         if spell_checker is None or not self._spell_check_enabled():
             return
         text = self.message_field.GetValue()
         position = self.message_field.GetInsertionPoint()
         width = 2 if os.name == "nt" and "\r\n" not in text else 1
-        spell_checker.caret_moved(text, value_index(text, position, width))
+        index = text_index(text, position, width) if os.name == "nt" else position
+        spell_checker.caret_moved(text, index)
 
     def _cue_spelling_at_caret_on_click(self, event):
         event.Skip()
         wx.CallAfter(self._cue_spelling_at_caret)
+
+    @staticmethod
+    def _editor_position(text: str, offset: int) -> int:
+        """Convert a GetValue() offset to the native Windows edit offset."""
+        offset = max(0, min(len(text), int(offset)))
+        if os.name != "nt":
+            return offset
+        return native_offset(text, offset, 2)
+
+    def _replace_spelling_word(self, start: int, end: int, replacement: str):
+        text = self.message_field.GetValue()
+        self.message_field.SetSelection(
+            self._editor_position(text, start),
+            self._editor_position(text, end),
+        )
+        self.message_field.WriteText(replacement)
+        self.message_field.SetFocus()
+
+    def _on_message_field_context_menu(self, event):
+        """Offer Windows spelling suggestions from Applications/right-click."""
+        checker = getattr(self, "_spell_checker", None)
+        if checker is None or not self._spell_check_enabled():
+            event.Skip()
+            return
+        text = self.message_field.GetValue()
+        position = self.message_field.GetInsertionPoint()
+        width = 2 if os.name == "nt" and "\r\n" not in text else 1
+        index = text_index(text, position, width) if os.name == "nt" else position
+        result = checker.suggestions_at(text, index)
+        if result is None:
+            event.Skip()
+            return
+        start, end, suggestions = result
+        menu = wx.Menu()
+        suggestion_ids = {}
+        suggestions_menu = wx.Menu()
+        for suggestion in suggestions:
+            item_id = wx.NewIdRef()
+            suggestions_menu.Append(item_id, suggestion.replace("&", "&&"))
+            suggestion_ids[int(item_id)] = suggestion
+        menu.AppendSubMenu(
+            suggestions_menu,
+            self.main_window.i18n.t("spell_orthography"),
+        )
+        menu.AppendSeparator()
+        # Keep the standard edit commands available alongside the suggestions.
+        for command_id in (
+            wx.ID_UNDO, wx.ID_CUT, wx.ID_COPY, wx.ID_PASTE,
+            wx.ID_DELETE, wx.ID_SELECTALL,
+        ):
+            menu.Append(command_id)
+
+        def on_menu(command_event):
+            command_id = command_event.GetId()
+            replacement = suggestion_ids.get(command_id)
+            if replacement is not None:
+                self._replace_spelling_word(start, end, replacement)
+            elif command_id == wx.ID_UNDO:
+                self.message_field.Undo()
+            elif command_id == wx.ID_CUT:
+                self.message_field.Cut()
+            elif command_id == wx.ID_COPY:
+                self.message_field.Copy()
+            elif command_id == wx.ID_PASTE:
+                self.message_field.Paste()
+            elif command_id == wx.ID_DELETE:
+                self.message_field.Remove(
+                    self.message_field.GetSelection()[0],
+                    self.message_field.GetSelection()[1],
+                )
+            elif command_id == wx.ID_SELECTALL:
+                self.message_field.SelectAll()
+
+        suggestions_menu.Bind(wx.EVT_MENU, on_menu)
+        menu.Bind(wx.EVT_MENU, on_menu)
+        try:
+            self.message_field.PopupMenu(menu)
+        finally:
+            menu.Destroy()
 
     def on_change_message_field(self, event):
         # Don't touch button visibility while recording or staging attachments.
