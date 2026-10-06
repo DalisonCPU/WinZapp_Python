@@ -990,6 +990,7 @@
     "sound_event_message_foreground": "Mesaj într-o altă conversație (aplicația în prim-plan)",
     "sound_event_message_sent": "Mesaj trimis",
     "sound_event_message_background": "Mesaj în timp ce programul este în fundal",
+    "sound_event_reaction_received": "Reacție la mesajul dvs.",
     "sound_event_call_incoming": "Apel primit",
     "incoming_call_announcement": "{name} vă sună.",
     "incoming_video_call_announcement": "{name} vă apelează video.",
