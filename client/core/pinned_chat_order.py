@@ -81,12 +81,14 @@ def sync_pinned_order(window, *, pinned=None, restore=None, chats=None):
     The state and metadata belong to this account. clear_local_data resets
     the state when it wipes metadata; an F5 resync preserves both.
     """
-    if pinned is not None and pinned is not getattr(window, "_pinned_chats", pinned):
-        # A list build that captured the pinned set before an account wipe
-        # replaced it: its ranks are moot, and saving them would carry the
-        # previous account's pins into the new account's metadata.
-        return ()
     with _state_lock:
+        if pinned is not None and pinned is not getattr(window, "_pinned_chats", pinned):
+            # A list build that captured the pinned set before an account
+            # wipe replaced it: its ranks are moot, and saving them would
+            # carry the previous account's pins into the new account. Checked
+            # under the lock reset_pinned_order() takes, so a build that sees
+            # the old set gets a state the reset retires before the DB wipe.
+            return ()
         state = getattr(window, "_pinned_order_state", None)
         if state is None:
             state = window._pinned_order_state = _PinOrderState()

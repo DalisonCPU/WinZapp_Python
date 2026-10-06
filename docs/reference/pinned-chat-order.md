@@ -35,11 +35,12 @@ No retries or changes to ambiguous API-failure handling are introduced.
 F5 preserves metadata and the rank cache. An account wipe retires the cache
 under its lock before clearing DB metadata, so an old worker cannot persist
 the previous account's ranks afterward. The wipe also replaces the pinned
-set, and a list build that captured the old set before that saves nothing. Reads are cached per window, writes
-only occur when the order changes, and a failed write can be retried. A pin
-event that arrives before the account DB opens (a reused pairing socket) is
-not cached, so it cannot hide the saved order once the DB is there. Server
-times and the visible order are only read when a chat was newly pinned.
+set, and a list build that captured the old set before that saves nothing.
+Reads are cached per window, writes only occur when the order changes, and a
+failed write can be retried. A pin event that arrives before the account DB
+opens (a reused pairing socket) is not cached, so it cannot hide the saved
+order once the DB is there. Server times and the visible order are only read
+when a chat was newly pinned.
 
 `tests/test_pinned_chat_order.py` calls real methods on plain stubs and tests
 the pure reconciliation logic. Remote-poll, settings-import and account-wipe
