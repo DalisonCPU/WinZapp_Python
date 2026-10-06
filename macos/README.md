@@ -103,7 +103,14 @@ next to `WinZappSourceCommit`). It is never `client/version.py`, which says
 genuine release would otherwise count as newer. A build without a valid
 `WinZappReleaseTag` (a development build) offers and installs no update, and
 the log says why. Versions compare as integers; an alpha or beta is older
-than the stable of the same number; an equal tag is not newer.
+than the stable of the same number; an equal tag is not newer. The same tag,
+without its `v`, is the version the whole app shows and uses: `version_mac`
+sets `version.__version__` from it at startup (About, the window title,
+`UpdateChecker`'s "is it newer" check), and `build_app.py` writes its
+numbers (no `alpha`/`beta`, which Apple's integer format does not allow) as
+`CFBundleShortVersionString`. Without it, the unstamped `version.py` of the
+tag's checkout would make `UpdateChecker` offer the running release on every
+check.
 
 **What is verified, in this order.** Any failure, or any answer that is not a
 clean 200, is a refusal: nothing is installed. Offline, a timeout, an HTTP

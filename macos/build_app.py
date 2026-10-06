@@ -424,20 +424,33 @@ def bundle_runtime(node_dir):
 
 
 # 6 ------------------------------------------------------------------------
-def finish_bundle(source=None):
-    step("Info.plist + signature")
-    plist_path = os.path.join(APP, "Contents", "Info.plist")
-    with open(plist_path, "rb") as fh:
-        plist = plistlib.load(fh)
+def bundle_version(source):
+    """CFBundleShortVersionString: the release tag's version for a release
+    build, which is checked out clean from the tag, so client/version.py there
+    is the unstamped placeholder (CI stamps it only at build); version.py for
+    a development build. Numbers only: Apple specifies period-separated
+    integers there, so an "alpha"/"beta" suffix is left out rather than risk
+    notarization or Gatekeeper; the app itself still runs as the full tag
+    (winzapp_mac/version_mac.py)."""
+    if source:
+        return re.sub(r"(alpha|beta)$", "", load_provenance().tag_version(source[0]))
     sys.path.insert(0, CLIENT)
     try:
         from version import __version__ as ver  # noqa
     except Exception:
         ver = "0"
+    return str(ver)
+
+
+def finish_bundle(source=None):
+    step("Info.plist + signature")
+    plist_path = os.path.join(APP, "Contents", "Info.plist")
+    with open(plist_path, "rb") as fh:
+        plist = plistlib.load(fh)
     plist.update({
         "CFBundleName": "WinZapp",
         "CFBundleDisplayName": "WinZapp",
-        "CFBundleShortVersionString": str(ver),
+        "CFBundleShortVersionString": bundle_version(source),
         "NSMicrophoneUsageDescription": "WinZapp records voice messages and voice calls.",
         "NSCameraUsageDescription": "WinZapp uses the camera for video calls.",
         "NSFocusStatusUsageDescription": "WinZapp stays quiet while a Focus is on.",

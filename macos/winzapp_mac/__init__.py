@@ -13,7 +13,8 @@ def install():
         return
     from . import paths_mac
     paths_mac.install()  # first: other modules bind app_paths names on import
-    from . import accessibility_mac, audio_mac, autostart_mac, camera_mac, combo_mac, diagnostics_mac, focus_mac, hotkey_mac, keymap_mac, lifecycle_mac, listctrl, menubar_mac, notify_mac, platform_mac, server_mac, sound_mac, speech, spell_mac, strings_mac, updater_mac
+    from . import accessibility_mac, audio_mac, autostart_mac, camera_mac, combo_mac, diagnostics_mac, focus_mac, hotkey_mac, keymap_mac, lifecycle_mac, listctrl, menubar_mac, notify_mac, platform_mac, server_mac, sound_mac, speech, spell_mac, strings_mac, updater_mac, version_mac
+    version_mac.install()  # before anything imports `from version import __version__`
     diagnostics_mac.install()
     accessibility_mac.install()
     listctrl.install()

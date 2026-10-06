@@ -145,6 +145,13 @@ def running_release_tag(info):
     return tag if is_release_tag(tag) else ""
 
 
+def tag_version(tag):
+    """The version a release tag names, as client/version.py spells it
+    ("v2.1.0.4050alpha" -> "2.1.0.4050alpha"), or "" for anything that is
+    not a release tag."""
+    return tag[1:] if is_release_tag(tag) else ""
+
+
 # -- the file -------------------------------------------------------------------
 
 def parse_provenance(raw):
