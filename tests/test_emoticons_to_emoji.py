@@ -18,6 +18,7 @@ from core.emoticons import (
     emoticon_before_caret,
     emoticon_setting_enabled,
     emoticons_enabled,
+    native_newline_width,
 )
 from core.utils import DEFAULT_SETTINGS
 from ui.conversation_panel import emoticon_conversion
@@ -86,6 +87,11 @@ class TestCaretValueIndex:
         # "🙂 :D" — the caret after ":D" is native position 5, value index 4.
         assert caret_value_index("🙂 :D", 5, utf16=True) == 4
         assert caret_value_index("🙂 :D", 4, utf16=False) == 4
+
+    def test_native_newline_width(self):
+        assert native_newline_width("a\nb", os_name="nt") == 2
+        assert native_newline_width("a\r\nb", os_name="nt") == 1
+        assert native_newline_width("a\nb", os_name="posix") == 1
 
 
 class TestSetting:
@@ -158,6 +164,8 @@ class _Panel:
     _arm_emoticon_undo = ConversationsPanel._arm_emoticon_undo
     _undo_emoticon_conversion = ConversationsPanel._undo_emoticon_conversion
     _text_with_trailing_emoticon = ConversationsPanel._text_with_trailing_emoticon
+    _emoticon_conversation_jid = ConversationsPanel._emoticon_conversation_jid
+    _editing_message_id = None
 
     def __init__(self, text, utf16=True, general=None):
         self.message_field = _NativeField(text, utf16)
@@ -209,6 +217,20 @@ class TestComposerConversion:
         panel = _Panel("http:/")
         _type(panel, " ", after)
         assert panel.message_field.GetValue() == "http:/ "
+
+    def test_a_tab_is_not_a_boundary(self, after):
+        # The field has no TE_PROCESS_TAB: Tab leaves it, it never types.
+        panel = _Panel("ok :D")
+        assert panel._convert_emoticon_before_caret("\t") is False
+        assert panel.message_field.GetValue() == "ok :D"
+
+    def test_editing_a_message_never_converts_while_typing(self, after):
+        # The edit pre-fills the old text; appending a word must not
+        # rewrite the ":/" already in it.
+        panel = _Panel("see you :/")
+        panel._editing_message_id = "MSGID"
+        _type(panel, " ", after)
+        assert panel.message_field.GetValue() == "see you :/ "
 
     def test_switched_off_in_settings(self, after):
         panel = _Panel("ok :D", general={"convert_emoticons": False})
@@ -414,6 +436,15 @@ class TestSendPath:
         panel.message_field.type("then :D")
         panel.on_send_message(None)
         assert panel.sent == ["ok :/ then 😃"]
+
+    def test_an_undo_in_one_chat_does_not_spare_the_same_text_in_another(self, after):
+        panel = _SendPanel("ok :/")
+        _type(panel, " ", after)
+        assert panel._undo_emoticon_conversion() is True
+        panel.conversation = {"remoteJid": "5511888888888@s.whatsapp.net"}
+        panel.message_field = _NativeField("ok :/")
+        panel.on_send_message(None)
+        assert panel.sent == ["ok 😕"]
 
     def test_an_edit_is_saved_exactly_as_typed(self):
         panel = _SendPanel("fixed it :D", editing="MSGID")

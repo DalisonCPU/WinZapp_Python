@@ -820,6 +820,9 @@ class MessageActionsMixin:
         self._hide_mention_suggestions()
         self._rebuild_mention_pills()
         self.message_field.SetValue("")
+        # The emoticon undo belonged to the text just discarded.
+        self._emoticon_undo = None
+        self._emoticon_undone = None
         self._cancel_edit_btn.Hide()
         self.conversation_panel.Layout()
         self.message_field.SetFocus()

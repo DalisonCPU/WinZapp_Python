@@ -19,9 +19,9 @@ from core.utils import (
     normalize_line_separators,
     to_editor_line_endings,
 )
+from core.emoticons import caret_value_index, native_newline_width, platform_counts_utf16
 from core.spell_checker import (
     spell_check_active,
-    value_index,
     windows_spellcheck_enabled,
 )
 
@@ -82,8 +82,9 @@ class ComposerMixin:
             return
         text = self.message_field.GetValue()
         position = self.message_field.GetInsertionPoint()
-        width = 2 if os.name == "nt" and "\r\n" not in text else 1
-        spell_checker.caret_moved(text, value_index(text, position, width))
+        # UTF-16 aware: every converted emoji takes two native positions.
+        spell_checker.caret_moved(text, caret_value_index(
+            text, position, native_newline_width(text), platform_counts_utf16()))
 
     def _cue_spelling_at_caret_on_click(self, event):
         event.Skip()

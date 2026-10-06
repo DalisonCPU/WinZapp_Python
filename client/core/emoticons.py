@@ -57,7 +57,7 @@ _TOKENS_LONGEST_FIRST = sorted(EMOTICONS, key=len, reverse=True)
 # typed in a row should not flip the first one mid-sequence. Newline is
 # handled by the composer itself (Shift+Enter inserts it with WriteText(),
 # which raises no EVT_CHAR).
-BOUNDARY_CHARS = frozenset(" \t\n.,!?")
+BOUNDARY_CHARS = frozenset(" \n.,!?")
 
 
 def emoticon_setting_enabled(value) -> bool:
@@ -129,6 +129,15 @@ def native_units(char: str, newline_width: int, utf16: bool) -> int:
     if utf16 and ord(char) > 0xFFFF:
         return 2
     return 1
+
+
+def native_newline_width(text: str, os_name: str = os.name) -> int:
+    """Caret positions a line break takes in the message field's GetValue().
+
+    A Windows multiline control counts "\\n" as two, unless the value
+    already carries "\\r\\n" (then each character counts once).
+    """
+    return 2 if os_name == "nt" and "\r\n" not in text else 1
 
 
 def caret_value_index(text: str, position: int, newline_width: int = 1, utf16: bool = False) -> int:

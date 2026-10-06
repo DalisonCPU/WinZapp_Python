@@ -9,8 +9,6 @@ No speech of its own: the replacement goes through the field like any other
 edit, and the screen reader's own echo of the typed character is enough.
 """
 
-import os
-
 import wx
 
 from core.emoticons import (
@@ -19,6 +17,7 @@ from core.emoticons import (
     convert_trailing_emoticon,
     emoticon_before_caret,
     emoticons_enabled,
+    native_newline_width,
     native_units,
     platform_counts_utf16,
 )
@@ -46,6 +45,10 @@ class EmoticonConversionMixin:
         """
         if boundary not in BOUNDARY_CHARS or not self._emoticon_conversion_enabled():
             return False
+        if getattr(self, "_editing_message_id", None) is not None:
+            # An edit keeps the person's text as typed (text_sending.py):
+            # appending a word must not rewrite an old ":/" in the message.
+            return False
         field = self.message_field
         sel_from, sel_to = field.GetSelection()
         if sel_from != sel_to:
@@ -54,7 +57,7 @@ class EmoticonConversionMixin:
             return False
         text = field.GetValue()
         position = field.GetInsertionPoint()
-        newline_width = 2 if os.name == "nt" and "\r\n" not in text else 1
+        newline_width = native_newline_width(text)
         index = caret_value_index(text, position, newline_width, platform_counts_utf16())
         found = emoticon_before_caret(text[:index])
         if found is None:
@@ -83,7 +86,7 @@ class EmoticonConversionMixin:
         field = self.message_field
         utf16 = platform_counts_utf16()
         text = field.GetValue()
-        newline_width = 2 if os.name == "nt" and "\r\n" not in text else 1
+        newline_width = native_newline_width(text)
         end = start + sum(native_units(c, newline_width, utf16) for c in emoji + boundary)
         if field.GetInsertionPoint() != end:
             self._emoticon_undo = None
@@ -113,11 +116,17 @@ class EmoticonConversionMixin:
         # + Backspace + Enter has to send ":/". The boundary is a single
         # character in GetValue() even when it is a Windows line break.
         text = field.GetValue()
-        newline_width = 2 if os.name == "nt" and "\r\n" not in text else 1
+        newline_width = native_newline_width(text)
         caret = caret_value_index(text, field.GetInsertionPoint(), newline_width,
                                   platform_counts_utf16())
-        self._emoticon_undone = text[:caret - 1]
+        # Tied to the open conversation: the same text typed in another chat
+        # was never undone there.
+        self._emoticon_undone = (self._emoticon_conversation_jid(), text[:caret - 1])
         return True
+
+    def _emoticon_conversation_jid(self) -> str:
+        conversation = getattr(self, "conversation", None) or {}
+        return conversation.get("remoteJid", "")
 
     def _text_with_trailing_emoticon(self, text: str) -> str:
         """The text to send: "ok :D" + Enter goes out as "ok 😃".
@@ -131,6 +140,8 @@ class EmoticonConversionMixin:
         self._emoticon_undone = None
         if not self._emoticon_conversion_enabled():
             return text
-        if undone is not None and undone.strip() == text:
-            return text
+        if undone is not None:
+            undone_jid, undone_text = undone
+            if undone_jid == self._emoticon_conversation_jid() and undone_text.strip() == text:
+                return text
         return convert_trailing_emoticon(text)
