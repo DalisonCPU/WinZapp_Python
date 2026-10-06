@@ -28,7 +28,7 @@ CORRECCIONES
 
 - Modelo "Automático (recomendado)" en la ventana de cada proveedor de IA (Transcripciones y Descripciones). Marcada por defecto en los proveedores donde aún no habías elegido un modelo, la casilla hace que WinZapp use siempre el modelo que recomienda, que sigue las actualizaciones; desmárcala para elegir o escribir un modelo fijo.
 
-- Archivos de audio enviados como archivo adjunto: un archivo WAV u OGG Vorbis en estéreo o envolvente (5.1, 7.1) ahora llega con todos sus canales y su frecuencia de muestreo, como audio normal. Antes llegaba en mono, con aspecto de mensaje de voz.
+- Archivos de audio enviados como archivo adjunto: un archivo WAV u OGG Vorbis en estéreo o envolvente (5.1, 7.1) ahora llega con todos sus canales y su frecuencia de muestreo, como audio normal. Antes llegaba en mono, con aspecto de mensaje de voz. Un archivo con más de 8 canales, que AAC no admite, se envía sin cambios como documento.
 
 V2.0.0.0
 
