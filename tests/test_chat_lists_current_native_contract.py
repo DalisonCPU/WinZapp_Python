@@ -3,9 +3,11 @@
 Synthetic stores only: no page, account, wx window or network is opened.
 """
 
+import json
+
 import pytest
 
-from tests.test_whatsapp_chat_lists_api import GROUP, LOCKED, PN, run
+from tests.test_whatsapp_chat_lists_api import GROUP, LOCKED, PN, ROOT, run
 
 
 def modern(commands, **options):
@@ -44,7 +46,7 @@ def test_current_member_changes_preserve_unselected_members_and_use_one_delta():
     ({"filters": False}, "account_disabled"),
     ({"filters": "true"}, "capability_check_failed"),
     ({"moduleThrows": True}, "capability_check_failed"),
-    ({"ready": False}, "runtime_incomplete"),
+    ({"ready": False}, "capability_check_failed"),
     ({"version": "4.6.2"}, "runtime_incomplete"),
     ({"loaderType": "webpack"}, "runtime_incomplete"),
     ({"wrongNativeArity": True}, "runtime_incomplete"),
@@ -94,8 +96,14 @@ def test_failed_native_write_has_one_attempt_without_legacy_retry(command, call)
 
 def test_native_empty_id_is_unconfirmed_without_retry_or_invented_id():
     result = modern([{"action": "create", "name": "Synthetic"}], nativeEmptyId=True)
-    assert result["results"] == [{"error": "list_response_invalid"}]
+    assert result["results"] == [{"error": "list_operation_unconfirmed"}]
     assert result["calls"] == [["nativeCreate", "Synthetic", None]]
+
+
+def test_native_path_accepts_the_pinned_wa_js_version():
+    package = json.loads((ROOT / "client/api_patches/package.json").read_text(encoding="utf-8"))
+    pin = package["dependencies"]["@wppconnect/wa-js"]
+    assert modern([{"action": "read"}], version=pin)["results"][0]["value"]["canEdit"] is True
 
 
 @pytest.mark.parametrize("command,expected", [

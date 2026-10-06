@@ -20,7 +20,11 @@ export async function executeListCommand(input) {
       }
       const gate = wpp.whatsapp.labelsEditingEnabled;
       if (typeof gate !== 'function') {
-        if (gate !== undefined || wpp.version !== '4.6.1' || wpp.isReady !== true
+        // Not ready yet is transient: "refresh and try again", not "this version lacks".
+        if (gate === undefined && wpp.version === '4.6.1' && wpp.isReady !== true) {
+          return result('capability_check_failed');
+        }
+        if (gate !== undefined || wpp.version !== '4.6.1'
             || wpp.loader?.loaderType !== 'meta'
             || typeof wpp.loader.loadModule !== 'function') return result('runtime_incomplete');
         const actions = wpp.loader.loadModule('WAWebBizLabelEditingAction');
@@ -105,7 +109,8 @@ export async function executeListCommand(input) {
       : await lists.create(input.name.trim());
     if (!['string', 'number'].includes(typeof createdId)
         || (typeof createdId === 'number' && (!Number.isSafeInteger(createdId) || createdId < 0))
-        || !/^[A-Za-z0-9_-]{1,64}$/.test(String(createdId))) fail('list_response_invalid');
+        // The list may already exist: report it as unconfirmed (503), never as refused.
+        || !/^[A-Za-z0-9_-]{1,64}$/.test(String(createdId))) fail('list_operation_unconfirmed');
     return { action: input.action, createdId: String(createdId) };
   }
   if (input.action === 'rename') {
