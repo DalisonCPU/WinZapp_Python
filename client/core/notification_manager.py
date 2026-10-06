@@ -1028,6 +1028,8 @@ class NotificationManager:
             # _setup_toaster() exhausted every AUMID candidate (or
             # windows_toasts is not importable at all): there will be no
             # banner for the screen reader to read, so announce it ourselves.
+            # A reaction keeps its own sound here: speech alone would not
+            # tell it apart from an ordinary message.
             if sound_event == "reaction_received":
                 wx.CallAfter(self._play_sound, *sound_args)
             self._announce_unshown(title, body)

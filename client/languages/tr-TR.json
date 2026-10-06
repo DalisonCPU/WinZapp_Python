@@ -1030,7 +1030,7 @@
   "sound_event_message_foreground": "Başka bir sohbette mesaj (uygulama ön planda)",
   "sound_event_message_sent": "Mesaj gönderildi",
   "sound_event_message_background": "Program arka plandayken mesaj",
-  "sound_event_reaction_received": "Mesajına tepki geldi",
+  "sound_event_reaction_received": "Mesajınıza gelen tepki",
   "sound_event_call_incoming": "Gelen arama",
   "incoming_call_announcement": "{name} sizi arıyor.",
   "incoming_video_call_announcement": "{name} sizi görüntülü arıyor.",
