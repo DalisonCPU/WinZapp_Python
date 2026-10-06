@@ -4,7 +4,7 @@ This release brings AI transcription and description of voice messages, images, 
 
 WHAT'S NEW
 
-- "Keep pinned chats in a fixed order" in Interface settings. When enabled, new messages do not move pinned chats, and their order is kept after restarting. It starts off; unpinned chats still rise when new messages arrive.
+- "Keep pinned chats in a fixed order" in the User Interface tab of Settings. When enabled, new messages do not move pinned chats, and their order is kept after restarting. It starts off; unpinned chats still rise when new messages arrive.
 
 - Transcribe and describe media with AI. The new "Transcriptions and Descriptions" tab in Settings turns the AI features on (they start off) and takes the API key of one or more providers — Gemini, OpenAI, Claude, Groq and OpenRouter — which are tried in the order you set, so when one fails or runs out of quota the next one answers. In a message's context menu, or with Ctrl+Shift+I, "Transcribe" turns a voice message into text, "Describe" describes a photo or a video, "Describe sticker" describes a sticker and "Convert to accessible text" turns a PDF into plain, readable text. The result opens in a window with the text, and for photos and videos you can ask follow-up questions in it. WinZapp asks before sending media to a provider and asks again every time for locked chats; your keys are encrypted on your computer and are sent only to the provider they belong to. A waiting sound plays while the provider works, and answers can be read aloud automatically. The text follows the language of the app.
 

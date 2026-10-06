@@ -101,7 +101,7 @@ class _Stub:
     def _sync_incoming_call_bar(self, message=""):
         self.steps.append("call bar")
 
-    def add_chats_to_ui(self):
+    def _schedule_set_chats(self):
         self.steps.append("chat list")
 
     def save_settings(self):

@@ -1,6 +1,6 @@
 # Optional fixed order for pinned chats
 
-Settings > Interface > "Keep pinned chats in a fixed order" is per-account
+Settings > User Interface > "Keep pinned chats in a fixed order" is per-account
 and off by default. Off preserves the existing recent-message ordering.
 On keeps pinned chats in their saved relative order while messages change
 their previews. Unpinned chats retain recent-message ordering in both modes.
@@ -13,8 +13,9 @@ existing full-sort fallback. Names and message times are never rank inputs.
 
 `core/pinned_chat_order.py` keeps an ordered list in account DB metadata
 `pinned_chat_order`, independently of the legacy `pinned_chats` membership
-set. Only known phone/LID mappings bridge identities; legacy phone JIDs and
-device suffixes use the existing normalizer. A mapping learned later folds
+set. Only known `_lid_to_phone` mappings bridge identities (a reverse-only
+`_phone_to_lid` entry is a leftover of identity cleanup and is never used);
+legacy phone JIDs and device suffixes use the existing normalizer. A mapping learned later folds
 the aliases into one retained position.
 
 On the first load, numeric server pin timestamps seed the order, newest pin
@@ -34,7 +35,10 @@ No retries or changes to ambiguous API-failure handling are introduced.
 F5 preserves metadata and the rank cache. An account wipe retires the cache
 under its lock before clearing DB metadata, so an old worker cannot persist
 the previous account's ranks afterward. Reads are cached per window, writes
-only occur when the order changes, and a failed write can be retried.
+only occur when the order changes, and a failed write can be retried. A pin
+event that arrives before the account DB opens (a reused pairing socket) is
+not cached, so it cannot hide the saved order once the DB is there. Server
+times and the visible order are only read when a chat was newly pinned.
 
 `tests/test_pinned_chat_order.py` calls real methods on plain stubs and tests
 the pure reconciliation logic. Remote-poll, settings-import and account-wipe

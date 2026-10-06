@@ -20,10 +20,9 @@ def canonical_pin_jid(window, jid):
     normalize = window._normalize_jid
     jid = normalize(jid)
     if jid.endswith("@lid"):
+        # _phone_to_lid is always written in pairs with _lid_to_phone, so a
+        # reverse scan could only revive a mapping identity cleanup dropped.
         phone = getattr(window, "_lid_to_phone", {}).get(jid)
-        if not phone:
-            phone = next((phone for phone, lid in
-                          dict(getattr(window, "_phone_to_lid", {})).items() if lid == jid), None)
         if phone:
             jid = normalize(phone)
     return jid
@@ -91,12 +90,16 @@ def sync_pinned_order(window, *, pinned=None, restore=None, chats=None):
             return ()
         db = getattr(window, "db", None)
         if state.order is None:
+            if db is None:
+                # A reused pairing socket can deliver a pin event before the
+                # account database opens; caching [] now would hide the saved
+                # order for the rest of the session.
+                return ()
             stored = []
-            if db is not None:
-                try:
-                    stored = db.get_metadata_json(METADATA_KEY, [])
-                except Exception:
-                    logging.exception("[pin-order] Could not read saved order")
+            try:
+                stored = db.get_metadata_json(METADATA_KEY, [])
+            except Exception:
+                logging.exception("[pin-order] Could not read saved order")
             state.order = stored if isinstance(stored, list) else []
             state.persisted = list(state.order)
         canon = lambda jid: canonical_pin_jid(window, jid)
@@ -104,15 +107,19 @@ def sync_pinned_order(window, *, pinned=None, restore=None, chats=None):
             getattr(window, "_pinned_chats", set()) if pinned is None else pinned)} - {""}
         previous = state.order if restore is None else restore
         previous = [canon(jid) for jid in previous]
-        times = {}
-        snapshot = list(dict(getattr(window, "chats", {})).values()) if chats is None else chats
-        for chat in snapshot:
-            if isinstance(chat, dict):
-                jid = canon(chat.get("remoteJid"))
-                if jid in members:
-                    times[jid] = max(times.get(jid, 0), pin_timestamp(chat.get("pin")))
-        panel = getattr(window, "conversations_panel", None)
-        seed = [canon(jid) for jid in getattr(panel, "_displayed_jids", ())]
+        # Server times and the visible order only place newly pinned chats,
+        # so the usual pass (no new pin) skips scanning every chat and row.
+        added = members.difference(previous)
+        times, seed = {}, []
+        if added:
+            snapshot = list(dict(getattr(window, "chats", {})).values()) if chats is None else chats
+            for chat in snapshot:
+                if isinstance(chat, dict):
+                    jid = canon(chat.get("remoteJid"))
+                    if jid in added:
+                        times[jid] = max(times.get(jid, 0), pin_timestamp(chat.get("pin")))
+            panel = getattr(window, "conversations_panel", None)
+            seed = [canon(jid) for jid in getattr(panel, "_displayed_jids", ())]
         order = reconcile_pin_order(previous, members, times, seed)
         state.order = order
         if db is not None and order != state.persisted:
@@ -131,6 +138,4 @@ def pinned_chat_ranks(window, pinned=None):
 def refresh_after_order_setting_change(window, previous):
     """Apply/OK must recompute, not reuse sorted arrays."""
     if keep_pinned_order(window) != previous:
-        schedule = getattr(window, "_schedule_set_chats", None)
-        if callable(schedule):
-            schedule()
+        window._schedule_set_chats()

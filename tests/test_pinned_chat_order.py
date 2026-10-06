@@ -190,11 +190,32 @@ def test_known_phone_and_lid_are_one_rank_even_when_the_mapping_is_learned_later
     assert win.db.data[METADATA_KEY] == [B, A, C]
 
 
-def test_reverse_known_mapping_is_used_but_unmapped_lid_is_never_guessed():
+def test_a_stale_reverse_entry_is_ignored_and_unmapped_lid_is_never_guessed():
     win = window()
     assert canonical_pin_jid(win, LID) == LID
+    # Identity cleanup can leave only the reverse half; it must not revive it.
     win._phone_to_lid = {A: LID}
-    assert canonical_pin_jid(win, LID) == A
+    assert canonical_pin_jid(win, LID) == LID
+
+
+def test_a_pin_event_before_the_database_opens_keeps_the_saved_order():
+    db = _DB([C, A, B])
+    win = window(db=db)
+    win.db = None
+    assert sync_pinned_order(win) == ()
+    win.db = db
+    assert sync_pinned_order(win) == (C, A, B)
+    assert db.data[METADATA_KEY] == [C, A, B]
+
+
+def test_a_pass_without_a_new_pin_scans_no_chat_or_row():
+    class _NoScan(list):
+        def __iter__(self):
+            raise AssertionError("scanned although no chat was newly pinned")
+
+    win = window(db=_DB([A, B, C]))
+    win.conversations_panel._displayed_jids = _NoScan()
+    assert sync_pinned_order(win, chats=_NoScan()) == (A, B, C)
 
 
 def test_local_unpin_and_repin_promote_only_that_chat():

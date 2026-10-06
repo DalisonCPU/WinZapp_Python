@@ -1062,11 +1062,7 @@ class SettingsMixin:
             # not changed — so it has to be cleared or the rebuild is skipped.
             self._chats_ui_fp = None
             # An imported pin-order choice changes sorting as well as text.
-            schedule = getattr(self, "_schedule_set_chats", None)
-            if callable(schedule):
-                schedule()
-            else:
-                self.add_chats_to_ui()
+            self._schedule_set_chats()
 
         _step("chat list", _rebuild_chat_list)
 
