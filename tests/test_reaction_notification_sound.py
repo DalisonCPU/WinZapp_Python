@@ -12,7 +12,9 @@ from unittest.mock import Mock
 import pytest
 import wx
 
-from core.notification_manager import NotificationManager
+from core.notification_manager import (
+    REACTION_SOUND_EVENT, NotificationManager, reaction_silenced_now,
+)
 from core.sound_system import SOUND_EVENTS, Sound, resolve_sound_event_path
 from main import MainWindow
 from tests.test_archived_chat_sound_tts import _StubMainWindow
@@ -244,7 +246,7 @@ def test_reaction_event_enabled_setting_gates_playback_without_audio(monkeypatch
 
 
 def test_bundled_reaction_sound_falls_back_from_old_pack_and_accepts_custom_file(tmp_path):
-    assert ("reaction_received", "reaction_received.ogg") in SOUND_EVENTS
+    assert (REACTION_SOUND_EVENT, "reaction_received.ogg") in SOUND_EVENTS
     folder = Path(__file__).resolve().parents[1] / "client/sounds/default"
     manifest = json.loads((folder / "default.pack.json").read_text(encoding="utf-8"))
     default = {"dir": str(folder), **manifest}
@@ -296,3 +298,15 @@ def test_mac_late_locked_reaction_shows_and_plays_nothing(mac_dispatch):
     dispatch(stub, "Name", "Reaction", JID, sound_event="reaction_received")
     stub.main_window.reaction_received_sound.play.assert_not_called()
     center.addNotificationRequest_withCompletionHandler_.assert_not_called()
+
+
+@pytest.mark.parametrize("check", ["is_chat_locked", "is_chat_muted", "is_chat_archived"])
+def test_reaction_is_silenced_by_each_late_chat_state(check):
+    window = SimpleNamespace(**{check: lambda jid: jid == JID})
+    assert reaction_silenced_now(window, JID)
+    assert not reaction_silenced_now(window, "other@s.whatsapp.net")
+
+
+def test_reaction_silence_check_tolerates_a_window_without_predicates():
+    assert not reaction_silenced_now(SimpleNamespace(), JID)
+    assert not reaction_silenced_now(None, JID)

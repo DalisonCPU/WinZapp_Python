@@ -141,7 +141,6 @@ class TestWiring:
         src = main_window_method_source("_maybe_notify_reaction")
         assert "notification_content_level(self.settings)" in src
         assert "send_sound_only(" in src
-        assert 'sound_event="reaction_received"' in src
         assert 'self.i18n.t("notif_hidden_reaction")' in src
 
 

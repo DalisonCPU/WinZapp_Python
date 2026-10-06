@@ -487,6 +487,20 @@ def format_locked_notification(unread_count: int, i18n, app_name="WinZapp") -> t
     return app_name or "WinZapp", body
 
 
+# The SOUND_EVENTS key a reaction to one of your messages queues with.
+REACTION_SOUND_EVENT = "reaction_received"
+
+
+def reaction_silenced_now(main_window, remote_jid: str) -> bool:
+    """Whether a queued reaction's chat was locked, muted or archived while
+    it waited. The predicates only read dicts, so this runs off the wx thread
+    too; Windows' and the Mac's _dispatch share it so they cannot drift."""
+    return any(
+        getattr(main_window, check, lambda _jid: False)(remote_jid)
+        for check in ("is_chat_locked", "is_chat_muted", "is_chat_archived")
+    )
+
+
 def format_notification_title(msg: dict, main_window, i18n) -> str:
     """
     Build the notification title for a toast notification.
@@ -996,10 +1010,7 @@ class NotificationManager:
             return
 
         main_window = getattr(self, "main_window", None)
-        if sound_event == "reaction_received" and any(
-            getattr(main_window, check, lambda _jid: False)(remote_jid)
-            for check in ("is_chat_locked", "is_chat_muted", "is_chat_archived")
-        ):
+        if sound_event == REACTION_SOUND_EVENT and reaction_silenced_now(main_window, remote_jid):
             # Preferences or the vault can change while the reaction is queued.
             return
         sound_args = (remote_jid,) if sound_event is None else (remote_jid, sound_event)
@@ -1030,7 +1041,7 @@ class NotificationManager:
             # banner for the screen reader to read, so announce it ourselves.
             # A reaction keeps its own sound here: speech alone would not
             # tell it apart from an ordinary message.
-            if sound_event == "reaction_received":
+            if sound_event == REACTION_SOUND_EVENT:
                 wx.CallAfter(self._play_sound, *sound_args)
             self._announce_unshown(title, body)
             return
@@ -1239,7 +1250,7 @@ class NotificationManager:
         from core.quiet_hours import is_quiet_hours_active
         if is_quiet_hours_active():
             return
-        if sound_event == "reaction_received":
+        if sound_event == REACTION_SOUND_EVENT:
             self.main_window.reaction_received_sound.play()
             return
         if hasattr(self.main_window, "play_background_notification_sound"):

@@ -1812,7 +1812,8 @@ class MessageEventsMixin:
                 return
             if hasattr(self, "notification_manager"):
                 from core.notification_manager import (
-                    background_notification_content, notification_content_level,
+                    REACTION_SOUND_EVENT, background_notification_content,
+                    notification_content_level,
                 )
                 content = background_notification_content(
                     notification_content_level(self.settings), title, body,
@@ -1820,9 +1821,9 @@ class MessageEventsMixin:
                 )
                 if content is None:
                     self.notification_manager.send_sound_only(
-                        remote_jid, sound_event="reaction_received")
+                        remote_jid, sound_event=REACTION_SOUND_EVENT)
                 else:
                     self.notification_manager.send(
-                        *content, remote_jid, sound_event="reaction_received")
+                        *content, remote_jid, sound_event=REACTION_SOUND_EVENT)
         except Exception:
             logging.exception("[_maybe_notify_reaction] failed")
