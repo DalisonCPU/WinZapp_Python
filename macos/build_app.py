@@ -428,9 +428,10 @@ def bundle_version(source):
     """CFBundleShortVersionString: the release tag's version for a release
     build, which is checked out clean from the tag, so client/version.py there
     is the unstamped placeholder (CI stamps it only at build); version.py for
-    a development build. Numbers only: Apple specifies period-separated
-    integers there, so an "alpha"/"beta" suffix is left out rather than risk
-    notarization or Gatekeeper; the app itself still runs as the full tag
+    a development build. The "alpha"/"beta" suffix is dropped so the value
+    stays numeric (Apple expects period-separated integers there; the four
+    parts already shipped notarized), rather than risk notarization or
+    Gatekeeper on a letter; the app itself still runs as the full tag
     (winzapp_mac/version_mac.py)."""
     if source:
         return re.sub(r"(alpha|beta)$", "", load_provenance().tag_version(source[0]))

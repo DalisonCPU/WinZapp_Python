@@ -128,7 +128,7 @@ def test_a_release_bundle_is_versioned_by_its_tag():
     assert build_app.bundle_version(("v2.1.0.4060", "a" * 40)) == "2.1.0.4060"
 
 
-def test_a_development_bundle_keeps_version_py():
-    sys.path.insert(0, build_app.CLIENT)
+def test_a_development_bundle_keeps_version_py(monkeypatch):
+    monkeypatch.syspath_prepend(build_app.CLIENT)   # restores sys.path, bundle_version's insert included
     from version import __version__
     assert build_app.bundle_version(None) == __version__

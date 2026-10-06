@@ -1,6 +1,7 @@
 """The running version of a Mac release is its release tag (version_mac),
 not the unstamped client/version.py of the tag's checkout."""
 
+import ast
 import os
 import sys
 
@@ -65,3 +66,35 @@ def test_installed_before_the_modules_that_copy_the_version():
     with open(path, encoding="utf-8") as fh:
         calls = [line.split("(")[0].strip() for line in fh if ".install()" in line]
     assert calls[:2] == ["paths_mac.install", "version_mac.install"]
+
+
+def _top_level_imports(body):
+    """Modules a module body imports when it is imported: if/try/with blocks
+    included, function and class bodies not."""
+    for node in body:
+        if isinstance(node, ast.Import):
+            yield from (alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
+            yield node.module
+        elif isinstance(node, (ast.If, ast.Try, ast.With)):
+            for field in ("body", "orelse", "finalbody"):
+                yield from _top_level_imports(getattr(node, field, []) or [])
+            for handler in getattr(node, "handlers", []) or []:
+                yield from _top_level_imports(handler.body)
+
+
+def test_no_layer_module_copies_the_version_on_import():
+    """winzapp_mac/__init__.py imports every layer module before
+    version_mac.install() runs: one that imported version, updater or
+    main_window at module level would bind the placeholder version first."""
+    layer = os.path.join(ROOT, "macos", "winzapp_mac")
+    found = []
+    for name in sorted(os.listdir(layer)):
+        if not name.endswith(".py"):
+            continue
+        with open(os.path.join(layer, name), encoding="utf-8") as fh:
+            tree = ast.parse(fh.read(), filename=name)
+        for module in _top_level_imports(tree.body):
+            if module.split(".")[0] in ("version", "updater", "main_window"):
+                found.append(f"{name}: {module}")
+    assert found == []
