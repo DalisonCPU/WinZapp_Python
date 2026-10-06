@@ -930,6 +930,7 @@
     "ui_selected_announce_position_start": "Announce \"selected\" at the start of the message or chat",
     "ui_selected_announce_position_end": "Announce \"selected\" at the end of the message or chat",
     "ui_show_yesterday_label": "Show yesterday's messages with the date omitted (yesterday)",
+    "ui_show_typing_row": "Show who is typing or recording audio as the last row of the messages list",
     "ui_show_link_previews_label": "Show link previews in the message list",
     "ui_forwarded_prefix_label": "Announce \"Forwarded\" at the start of the message, before the sender",
     "ui_forward_voice_as_voice": "Forward voice messages as voice messages instead of audio (they are still marked as forwarded)",

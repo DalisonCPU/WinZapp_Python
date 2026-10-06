@@ -27,6 +27,7 @@ from ui.conversation_panel.typing_row import (
     dismiss_typing_row_for_message,
     message_row_count,
     sync_typing_row,
+    typing_row_enabled,
     typing_row_shown,
     typing_row_text,
 )
@@ -544,3 +545,49 @@ def test_message_appended_by_the_sync_tail_path_also_dismisses():
     assert s.populate_calls == [True]           # tail append, not a rebuild
     assert s.messages_list.rows == ["oi", "nova"]
     assert not typing_row_shown(s)
+
+
+# ── Settings > User Interface: show_typing_row ───────────────────────────────
+
+
+@pytest.mark.parametrize("settings, expected", [
+    (None, True),                                            # no settings at all
+    ({}, True),                                              # install without the key
+    ({"user_interface": {}}, True),
+    ({"user_interface": "junk"}, True),
+    ({"user_interface": {"show_typing_row": True}}, True),
+    ({"user_interface": {"show_typing_row": False}}, False),
+])
+def test_the_setting_is_on_unless_turned_off(settings, expected):
+    assert typing_row_enabled(settings) is expected
+
+
+def test_turned_off_no_row_appears():
+    panel = _Panel()
+    panel.main_window.settings = {"user_interface": {"show_typing_row": False}}
+    panel.typing(CONTACT, CONTACT)
+    panel.refresh_typing_row()
+
+    assert panel.messages_list.rows == ["m0", "m1", "m2"]
+    assert not typing_row_shown(panel)
+    assert panel.messages_list.log == []
+
+
+def test_turning_it_off_removes_a_row_already_showing_and_on_brings_it_back(listbox):
+    panel = _Panel(listbox=listbox)
+    panel.main_window.settings = {"user_interface": {"show_typing_row": True}}
+    panel.typing(CONTACT, CONTACT)
+    panel.refresh_typing_row()
+    assert panel.messages_list.rows[-1] == "Ana is typing..."
+
+    # What Settings > Apply does: store the choice, then refresh_typing_row().
+    panel.main_window.settings["user_interface"]["show_typing_row"] = False
+    panel.refresh_typing_row()
+    assert panel.messages_list.rows == ["m0", "m1", "m2"]
+    assert not typing_row_shown(panel)
+    assert panel.messages_list.frozen == 0
+    assert panel.main_window.spoken == []
+
+    panel.main_window.settings["user_interface"]["show_typing_row"] = True
+    panel.refresh_typing_row()
+    assert panel.messages_list.rows[-1] == "Ana is typing..."

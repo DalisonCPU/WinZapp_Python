@@ -25,6 +25,10 @@ Inserting at an index (_sync_message_rows(), the unread separator) needs
 nothing: every such index is at most ``len(self._sorted_messages)``, which is
 above this row.
 
+It can be turned off in Settings > User Interface
+(``user_interface.show_typing_row``, on by default; typing_row_enabled()).
+Off, nothing here adds a row and a row already showing is removed.
+
 It never speaks. Typing/recording is already announced by
 MainWindow.on_presence_update() (announce_typing / announce_recording), and a
 row appearing must not become a second announcement — so it is only appended
@@ -65,6 +69,16 @@ def typing_row_text(entries, t) -> str:
         if phrase not in parts:
             parts.append(phrase)
     return " ".join(parts)
+
+
+def typing_row_enabled(settings) -> bool:
+    """Settings > User Interface, ``user_interface.show_typing_row``: on unless
+    explicitly turned off. A missing or malformed settings dict counts as on,
+    like the shipped default."""
+    ui = settings.get("user_interface") if isinstance(settings, dict) else None
+    if not isinstance(ui, dict):
+        return True
+    return ui.get("show_typing_row", True) is not False
 
 
 def typing_row_shown(panel) -> bool:
@@ -183,6 +197,17 @@ def sync_typing_row(panel, chat_jid_norm: str = "", fresh=()) -> None:
     if not isinstance(composing, dict):
         composing = {}
     shown = typing_row_shown(panel)
+    # Read on every update, so turning it off in Settings applies at once
+    # (the dialog calls refresh_typing_row() after Apply) and a row already
+    # on screen goes away.
+    if not typing_row_enabled(getattr(mw, "settings", None)):
+        if shown:
+            lst.Freeze()
+            try:
+                _remove_typing_row(panel)
+            finally:
+                lst.Thaw()
+        return
     # Cheap way out for the overwhelmingly common case — nobody typing
     # anywhere and no row on screen — since this runs on every presence event.
     if not shown and not any(composing.values()):

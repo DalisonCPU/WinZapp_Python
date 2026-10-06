@@ -930,6 +930,7 @@
     "ui_selected_announce_position_start": "Anunciar \"selecionado\" no início da mensagem ou conversa",
     "ui_selected_announce_position_end": "Anunciar \"selecionado\" no fim da mensagem ou conversa",
     "ui_show_yesterday_label": "Mostrar mensagens do dia anterior com data omitida (ontem)",
+    "ui_show_typing_row": "Mostrar quem está digitando ou gravando áudio como última linha da lista de mensagens",
     "ui_show_link_previews_label": "Mostrar prévias de links na lista de mensagens",
     "ui_forwarded_prefix_label": "Anunciar \"Encaminhada\" no início da mensagem, antes do remetente",
     "ui_forward_voice_as_voice": "Encaminhar mensagens de voz como mensagens de voz, em vez de áudio (continuam marcadas como encaminhadas)",

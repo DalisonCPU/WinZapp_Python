@@ -874,6 +874,7 @@
     "ui_selected_announce_position_start": "Anunțați „selectat” la începutul mesajului sau al conversației",
     "ui_selected_announce_position_end": "Anunțați „selectat” la sfârșitul mesajului sau conversației",
     "ui_show_yesterday_label": "Afișați mesajele de ieri cu data omisă (ieri)",
+    "ui_show_typing_row": "Afișează cine tastează sau înregistrează un mesaj vocal ca ultim rând al listei de mesaje",
     "ui_show_link_previews_label": "Afișează previzualizările linkurilor în lista de mesaje",
     "ui_forwarded_prefix_label": "Anunțați „Redirecționat” la începutul mesajului, înaintea expeditorului",
     "ui_forward_voice_as_voice": "Redirecționați mesajele vocale ca mesaje vocale, nu ca audio (rămân marcate ca redirecționate)",
