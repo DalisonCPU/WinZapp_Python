@@ -14,6 +14,7 @@ from core.audio_devices import (
     enumerate_output_devices, enumerate_input_devices, test_input_device,
 )
 from core.spell_checker import SPELL_CHECK_MODES, spell_check_mode
+from core.emoticons import emoticon_setting_enabled
 from core.notification_manager import NOTIFICATION_CONTENT_LEVELS
 from core.attachment_types import PASTED_AUDIO_MODES
 from core.reaction_shortcuts import (
@@ -329,6 +330,13 @@ class SettingsDialog(wx.Dialog):
             style=wx.RA_SPECIFY_COLS,
         )
         gen_sizer.Add(self._spell_check_radio, 0, wx.EXPAND | wx.ALL, 8)
+
+        # Next to spell checking: both act on what is typed in the message
+        # field. Read live by ConversationsPanel on every keystroke.
+        self._convert_emoticons_check = wx.CheckBox(
+            self._general_page, label=i18n.t("convert_emoticons_label")
+        )
+        gen_sizer.Add(self._convert_emoticons_check, 0, wx.ALL, 8)
 
         # Radio group, not a checkbox: the two folding levels are different
         # trades, not "more of the same", so the user picks one rather than
@@ -1580,6 +1588,9 @@ class SettingsDialog(wx.Dialog):
         self._announce_sync_check.SetValue(announce_sync)
 
         self._apply_spell_check_mode()
+
+        convert_emoticons = self.main_window.settings.get("general", {}).get("convert_emoticons", True)
+        self._convert_emoticons_check.SetValue(emoticon_setting_enabled(convert_emoticons))
 
         # "off" unless the user chose otherwise — including for installs
         # whose settings.json predates the option and has no key at all.
@@ -3252,6 +3263,11 @@ class SettingsDialog(wx.Dialog):
             SPELL_CHECK_MODES[self._spell_check_radio.GetSelection()]
         )
 
+        # Emoticon -> emoji in the message field; read live, like the above.
+        self.main_window.settings.setdefault("general", {})["convert_emoticons"] = (
+            self._convert_emoticons_check.GetValue()
+        )
+
         # Unicode folding in searches
         _sel = self._search_norm_radio.GetSelection()
         self.main_window.settings.setdefault("general", {})["search_normalization"] = (
@@ -3523,6 +3539,7 @@ class SettingsDialog(wx.Dialog):
             "spell_check_mode_off",
         )):
             self._spell_check_radio.SetItemLabel(_i, i18n.t(_key))
+        self._convert_emoticons_check.SetLabel(i18n.t("convert_emoticons_label"))
         self._search_norm_radio.SetLabel(i18n.t("search_normalization_label"))
         for _i, _key in enumerate((
             "search_normalization_off",

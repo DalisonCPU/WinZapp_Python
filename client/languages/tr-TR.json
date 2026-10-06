@@ -396,6 +396,7 @@
   "spell_check_mode_windows_macos": "macOS ayarını izle (varsayılan)",
   "spell_check_mode_on": "Her zaman açık",
   "spell_check_mode_off": "Her zaman kapalı",
+  "convert_emoticons_label": "Yazarken :D gibi metin ifadelerini &emojiye dönüştür",
   "search_normalization_label": "Aramalarda Evrensel Kod (Unicode) &normalleştirmesi",
   "search_normalization_off": "Kapalı (varsayılan): Arama tam olarak yazdığınızla eşleşir",
   "search_normalization_nfd": "Aksanları yok say: \"reuniao\" yazdığınızda \"reunião\" bulunur",

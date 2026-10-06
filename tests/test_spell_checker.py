@@ -5,7 +5,6 @@ import pytest
 from core.spell_checker import (
     WindowsSpellChecker,
     _word_ended,
-    value_index,
     word_span_at,
 )
 from tests.locales import registered_locale_codes
@@ -168,9 +167,3 @@ def test_typing_and_reset_forget_the_caret_word():
     checker.reset("ab")
     assert checker.caret_moved("ab", 0)
     assert len(played) == 3
-
-
-def test_value_index_converts_native_positions():
-    assert value_index("ab\ncd", 4) == 4
-    assert value_index("ab\ncd", 4, 2) == 3
-    assert value_index("ab\ncd", 99, 2) == 5

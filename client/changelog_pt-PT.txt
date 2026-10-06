@@ -18,6 +18,8 @@ NOVIDADES
 
 - "A escrever" na lista de mensagens: enquanto a pessoa da conversa aberta (ou, num grupo, um participante) está a escrever ou a gravar áudio, uma última linha temporária, como "Ana está a escrever...", aparece no fim da lista de mensagens. Desaparece quando a pessoa para ou quando a mensagem chega. Nunca move o foco por si só (só se estiveres na linha quando ela desaparecer és levado para a última mensagem) e não é lida sozinha, por isso o anúncio de escrita continua exatamente como era. Não é uma mensagem: não tem menu de contexto nem ações. Pode ser desativada em "Mostrar quem está a escrever ou a gravar áudio como última linha da lista de mensagens", no separador Interface do utilizador das Definições
 
+- Os emoticons passam a emojis enquanto escreve, como no WhatsApp Web: ":)" passa a 🙂, ":D" a 😃, "<3" a ❤️ e assim por diante, ao escrever um espaço ou uma pontuação a seguir, ou ao enviar a mensagem logo a seguir a um. Só é convertido um emoticon isolado, nunca um dentro de um link, de uma palavra ou de `código`. Premir Backspace logo após a conversão repõe o que escreveu. Pode ser desativado em Definições, separador "Geral", "Converter emoticons como :D em emojis ao escrever"
+
 CORREÇÕES
 
 - Menções: uma pessoa mencionada pelo nome juntamente com @todos mantém a sua ligação nas menções da mensagem, e uma menção a si, na notificação e na pré-visualização da lista de conversas, usa a palavra escolhida em "Como se referir a mim?" em vez de uma palavra fixa

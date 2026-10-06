@@ -18,6 +18,8 @@ YENİLİKLER
 
 - Mesaj listesinde "yazıyor": açık sohbetteki kişi (ya da bir grupta bir katılımcı) yazarken veya ses kaydederken, mesaj listesinin sonunda "Ana yazıyor..." gibi geçici bir son satır görünür. Kişi durduğunda veya mesajı geldiğinde kaybolur. Odağı kendiliğinden asla taşımaz (yalnızca satır kaybolduğunda üzerindeyseniz son mesaja geçersiniz) ve kendiliğinden okunmaz; yazıyor duyurusu tam olarak eskisi gibi kalır. Bir mesaj değildir: bağlam menüsü ve eylemleri yoktur. Ayarlar > Kullanıcı Arayüzü sekmesindeki "Yazan veya ses kaydeden kişiyi mesaj listesinin son satırı olarak göster" seçeneğiyle kapatılabilir
 
+- Metin ifadeleri, WhatsApp Web'deki gibi yazarken emojiye dönüşür: ":)" 🙂, ":D" 😃, "<3" ❤️ olur; ardından boşluk ya da noktalama işareti yazdığınızda veya mesajı hemen ardından gönderdiğinizde. Yalnızca tek başına duran bir ifade dönüştürülür; bir bağlantının, bir kelimenin ya da `kod`un içindeki asla. Dönüşümden hemen sonra Backspace tuşuna basmak yazdığınızı geri getirir. Ayarlar, "Genel" sekmesi, "Yazarken :D gibi metin ifadelerini emojiye dönüştür" ile kapatılabilir
+
 DÜZELTMELER
 
 - Bahsetmeler: @tümü ile birlikte adıyla anılan kişi mesajın bahsetmelerinde bağlantısını korur ve sizden bahsedilmesi, bildirimde ve sohbet listesi önizlemesinde, sabit bir sözcük yerine "Kendimden nasıl bahsedilsin?" ayarında seçilen sözcüğü kullanır

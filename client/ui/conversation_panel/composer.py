@@ -19,9 +19,9 @@ from core.utils import (
     normalize_line_separators,
     to_editor_line_endings,
 )
+from core.emoticons import caret_value_index, native_newline_width, platform_counts_utf16
 from core.spell_checker import (
     spell_check_active,
-    value_index,
     windows_spellcheck_enabled,
 )
 
@@ -31,6 +31,16 @@ from core.spell_checker import (
 _CARET_KEYS = frozenset((
     wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_UP, wx.WXK_DOWN, wx.WXK_HOME,
     wx.WXK_END, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN,
+))
+
+
+# Pressed on their own, these neither type nor delete anything, so they must
+# not cancel the Backspace undo of an emoticon conversion — a screen reader
+# user may press Shift or Control just to stop speech.
+_MODIFIER_KEYS = frozenset((
+    wx.WXK_SHIFT, wx.WXK_CONTROL, wx.WXK_ALT, wx.WXK_RAW_CONTROL,
+    wx.WXK_WINDOWS_LEFT, wx.WXK_WINDOWS_RIGHT, wx.WXK_INSERT,
+    wx.WXK_NUMPAD_INSERT, wx.WXK_CAPITAL,
 ))
 
 
@@ -72,8 +82,9 @@ class ComposerMixin:
             return
         text = self.message_field.GetValue()
         position = self.message_field.GetInsertionPoint()
-        width = 2 if os.name == "nt" and "\r\n" not in text else 1
-        spell_checker.caret_moved(text, value_index(text, position, width))
+        # UTF-16 aware: every converted emoji takes two native positions.
+        spell_checker.caret_moved(text, caret_value_index(
+            text, position, native_newline_width(text), platform_counts_utf16()))
 
     def _cue_spelling_at_caret_on_click(self, event):
         event.Skip()
@@ -334,6 +345,12 @@ class ComposerMixin:
         wx's native multiline edit control only inserts a literal newline on
         Ctrl+Enter, with no Shift+Enter equivalent of its own (issue #16)."""
         kc = event.GetKeyCode()
+        if kc == wx.WXK_BACK:
+            if self._undo_emoticon_conversion():
+                return  # consume — the undo replaced the emoji and boundary
+        elif kc not in _MODIFIER_KEYS:
+            # Undo is for the keystroke right after a conversion only.
+            self._emoticon_undo = None
         if kc == wx.WXK_DOWN and self._mention_panel.IsShown():
             if self._mention_list.GetCount() > 0:
                 self._mention_list.SetFocus()
@@ -352,6 +369,9 @@ class ComposerMixin:
             # so the caret landed one character short, between the \r and
             # the \n. NVDA then kept announcing everything typed next as
             # still on the previous line (issue #48).
+            # WriteText() raises no EVT_CHAR, so the newline ends an
+            # emoticon here rather than in _on_message_field_char().
+            self._convert_emoticon_before_caret("\n")
             self.message_field.WriteText("\n")
             self.on_change_message_field(None)
             return  # consume — don't send and don't double-insert
@@ -387,6 +407,11 @@ class ComposerMixin:
     def _on_message_field_char(self, event):
         if self._is_phantom_nvda_char(event):
             return  # veto — do not insert, do not Skip()
+        key = event.GetUnicodeKey()
+        if key != wx.WXK_NONE:
+            # Before Skip(): the native control inserts the character after
+            # this returns, so it lands after the emoji.
+            self._convert_emoticon_before_caret(chr(key))
         event.Skip()
 
     def _on_text_field_paste(self, event):
