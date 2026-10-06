@@ -273,6 +273,8 @@
     "chat_lock_configured": "Locked chats were set up.",
     "chat_lock_chat_locked": "The chat was moved to Locked chats.",
     "chat_lock_chat_unlocked": "The chat was removed from Locked chats.",
+    "chat_lock_phone_needs_pin": "Some chats are locked on your phone with WhatsApp Chat Lock. They stay hidden here and only appear under Locked chats, protected by a WinZapp PIN. Create the PIN now?",
+    "chat_lock_phone_only": "This chat is locked on your phone with WhatsApp Chat Lock. Only your phone can unlock it.",
     "chat_lock_closed": "The locked-chats vault was closed.",
     "chat_lock_reveal_changed": "The secret code was changed.",
     "chat_lock_notification_singular": "1 new message",

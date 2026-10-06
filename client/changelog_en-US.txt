@@ -124,6 +124,8 @@ IMPROVEMENTS
 
 - Forwarding now confirms when it worked. Before, only a failure was announced; now a box appears at the end saying "Message forwarded." or how many messages were forwarded.
 
+- Chats you lock with WhatsApp Chat Lock on your phone are now hidden in WinZapp too. They leave the conversation list and appear only under "Locked chats" (Alt+7), after your WinZapp PIN; if you never set one up, WinZapp offers to create it the first time. Only your phone can unlock them, so WinZapp does not offer "Unlock chat" for those chats, and a chat you unlock on the phone returns to the list on its own.
+
 FIXES
 
 - Calls no longer fail with a "NumPy was built with baseline optimizations" error, followed by "cannot load module more than once per process", on computers whose processor is older or limited by a virtual machine. WinZapp now ships a NumPy build that runs on any 64-bit processor.

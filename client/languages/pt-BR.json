@@ -273,6 +273,8 @@
     "chat_lock_configured": "As conversas trancadas foram configuradas.",
     "chat_lock_chat_locked": "A conversa foi movida para Conversas trancadas.",
     "chat_lock_chat_unlocked": "A conversa foi removida de Conversas trancadas.",
+    "chat_lock_phone_needs_pin": "Há conversas trancadas no seu celular, com o Chat Lock do WhatsApp. Elas ficam escondidas aqui e só aparecem em Conversas trancadas, protegidas por um PIN do WinZapp. Criar o PIN agora?",
+    "chat_lock_phone_only": "Esta conversa está trancada no celular, com o Chat Lock do WhatsApp. Só o celular pode destrancá-la.",
     "chat_lock_closed": "O cofre de conversas trancadas foi fechado.",
     "chat_lock_reveal_changed": "O código secreto foi alterado.",
     "chat_lock_notification_singular": "1 nova mensagem",

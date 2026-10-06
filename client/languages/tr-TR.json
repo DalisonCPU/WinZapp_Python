@@ -273,6 +273,8 @@
   "chat_lock_configured": "Kilitli sohbetler ayarlandı.",
   "chat_lock_chat_locked": "Sohbet Kilitli sohbetlere taşındı.",
   "chat_lock_chat_unlocked": "Sohbet Kilitli sohbetlerden çıkarıldı.",
+  "chat_lock_phone_needs_pin": "Bazı sohbetler telefonunuzda WhatsApp Chat Lock ile kilitli. Burada gizli kalır ve yalnızca bir WinZapp PIN'i ile korunan Kilitli sohbetler bölümünde görünür. PIN şimdi oluşturulsun mu?",
+  "chat_lock_phone_only": "Bu sohbet telefonunuzda WhatsApp Chat Lock ile kilitli. Kilidini yalnızca telefonunuz açabilir.",
   "chat_lock_closed": "Kilitli sohbetler kasası kapatıldı.",
   "chat_lock_reveal_changed": "Gizli kod değiştirildi.",
   "chat_lock_notification_singular": "1 yeni mesaj",

@@ -1362,6 +1362,8 @@
     "chat_lock_change_reveal_title": "Schimbați codul secret pentru conversațiile blocate",
     "chat_lock_chat_locked": "Conversația a fost mutată în Conversații blocate.",
     "chat_lock_chat_unlocked": "Conversația a fost eliminată din Conversații blocate.",
+    "chat_lock_phone_needs_pin": "Unele conversații sunt blocate pe telefon cu Chat Lock din WhatsApp. Rămân ascunse aici și apar doar în Conversații blocate, protejate de un PIN WinZapp. Creați PIN-ul acum?",
+    "chat_lock_phone_only": "Această conversație este blocată pe telefon cu Chat Lock din WhatsApp. Doar telefonul o poate debloca.",
     "chat_lock_close": "&Închideți și ascundeți seiful",
     "chat_lock_closed": "Seiful conversațiilor blocate a fost închis.",
     "chat_lock_configured": "Conversațiile blocate au fost configurate.",

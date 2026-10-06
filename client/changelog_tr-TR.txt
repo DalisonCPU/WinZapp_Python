@@ -124,6 +124,8 @@ YENİLİKLER
 
 - İletme artık başarılı olduğunda bunu bildiriyor. Önceden yalnızca hata duyuruluyordu; artık işlem bitince "Mesaj iletildi." diyen ya da kaç mesajın iletildiğini söyleyen bir kutu çıkıyor.
 
+- Telefonunuzda WhatsApp Chat Lock ile kilitlediğiniz sohbetler artık WinZapp'ta da gizleniyor. Sohbet listesinden çıkar ve yalnızca WinZapp PIN'inizden sonra "Kilitli sohbetler" (Alt+7) bölümünde görünür; hiç PIN oluşturmadıysanız WinZapp ilk seferde oluşturmayı önerir. Kilidi yalnızca telefonunuz açabilir; bu yüzden WinZapp bu sohbetler için "Sohbetin kilidini kaldır" seçeneğini sunmaz ve telefonda kilidini açtığınız sohbet listeye kendiliğinden geri döner.
+
 DÜZELTMELER
 
 - Aramalar, işlemcisi eski olan veya sanal makineyle sınırlanan bilgisayarlarda artık "NumPy was built with baseline optimizations" ve ardından "cannot load module more than once per process" hatasıyla başarısız olmuyor. WinZapp artık her 64 bit işlemcide çalışan bir NumPy sürümü içeriyor.

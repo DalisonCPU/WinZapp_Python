@@ -124,6 +124,8 @@ NOUTĂȚI
 
 - Redirecționarea confirmă acum când a reușit. Înainte era anunțat doar eșecul; acum, la final, apare o casetă care spune „Mesajul a fost redirecționat.” sau câte mesaje au fost redirecționate.
 
+- Conversațiile pe care le blocați pe telefon cu Chat Lock din WhatsApp sunt acum ascunse și în WinZapp. Dispar din lista de conversații și apar doar în „Conversații blocate” (Alt+7), după PIN-ul WinZapp; dacă nu ați creat niciunul, WinZapp vă propune să îl creați prima dată. Doar telefonul le poate debloca, așa că WinZapp nu oferă „Deblocați conversația” pentru aceste conversații, iar o conversație pe care o deblocați pe telefon revine singură în listă.
+
 CORECTĂRI
 
 - Apelurile nu mai eșuează cu eroarea "NumPy was built with baseline optimizations", urmată de "cannot load module more than once per process", pe calculatoarele cu un procesor mai vechi sau limitat de o mașină virtuală. WinZapp include acum o versiune de NumPy care funcționează pe orice procesor pe 64 de biți.

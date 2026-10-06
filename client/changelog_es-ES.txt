@@ -124,6 +124,8 @@ MEJORAS
 
 - Reenviar ahora confirma cuando ha salido bien. Antes solo se avisaba del fallo; ahora, al terminar, aparece un cuadro que dice "Mensaje reenviado." o cuántos mensajes se han reenviado.
 
+- Los chats que bloqueas en el móvil con el Chat Lock de WhatsApp ahora también quedan ocultos en WinZapp. Salen de la lista de conversaciones y aparecen solo en "Chats bloqueados" (Alt+7), tras tu PIN de WinZapp; si nunca creaste uno, WinZapp te ofrece crearlo la primera vez. Solo el móvil puede desbloquearlos, así que WinZapp no ofrece "Desbloquear chat" para esos chats, y un chat que desbloqueas en el móvil vuelve solo a la lista.
+
 CORRECCIONES
 
 - Las llamadas ya no fallan con el error "NumPy was built with baseline optimizations", seguido de "cannot load module more than once per process", en equipos con un procesador más antiguo o limitado por una máquina virtual. WinZapp ahora incluye una versión de NumPy que funciona en cualquier procesador de 64 bits.
