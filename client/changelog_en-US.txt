@@ -28,7 +28,7 @@ FIXES
 
 - "Automatic (recommended)" model in each AI provider window (Transcriptions and Descriptions). Checked by default for providers where you had not picked a model, the box makes WinZapp always use the model it recommends, which follows updates; uncheck it to pick or type a fixed model.
 
-- Audio files sent as an attachment: a WAV or OGG Vorbis file in stereo or surround (5.1, 7.1) now arrives with all its channels and its sample rate, as ordinary audio. It used to arrive in mono, looking like a voice message. A file with more than 8 channels, which AAC cannot carry, is sent untouched as a document instead.
+- Audio files sent as an attachment: a WAV or OGG Vorbis file in stereo or surround (5.1, 7.1) now arrives with all its channels, as ordinary audio, and keeps its sample rate up to 48 kHz (a higher one is sent at 48 kHz). It used to arrive in mono, looking like a voice message. A file with more than 8 channels, which AAC cannot carry, is sent untouched as a document instead.
 
 V2.0.0.0
 

@@ -28,7 +28,7 @@ POPRAWKI
 
 - Model „Automatycznie (zalecane)” w oknie każdego dostawcy AI (Transkrypcje i opisy). Domyślnie zaznaczone u dostawców, u których nie wybrano jeszcze modelu, pole sprawia, że WinZapp zawsze używa zalecanego modelu, który podąża za aktualizacjami; odznacz je, aby wybrać lub wpisać stały model.
 
-- Pliki audio wysyłane jako załącznik: plik WAV lub OGG Vorbis w stereo lub dźwięku przestrzennym (5.1, 7.1) dociera teraz ze wszystkimi kanałami i tą samą częstotliwością próbkowania, jako zwykłe audio. Wcześniej docierał w mono i wyglądał jak wiadomość głosowa. Plik z więcej niż 8 kanałami, których AAC nie obsługuje, jest wysyłany bez zmian jako dokument.
+- Pliki audio wysyłane jako załącznik: plik WAV lub OGG Vorbis w stereo lub dźwięku przestrzennym (5.1, 7.1) dociera teraz ze wszystkimi kanałami, jako zwykłe audio, i zachowuje częstotliwość próbkowania do 48 kHz (wyższa jest obniżana do 48 kHz). Wcześniej docierał w mono i wyglądał jak wiadomość głosowa. Plik mający ponad 8 kanałów, czyli więcej, niż obsługuje AAC, jest wysyłany bez zmian jako dokument.
 
 V2.0.0.0
 

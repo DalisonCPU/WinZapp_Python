@@ -28,7 +28,7 @@ CORECTĂRI
 
 - Modelul „Automat (recomandat)” în fereastra fiecărui furnizor AI (Transcrieri și descrieri). Bifată implicit la furnizorii la care nu ați ales încă un model, caseta face ca WinZapp să folosească mereu modelul pe care îl recomandă, care urmează actualizările; debifați-o pentru a alege sau a scrie un model fix.
 
-- Fișiere audio trimise ca atașament: un fișier WAV sau OGG Vorbis stereo sau surround (5.1, 7.1) ajunge acum cu toate canalele și aceeași frecvență de eșantionare, ca audio obișnuit. Înainte ajungea mono și arăta ca un mesaj vocal. Un fișier cu mai mult de 8 canale, pe care AAC nu le poate transporta, este trimis neschimbat ca document.
+- Fișiere audio trimise ca atașament: un fișier WAV sau OGG Vorbis stereo sau surround (5.1, 7.1) ajunge acum cu toate canalele, ca audio obișnuit, și își păstrează frecvența de eșantionare până la 48 kHz (una mai mare este redusă la 48 kHz). Înainte ajungea mono și arăta ca un mesaj vocal. Un fișier cu mai mult de 8 canale, pe care AAC nu le poate transporta, este trimis neschimbat ca document.
 
 V2.0.0.0
 

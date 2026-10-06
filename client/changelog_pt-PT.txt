@@ -28,7 +28,7 @@ CORREÇÕES
 
 - Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
 
-- Ficheiros de áudio enviados como anexo: um ficheiro WAV ou OGG Vorbis em estéreo ou surround (5.1, 7.1) chega agora com todos os canais e a mesma taxa de amostragem, como áudio normal. Antes chegava em mono, a parecer uma mensagem de voz. Um ficheiro com mais de 8 canais, que o AAC não suporta, é enviado sem alterações como documento.
+- Ficheiros de áudio enviados como anexo: um ficheiro WAV ou OGG Vorbis em estéreo ou surround (5.1, 7.1) chega agora com todos os canais, como áudio normal, e mantém a taxa de amostragem até 48 kHz (uma taxa superior é enviada a 48 kHz). Antes chegava em mono, a parecer uma mensagem de voz. Um ficheiro com mais de 8 canais, que o AAC não suporta, é enviado sem alterações como documento.
 
 V2.0.0.0
 
