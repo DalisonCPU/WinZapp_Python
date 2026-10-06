@@ -16,6 +16,8 @@ NOVEDADES
 
 - Nuevo atajo Alt+Shift+P en la lista de mensajes: ir al mensaje anterior que te responde, como Alt+Shift+M hace con las menciones. Al repetirlo se recorren hacia atrás y se vuelve a la más reciente. También aparece en "Atajos de teclado" (F1)
 
+- "Escribiendo" en la lista de mensajes: mientras la persona de la conversación abierta (o, en un grupo, un participante) está escribiendo o grabando audio, aparece al final de la lista de mensajes una última fila temporal, como "Ana está escribiendo...". Desaparece cuando deja de hacerlo o cuando llega su mensaje. Nunca mueve el foco y no se lee por sí sola, así que el anuncio de escritura sigue exactamente como era. No es un mensaje: no tiene menú contextual ni acciones
+
 CORRECCIONES
 
 - Menciones: una persona mencionada por su nombre junto a @todos conserva su enlace en las menciones del mensaje, y una mención tuya, en la notificación y en la vista previa de la lista de conversaciones, usa la palabra elegida en "¿Cómo debo referirme a mí?" en lugar de una palabra fija

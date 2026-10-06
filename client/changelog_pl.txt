@@ -16,6 +16,8 @@ NOWOŚCI
 
 - Nowy skrót Alt+Shift+P na liście wiadomości: przejście do poprzedniej wiadomości z odpowiedzią do Ciebie, tak jak Alt+Shift+M robi to dla wzmianek. Kolejne naciśnięcia cofają się po nich i wracają do najnowszej. Skrót jest też w "Skróty klawiszowe" (F1)
 
+- "Pisze" na liście wiadomości: gdy osoba w otwartym czacie (lub, w grupie, uczestnik) pisze albo nagrywa wiadomość głosową, na końcu listy wiadomości pojawia się tymczasowy ostatni wiersz, np. "Ana pisze...". Znika, gdy ta osoba przestanie albo gdy przyjdzie jej wiadomość. Nigdy nie przenosi fokusu i nie jest odczytywany sam z siebie, więc dotychczasowy komunikat o pisaniu pozostaje dokładnie taki jak był. To nie jest wiadomość: nie ma menu kontekstowego ani akcji
+
 POPRAWKI
 
 - Wzmianki: osoba wspomniana z imienia obok @wszyscy zachowuje swój link we wzmiankach wiadomości, a wzmianka o Tobie, w powiadomieniu i w podglądzie na liście czatów, używa słowa wybranego w "Jak mam się do Ciebie zwracać?" zamiast stałego słowa

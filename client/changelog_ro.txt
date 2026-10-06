@@ -16,6 +16,8 @@ NOUTĂȚI
 
 - Comandă rapidă nouă Alt+Shift+P în lista de mesaje: accesați mesajul anterior care vă răspunde, ca Alt+Shift+M pentru mențiuni. Apăsările repetate merg înapoi prin ele și revin la cel mai recent. Apare și în "Comenzi rapide de la tastatură" (F1)
 
+- "Tastează" în lista de mesaje: cât timp persoana din conversația deschisă (sau, într-un grup, un participant) tastează sau înregistrează un mesaj vocal, la sfârșitul listei de mesaje apare un ultim rând temporar, de exemplu "Ana tastează...". Dispare când persoana se oprește sau când sosește mesajul ei. Nu mută niciodată focusul și nu este citit singur, așa că anunțul de tastare rămâne exact ca înainte. Nu este un mesaj: nu are meniu contextual și nici acțiuni
+
 CORECTĂRI
 
 - Mențiuni: o persoană menționată pe nume alături de @toți își păstrează linkul în mențiunile mesajului, iar o mențiune a dumneavoastră, în notificare și în previzualizarea din lista de conversații, folosește cuvântul ales în "Cum să se facă referire la mine?" în locul unui cuvânt fix

@@ -19,6 +19,7 @@ from core.utils import (
     normalize_line_separators,
 )
 from core.message_queue import PendingMessage
+from ui.conversation_panel.typing_row import append_message_row, message_row_count
 from core.attachment_types import classify_attachment_media_type
 from app_paths import data_path
 
@@ -143,7 +144,7 @@ class AttachmentsMixin:
         
         self._clear_empty_placeholder()
         self._sorted_messages.append(virtual_msg)
-        self.messages_list.Append((self._render_message_line(virtual_msg),))
+        append_message_row(self, self._render_message_line(virtual_msg))
         last = self.messages_list.GetItemCount() - 1
         if last >= 0:
             self.messages_list.EnsureVisible(last)
@@ -410,8 +411,9 @@ class AttachmentsMixin:
             
             self._clear_empty_placeholder()
             self._sorted_messages.append(virtual_msg)
-            self.messages_list.Append((self._render_message_line(virtual_msg),))
-            last = self.messages_list.GetItemCount() - 1
+            append_message_row(self, self._render_message_line(virtual_msg))
+            # The row just added — not the typing row that may sit below it.
+            last = message_row_count(self) - 1
             if last >= 0:
                 self.messages_list.Select(last, True)
                 self.messages_list.EnsureVisible(last)

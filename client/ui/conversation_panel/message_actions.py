@@ -16,6 +16,7 @@ from core.message_edit import (
     edit_window_open,
 )
 from core.message_queue import PendingMessage
+from ui.conversation_panel.typing_row import append_message_row
 from app_paths import data_path
 from ui.conversation_panel.media_paths import discard_local_media_cache
 from core.utils import to_editor_line_endings
@@ -795,7 +796,7 @@ class MessageActionsMixin:
         }
         self._clear_empty_placeholder()
         self._sorted_messages.append(virtual_msg)
-        self.messages_list.Append((self._render_message_line(virtual_msg),))
+        append_message_row(self, self._render_message_line(virtual_msg))
         last = self.messages_list.GetItemCount() - 1
         if last >= 0:
             self.messages_list.EnsureVisible(last)

@@ -12,6 +12,7 @@ import time
 import uuid
 import wx
 from core.message_queue import PendingMessage
+from ui.conversation_panel.typing_row import append_message_row
 from app_paths import data_path
 from ui.conversation_panel.media_paths import (
     discard_local_media_cache,
@@ -311,7 +312,7 @@ class TextSendingMixin:
         # Add to sorted list and UI list immediately.
         self._clear_empty_placeholder()
         self._sorted_messages.append(virtual_msg)
-        self.messages_list.Append((self._render_message_line(virtual_msg),))
+        append_message_row(self, self._render_message_line(virtual_msg))
         # Scroll to the new item.
         last = self.messages_list.GetItemCount() - 1
         if last >= 0:
