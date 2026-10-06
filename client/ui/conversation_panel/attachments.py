@@ -20,6 +20,7 @@ from core.utils import (
 )
 from core.message_queue import PendingMessage
 from core.attachment_types import classify_attachment_media_type
+from core.audio_transcode import exceeds_aac_channel_limit
 from app_paths import data_path
 
 
@@ -323,6 +324,18 @@ class AttachmentsMixin:
         for attachment in list(self._staged_attachments):
             path       = attachment["path"]
             media_type = attachment.get("media_type", "document")
+            if media_type == "audio" and exceeds_aac_channel_limit(path):
+                # More channels than AAC carries: converting would downmix,
+                # and an attachment never loses a channel, so the original
+                # goes untouched as a document. Decided here and not inside
+                # send_media_attachment(): the pending row built below has to
+                # be a documentMessage too, or on_new_message()'s by-type
+                # echo matching never binds the document echo to it.
+                logging.info(
+                    "[attachments] audio has more than 8 channels; sending "
+                    "the original untouched as a document"
+                )
+                media_type = "document"
 
             vtype      = _VTYPE.get(media_type, "documentMessage")
             is_document = vtype == "documentMessage"
