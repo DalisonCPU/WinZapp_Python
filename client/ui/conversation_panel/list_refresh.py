@@ -436,6 +436,9 @@ class ListRefreshMixin:
                             break
             
             if not scrolled:
+                # The very bottom on purpose, typing row included: when it is
+                # still there someone else is typing, and it sits right below
+                # the message that just arrived.
                 last = self.messages_list.GetItemCount() - 1
                 if last >= 0:
                     self.messages_list.EnsureVisible(last)
@@ -977,6 +980,10 @@ class ListRefreshMixin:
                         self._all_sorted_messages.append(m)
                     self._sorted_messages.append(m)
                     append_message_row(self, self._render_message_line(m))
+                    # Same as the live path: a message that came in through
+                    # sync takes its sender off the typing row too (own
+                    # messages are ignored inside).
+                    dismiss_typing_row_for_message(self, m)
             finally:
                 self.messages_list.Thaw()
             self._remember_expanded_window()

@@ -476,3 +476,27 @@ def test_presence_update_refreshes_the_row_and_speaks_only_the_existing_announce
 
     assert mw.speak_output.outputs == ["Ana is typing..."]
     assert mw.conversations_panel.calls == [(CONTACT, {CONTACT}), (CONTACT, set())]
+
+
+# ── a message that arrives through sync, not the live path ──────────────────
+
+def test_message_appended_by_the_sync_tail_path_also_dismisses():
+    """_append_new_tail_rows() appends a message the live path never painted
+    (it came in through sync). It lands above the typing row and takes its
+    sender off it, exactly like on_incoming_message() — without a rebuild."""
+    from tests.test_message_list_refresh import _Stub as _RefreshStub, _msg as _rmsg
+
+    s = _RefreshStub([_rmsg("a")], jid=CONTACT)
+    s.main_window = _MainWindow()
+    s.messages_list = _FakeList([])
+    s.refresh_messages_if_changed()              # initial rebuild: ["oi"]
+    s.main_window._composing_chats[CONTACT] = {CONTACT: "composing"}
+    sync_typing_row(s)
+    assert s.messages_list.rows == ["oi", "Ana is typing..."]
+
+    s._records.append(_rmsg("b", text="nova", ts=2000))
+    s.refresh_messages_if_changed()
+
+    assert s.populate_calls == [True]           # tail append, not a rebuild
+    assert s.messages_list.rows == ["oi", "nova"]
+    assert not typing_row_shown(s)

@@ -84,7 +84,7 @@ class MessageRowsMixin:
         if message_row_count(self) != len(old_rows):
             logging.warning(
                 "[_sync_message_rows] list out of step (control=%d, backing=%d) "
-                "— resyncing from scratch", lst.GetItemCount(), len(old_rows))
+                "— resyncing from scratch", message_row_count(self), len(old_rows))
             typing_text = self._typing_row_text if typing_row_shown(self) else ""
             lst.DeleteAllItems()
             for text in texts:

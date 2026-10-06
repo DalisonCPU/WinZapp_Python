@@ -16,7 +16,7 @@ WHAT'S NEW
 
 - New shortcut Alt+Shift+P in the messages list: jump to the previous message that replies to you, like Alt+Shift+M does for mentions. Repeated presses go back through them and wrap to the newest. It is also listed in "Keyboard shortcuts" (F1)
 
-- "Is typing" in the messages list: while the person in the open chat (or, in a group, a participant) is typing or recording audio, a temporary last row such as "Ana is typing..." appears at the end of the messages list. It goes away when they stop or when their message arrives. It never moves the focus and is not read out on its own, so the typing announcement stays exactly as it was. It is not a message: it has no context menu and no actions
+- "Is typing" in the messages list: while the person in the open chat (or, in a group, a participant) is typing or recording audio, a temporary last row such as "Ana is typing..." appears at the end of the messages list. It goes away when they stop or when their message arrives. It never moves the focus on its own (only if you are on the row when it goes away are you moved to the last message) and is not read out on its own, so the typing announcement stays exactly as it was. It is not a message: it has no context menu and no actions
 
 FIXES
 

@@ -145,7 +145,7 @@ class AttachmentsMixin:
         self._clear_empty_placeholder()
         self._sorted_messages.append(virtual_msg)
         append_message_row(self, self._render_message_line(virtual_msg))
-        last = self.messages_list.GetItemCount() - 1
+        last = message_row_count(self) - 1   # the row just sent, not the typing row
         if last >= 0:
             self.messages_list.EnsureVisible(last)
         pm = PendingMessage(local_id, remote_jid, contact_info=contact,
