@@ -218,11 +218,11 @@ class TestComposerConversion:
         _type(panel, " ", after)
         assert panel.message_field.GetValue() == "http:/ "
 
-    def test_a_tab_is_not_a_boundary(self, after):
-        # The field has no TE_PROCESS_TAB: Tab leaves it, it never types.
+    def test_a_tab_typed_with_ctrl_tab_is_a_boundary(self, after):
+        # The multiline field inserts a tab on Ctrl+Tab.
         panel = _Panel("ok :D")
-        assert panel._convert_emoticon_before_caret("\t") is False
-        assert panel.message_field.GetValue() == "ok :D"
+        _type(panel, "\t", after)
+        assert panel.message_field.GetValue() == "ok 😃\t"
 
     def test_editing_a_message_never_converts_while_typing(self, after):
         # The edit pre-fills the old text; appending a word must not

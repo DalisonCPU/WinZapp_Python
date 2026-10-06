@@ -57,7 +57,7 @@ _TOKENS_LONGEST_FIRST = sorted(EMOTICONS, key=len, reverse=True)
 # typed in a row should not flip the first one mid-sequence. Newline is
 # handled by the composer itself (Shift+Enter inserts it with WriteText(),
 # which raises no EVT_CHAR).
-BOUNDARY_CHARS = frozenset(" \n.,!?")
+BOUNDARY_CHARS = frozenset(" \t\n.,!?")
 
 
 def emoticon_setting_enabled(value) -> bool:
