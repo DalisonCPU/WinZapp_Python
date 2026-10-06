@@ -12,56 +12,74 @@ message.
 
 Two changes, no control touched beyond its size:
 
-* the messages list keeps a minimum height of a few rows, so the inner
-  panel's minimum grows with every control shown beside it;
+* the messages list and the Chats list keep a minimum height of a few rows,
+  so the inner panel's minimum grows with every control shown beside it and
+  neither list can be squeezed to nothing in exchange;
 * the conversation panel's ``Layout()`` also lays out ConversationsPanel,
   whose sizer then gives the conversation panel that larger minimum and
   takes the space from the Chats list instead.
 
 The second is an instance attribute on ``conversation_panel``: only
-WinZapp's Python calls see it. wx's own size handling lays the inner panel
-out in C++, so laying out the outer panel (which resizes the inner one)
-cannot come back here; a guard covers any other path anyway.
+WinZapp's Python calls see it, never wx's own C++ resize handling. The
+inner layout stays synchronous, as WinZapp expects; the outer one is
+deferred to the next event-loop turn and coalesced, because a single arrow
+key in the messages list can call the inner ``Layout()`` five times
+(``on_message_selected`` toggling the action buttons, read-more, the media
+slot...) and laying out the whole panel each time is wasted work.
 """
 
 import logging
 
-MIN_MESSAGE_ROWS = 4
+import wx
 
-# An NSTableView row is the text height plus its intercell spacing; the
-# scroll view adds a border. Slightly generous rather than a row short.
-_ROW_PADDING = 4
-_BORDER = 4
+from .listctrl import row_height
 
-
-def min_messages_height(char_height, rows=MIN_MESSAGE_ROWS):
-    """Minimum height in px of a messages list showing *rows* rows."""
-    return rows * (int(char_height) + _ROW_PADDING) + _BORDER
+MIN_ROWS = 4
 
 
-def keep_messages_list_tall(panel):
-    """Give every messages-list control (classic and listbox, only one of
-    them shown) a minimum height of MIN_MESSAGE_ROWS rows."""
-    for control in getattr(panel, "_message_list_controls", {}).values():
-        control.SetMinSize((-1, min_messages_height(control.GetCharHeight())))
+def min_list_height(control, rows=MIN_ROWS):
+    """Minimum height in px of *control* showing *rows* rows, plus the
+    scroll view's border."""
+    return rows * row_height(control) + 4
+
+
+def keep_lists_tall(panel):
+    """Give the Chats list and every messages-list control (classic and
+    listbox, only one of them shown) a minimum height of MIN_ROWS rows."""
+    controls = list(getattr(panel, "_message_list_controls", {}).values())
+    chats = getattr(panel, "conversations_list", None)
+    if chats is not None:
+        controls.append(chats)
+    for control in controls:
+        control.SetMinSize((-1, min_list_height(control)))
 
 
 def chain_layout_to_outer(panel):
-    """Make ``panel.conversation_panel.Layout()`` re-lay out *panel* too."""
-    inner = panel.conversation_panel
+    """Make ``panel.conversation_panel.Layout()`` also lay out *panel*, at
+    most once per event-loop turn."""
+    inner = getattr(panel, "conversation_panel", None)
+    if inner is None:
+        # Renamed upstream: the lists still keep their minimum height, and a
+        # missing chain must never stop WinZapp from starting.
+        logging.debug("[layout_mac] no conversation_panel; outer layout not chained")
+        return
     inner_layout = inner.Layout     # wx's own bound method
-    busy = []
+    pending = []                    # non-empty from scheduling until the outer layout ends
+
+    def outer_layout():
+        try:
+            panel.Layout()
+        except Exception:
+            # e.g. the panel was destroyed before this event-loop turn.
+            logging.debug("[layout_mac] outer layout failed", exc_info=True)
+        finally:
+            pending.clear()
 
     def layout():
         result = inner_layout()
-        if not busy:
-            busy.append(True)
-            try:
-                panel.Layout()
-            except Exception:
-                logging.debug("[layout_mac] outer layout failed", exc_info=True)
-            finally:
-                busy.clear()
+        if not pending:
+            pending.append(True)
+            wx.CallAfter(outer_layout)
         return result
 
     inner.Layout = layout
@@ -74,7 +92,7 @@ def install():
 
     def init_ui(self, *a, **k):
         result = orig_init_ui(self, *a, **k)
-        keep_messages_list_tall(self)
+        keep_lists_tall(self)
         chain_layout_to_outer(self)
         return result
 
