@@ -16,6 +16,8 @@ NOUTĂȚI
 
 - Comandă rapidă nouă Alt+Shift+P în lista de mesaje: accesați mesajul anterior care vă răspunde, ca Alt+Shift+M pentru mențiuni. Apăsările repetate merg înapoi prin ele și revin la cel mai recent. Apare și în "Comenzi rapide de la tastatură" (F1)
 
+- Emoticoanele devin emoji în timp ce tastați, ca în WhatsApp Web: ":)" devine 🙂, ":D" devine 😃, "<3" devine ❤️ și așa mai departe, când tastați un spațiu sau un semn de punctuație după ele ori trimiteți mesajul imediat după unul. Se convertește doar un emoticon de sine stătător, niciodată unul dintr-un link, dintr-un cuvânt sau din `cod`. Apăsarea tastei Backspace imediat după conversie readuce ce ați tastat. Se poate dezactiva în Setări, fila "Generale", "Convertiți emoticoanele precum :D în emoji în timpul tastării"
+
 CORECTĂRI
 
 - Mențiuni: o persoană menționată pe nume alături de @toți își păstrează linkul în mențiunile mesajului, iar o mențiune a dumneavoastră, în notificare și în previzualizarea din lista de conversații, folosește cuvântul ales în "Cum să se facă referire la mine?" în locul unui cuvânt fix

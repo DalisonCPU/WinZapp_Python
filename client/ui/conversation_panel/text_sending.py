@@ -41,6 +41,9 @@ class TextSendingMixin:
         text = normalize_line_separators(self.message_field.GetValue()).strip()
         if not text:
             return
+        # Enter right after an emoticon never typed the boundary that would
+        # have converted it in the field (emoticon_conversion.py).
+        text = self._text_with_trailing_emoticon(text)
         remote_jid = self.conversation.get("remoteJid", "")
         if not remote_jid:
             return

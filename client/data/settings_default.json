@@ -20,6 +20,7 @@
         "system_audio_recording_volume": 100,
         "system_audio_recording_nvda_volume": 100,
         "spell_check_mode": "windows",
+        "convert_emoticons": true,
         "first_run": true,
         "api_type_first_run_asked": false,
         "hotkey_first_run_asked": false,

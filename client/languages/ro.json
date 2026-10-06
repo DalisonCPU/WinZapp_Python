@@ -338,6 +338,7 @@
     "spell_check_mode_windows_macos": "Urmează setarea macOS (implicit)",
     "spell_check_mode_on": "Întotdeauna activată",
     "spell_check_mode_off": "Întotdeauna dezactivată",
+    "convert_emoticons_label": "Convertiți emoticoanele precum :D în emoji în timpul tastării",
     "search_normalization_label": "&Normalizare Unicode în căutări",
     "search_normalization_off": "Dezactivat (implicit): căutarea se potrivește exact cu ceea ce introduceți",
     "search_normalization_nfd": "Ignorați accente: „reuniao” găsește „reunião”",

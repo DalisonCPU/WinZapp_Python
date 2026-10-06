@@ -16,6 +16,8 @@ NOWOŚCI
 
 - Nowy skrót Alt+Shift+P na liście wiadomości: przejście do poprzedniej wiadomości z odpowiedzią do Ciebie, tak jak Alt+Shift+M robi to dla wzmianek. Kolejne naciśnięcia cofają się po nich i wracają do najnowszej. Skrót jest też w "Skróty klawiszowe" (F1)
 
+- Emotikony zamieniają się w emoji podczas pisania, jak w WhatsApp Web: ":)" w 🙂, ":D" w 😃, "<3" w ❤️ itd., gdy po nich wpiszesz spację lub znak interpunkcyjny albo wyślesz wiadomość zaraz po jednym z nich. Zamieniany jest tylko emotikon stojący osobno, nigdy w linku, w słowie ani w `kodzie`. Naciśnięcie Backspace zaraz po zamianie przywraca to, co wpisano. Można to wyłączyć w Ustawieniach, karta "Ogólne", "Zamieniaj emotikony, takie jak :D, na emoji podczas pisania"
+
 POPRAWKI
 
 - Wzmianki: osoba wspomniana z imienia obok @wszyscy zachowuje swój link we wzmiankach wiadomości, a wzmianka o Tobie, w powiadomieniu i w podglądzie na liście czatów, używa słowa wybranego w "Jak mam się do Ciebie zwracać?" zamiast stałego słowa

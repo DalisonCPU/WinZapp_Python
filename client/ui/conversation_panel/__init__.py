@@ -16,6 +16,7 @@ Where to look (and where new code goes):
     chat_lists               native WhatsApp custom-list filter and manager entry
     panel_visibility         which panel an open conversation belongs to, and showing it only there
     composer                 message field: spell check, link preview, keys, paste
+    emoticon_conversion      ":)" -> emoji while typing and at send, Backspace undo
     text_sending             sending/editing text, pending rows, cancelled sends
     voice_recording          recording and sending voice messages
     system_audio_recording   mixed microphone + system-audio (WASAPI loopback) recording

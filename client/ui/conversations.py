@@ -132,6 +132,7 @@ from ui.conversation_panel.accelerators import AcceleratorsMixin
 from ui.conversation_panel.conversation_navigation import ConversationNavigationMixin
 from ui.conversation_panel.chat_lists import WhatsAppListFilterMixin
 from ui.conversation_panel.composer import ComposerMixin
+from ui.conversation_panel.emoticon_conversion import EmoticonConversionMixin
 from ui.conversation_panel.voice_recording import VoiceRecordingMixin
 from ui.conversation_panel.system_audio_recording import SystemAudioRecordingMixin
 from ui.conversation_panel.text_sending import TextSendingMixin
@@ -170,6 +171,7 @@ class ConversationsPanel(
     WhatsAppListFilterMixin,
     ConversationPanelVisibilityMixin,
     ComposerMixin,
+    EmoticonConversionMixin,
     VoiceRecordingMixin,
     SystemAudioRecordingMixin,
     TextSendingMixin,

@@ -16,6 +16,8 @@ NOVEDADES
 
 - Nuevo atajo Alt+Shift+P en la lista de mensajes: ir al mensaje anterior que te responde, como Alt+Shift+M hace con las menciones. Al repetirlo se recorren hacia atrás y se vuelve a la más reciente. También aparece en "Atajos de teclado" (F1)
 
+- Los emoticonos se convierten en emojis mientras escribes, como en WhatsApp Web: ":)" pasa a 🙂, ":D" a 😃, "<3" a ❤️, etc., al escribir un espacio o un signo de puntuación tras ellos, o al enviar el mensaje justo después de uno. Solo se convierte un emoticono aislado, nunca uno dentro de un enlace, de una palabra o de `código`. Pulsar Retroceso justo después de la conversión devuelve lo que escribiste. Se puede desactivar en Configuración, pestaña "General", "Convertir emoticonos como :D en emojis al escribir"
+
 CORRECCIONES
 
 - Menciones: una persona mencionada por su nombre junto a @todos conserva su enlace en las menciones del mensaje, y una mención tuya, en la notificación y en la vista previa de la lista de conversaciones, usa la palabra elegida en "¿Cómo debo referirme a mí?" en lugar de una palabra fija

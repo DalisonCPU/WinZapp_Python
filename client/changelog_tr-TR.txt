@@ -16,6 +16,8 @@ YENİLİKLER
 
 - Mesaj listesinde yeni Alt+Shift+P kısayolu: size yanıt veren önceki mesaja gider; Alt+Shift+M'nin bahsetmeler için yaptığı gibi. Tekrar basınca geriye doğru ilerler ve en yeniye döner. "Klavye kısayolları" (F1) içinde de yer alır
 
+- Metin ifadeleri, WhatsApp Web'deki gibi yazarken emojiye dönüşür: ":)" 🙂, ":D" 😃, "<3" ❤️ olur; ardından boşluk ya da noktalama işareti yazdığınızda veya mesajı hemen ardından gönderdiğinizde. Yalnızca tek başına duran bir ifade dönüştürülür; bir bağlantının, bir kelimenin ya da `kod`un içindeki asla. Dönüşümden hemen sonra Backspace tuşuna basmak yazdığınızı geri getirir. Ayarlar, "Genel" sekmesi, "Yazarken :D gibi metin ifadelerini emojiye dönüştür" ile kapatılabilir
+
 DÜZELTMELER
 
 - Bahsetmeler: @tümü ile birlikte adıyla anılan kişi mesajın bahsetmelerinde bağlantısını korur ve sizden bahsedilmesi, bildirimde ve sohbet listesi önizlemesinde, sabit bir sözcük yerine "Kendimden nasıl bahsedilsin?" ayarında seçilen sözcüğü kullanır
