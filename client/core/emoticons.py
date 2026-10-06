@@ -159,6 +159,12 @@ def caret_value_index(text: str, position: int, newline_width: int = 1, utf16: b
     return len(text)
 
 
+def native_position(text: str, index: int, newline_width: int = 1, utf16: bool = False) -> int:
+    """Inverse of caret_value_index: the native position of GetValue() index *index*."""
+    index = max(0, min(len(text), index))
+    return sum(native_units(char, newline_width, utf16) for char in text[:index])
+
+
 def platform_counts_utf16() -> bool:
     """Whether wx.TextCtrl positions are UTF-16 units on this platform."""
     return os.name == "nt" or sys.platform == "darwin"
