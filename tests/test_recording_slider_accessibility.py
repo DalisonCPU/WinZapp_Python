@@ -45,7 +45,8 @@ class RecordingSliderNameTests(unittest.TestCase):
             sliders.append(slider)
             return slider
         wx.Slider = make_slider
-        pl = json.loads((ROOT / 'client/languages/pl.json').read_text(encoding='utf-8'))
+        from tests.locales import load_strings
+        pl = load_strings("pl")
         p = SimpleNamespace(_voice_panel=object(), _send_voice_btn=object(),
             main_window=SimpleNamespace(settings={}, i18n=SimpleNamespace(t=pl.__getitem__)),
             _on_system_audio_volume=Mock(), _on_system_audio_volume_key=Mock(),
@@ -82,7 +83,7 @@ class RecordingSliderNameTests(unittest.TestCase):
         p._relabel_system_audio_volume_controls()
         self.assertEqual(self.exposed_name(sliders[0]),
                          'Głośność innych dźwięków (%)')
-        en = json.loads((ROOT / 'client/languages/en-US.json').read_text(encoding='utf-8'))
+        en = load_strings("en-US")
         p.main_window.i18n.t = en.__getitem__
         p._relabel_system_audio_volume_controls()
         self.assertEqual(self.exposed_name(sliders[1]), en['system_audio_recording_nvda_volume'])
