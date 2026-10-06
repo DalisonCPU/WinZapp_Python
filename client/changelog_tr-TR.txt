@@ -28,7 +28,7 @@ DÜZELTMELER
 
 - Her yapay zekâ sağlayıcısının penceresinde (Yazıya Dökme ve Betimleme) "Otomatik (önerilen)" model. Henüz model seçmediğiniz sağlayıcılarda varsayılan olarak işaretli olan kutu, WinZapp'ın her zaman önerdiği ve güncellemeleri izleyen modeli kullanmasını sağlar; sabit bir model seçmek veya yazmak için işareti kaldırın.
 
-- Ek olarak gönderilen ses dosyaları: stereo veya surround (5.1, 7.1) bir WAV ya da OGG Vorbis dosyası artık tüm kanallarıyla ve aynı örnekleme hızıyla, normal ses olarak ulaşıyor. Önceden mono olarak ulaşıyor ve sesli mesaj gibi görünüyordu
+- Ek olarak gönderilen ses dosyaları: stereo veya surround (5.1, 7.1) bir WAV ya da OGG Vorbis dosyası artık tüm kanallarıyla ve aynı örnekleme hızıyla, normal ses olarak ulaşıyor. Önceden mono olarak ulaşıyor ve sesli mesaj gibi görünüyordu.
 
 V2.0.0.0
 

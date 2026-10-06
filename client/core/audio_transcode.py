@@ -111,6 +111,8 @@ _AAC_BITRATE_PER_CHANNEL_K = 96
 # encoder clamps an excessive request to its own per-channel ceiling, so the
 # only cost of over-asking is a larger file, never a worse one.
 _AAC_FALLBACK_CHANNELS = 8
+# AAC-LC's channel ceiling (7.1); ffmpeg's encoder exits 234 beyond it.
+_AAC_MAX_CHANNELS = 8
 
 
 def read_audio_header_format(header: bytes) -> tuple[int, int] | None:
@@ -145,6 +147,28 @@ def read_audio_header_format(header: bytes) -> tuple[int, int] | None:
         if channels and sample_rate:
             return channels, sample_rate
     return None
+
+
+def exceeds_aac_channel_limit(source_path: str) -> bool:
+    """True for a WAV/Vorbis attachment with more channels than AAC can carry.
+
+    prepare_audio_for_whatsapp() would have to downmix such a file, and the
+    rule is that an attachment never loses a channel, so the caller sends the
+    original untouched as a document instead. Opus OGG is never re-encoded,
+    so it never needs this.
+    """
+    extension = os.path.splitext(source_path)[1].lower()
+    if extension not in {".ogg", ".wav", ".wave"}:
+        return False
+    try:
+        with open(source_path, "rb") as source:
+            header = source.read(65536)
+    except OSError:
+        return False
+    if extension == ".ogg" and b"OpusHead" in header:
+        return False
+    source_format = read_audio_header_format(header)
+    return bool(source_format and source_format[0] > _AAC_MAX_CHANNELS)
 
 
 def aac_encode_args(channels: int | None, sample_rate: int | None) -> list[str]:

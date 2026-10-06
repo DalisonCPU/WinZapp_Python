@@ -20,6 +20,7 @@ import pytest
 
 from core.audio_transcode import (
     aac_encode_args,
+    exceeds_aac_channel_limit,
     prepare_audio_for_whatsapp,
     read_audio_header_format,
 )
@@ -193,3 +194,85 @@ class TestSendFileIsPtt:
                            source.index("export async function sendVoice(")]
         assert "isPtt === true || isPtt === 'true'" in send_file
         assert "...pttOption," in send_file
+
+
+class TestMoreChannelsThanAac:
+    """AAC stops at 8 channels (ffmpeg exits 234 beyond). Such a file is not
+    downmixed: it goes untouched, as a document. The switch happens where the
+    attachment is staged, so the pending row is a documentMessage and the
+    document echo binds to it by type."""
+
+    @pytest.mark.parametrize("name,header,expected", [
+        ("nine.wav", _wav_header(9, 48000), True),
+        ("sixteen.ogg", _vorbis_header(16, 48000), True),
+        ("eight.wav", _wav_header(8, 48000), False),
+        ("surround.wav", _wav_header(6, 44100), False),
+        ("unreadable.wav", b"RIFF junk", False),
+        # Opus is never re-encoded, so it never needs the fallback.
+        ("opus.ogg", b"OggS" + b"\x00" * 24 + b"OpusHead" + bytes([1, 9]), False),
+        ("music.mp3", _wav_header(9, 48000), False),
+    ])
+    def test_exceeds_aac_channel_limit(self, tmp_path, name, header, expected):
+        path = tmp_path / name
+        path.write_bytes(header)
+        assert exceeds_aac_channel_limit(str(path)) is expected
+
+    def test_a_nine_channel_wav_is_sent_as_the_original_document(self, tmp_path, monkeypatch):
+        import mimetypes
+
+        import ui.conversations as conversations_module
+        from core.i18n import I18n
+        from tests.test_sent_document_file_size import _SendStub
+
+        class _InlineThread:
+            def __init__(self, target=None, daemon=None, args=(), kwargs=None):
+                self._target, self._args, self._kwargs = target, args, kwargs or {}
+
+            def start(self):
+                self._target(*self._args, **self._kwargs)
+
+        monkeypatch.setattr(conversations_module.threading, "Thread", _InlineThread)
+        header = _wav_header(9, 48000)
+        path = tmp_path / "nine channels.wav"
+        path.write_bytes(header)
+        stub = _SendStub([{"path": str(path), "media_type": "audio"}], I18n("pt-BR"))
+
+        stub._on_send_attachment()
+
+        pending = stub._sorted_messages[0]
+        assert pending["messageType"] == "documentMessage"
+        body = pending["message"]["documentMessage"]
+        assert body["fileName"] == "nine channels.wav"
+        assert body["mimetype"] == mimetypes.guess_type(str(path))[0]
+        queued = stub.enqueued[0]
+        assert queued.media_type == "document"
+        assert queued.media_path == str(path)
+        assert path.read_bytes() == header
+
+    def test_a_document_is_uploaded_byte_for_byte_with_no_conversion(self, tmp_path, monkeypatch):
+        """send_media_attachment() only converts media_type 'audio'; a document
+        is the original file, its own name and MIME type, and no isPtt."""
+        import main
+        import core.audio_transcode as audio_transcode
+
+        path = tmp_path / "nine channels.wav"
+        path.write_bytes(_wav_header(9, 48000))
+        monkeypatch.setattr(
+            audio_transcode, "prepare_audio_for_whatsapp",
+            lambda *a: (_ for _ in ()).throw(AssertionError("a document is never converted")),
+        )
+        bodies = []
+        monkeypatch.setattr(
+            main.requests, "post",
+            lambda url, **kwargs: bodies.append(kwargs["data"]) or _FakeResponse(),
+        )
+
+        assert _Stub().send_media_attachment(
+            "5511999999999@s.whatsapp.net", str(path), "document"
+        ) == "AUDIO123"
+        body = bodies[0]
+        assert body.file_path == str(path)
+        assert body.filename == "nine channels.wav"
+        assert body.mime_type.startswith("audio/")
+        assert b'name="type"\r\n\r\ndocument\r\n' in body._prefix
+        assert b'name="isPtt"' not in body._prefix
