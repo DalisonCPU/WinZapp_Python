@@ -45,19 +45,6 @@ class TestStatedFlag:
         assert rules.stated_flag(chat) is None
 
 
-class TestIsLocked:
-    def test_a_stated_flag_settles_it_over_the_persisted_set(self):
-        assert rules.is_locked(False, [PHONE], {PHONE}) is False
-        assert rules.is_locked(True, [PHONE], set()) is True
-
-    def test_the_persisted_set_decides_only_when_the_record_says_nothing(self):
-        assert rules.is_locked(None, [PHONE], {PHONE}) is True
-        assert rules.is_locked(None, [PHONE], set()) is False
-
-    def test_any_of_the_names_of_the_chat_counts(self):
-        assert rules.is_locked(None, [PHONE, LID], {LID}) is True
-
-
 class TestApplyFlag:
     def test_true_adds_every_name_and_reports_a_change(self):
         members = set()
@@ -469,7 +456,6 @@ class TestRequirePin:
         mw = _PinStub()
         assert mw._require_pin_for_phone_locked_chats() is False
         assert mw.settings_calls == 0
-
 
 
 class TestStringsInEveryLocale:

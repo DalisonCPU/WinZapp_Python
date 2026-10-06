@@ -106,7 +106,8 @@ def _make(chats=None):
                  # the phone's own Chat Lock is mirrored while the chats merge
                  # (main_window/phone_chat_lock.py)
                  "_sync_phone_chat_lock", "_persist_phone_locked_chats",
-                 "_phone_lock_counterpart", "_phone_lock_fp"):
+                 "_phone_lock_counterpart", "_phone_lock_fp",
+                 "_phone_locked_in_answer"):
         # Read from __dict__, not getattr: accessing a staticmethod through
         # the class hands back the plain function, so `isinstance(...,
         # staticmethod)` is always False there and every one of them would be
@@ -320,3 +321,20 @@ class TestPhoneChatLock:
         stub.get_remote_chats({}, persist_full=False, notify_errors=False)
         assert stub._phone_locked_chats == set()
         assert stub.db.metadata["phone_lock_index_v1"] == []
+
+    @pytest.mark.parametrize("locked_first", [True, False], ids=["lid-first", "phone-first"])
+    def test_the_twin_entry_without_the_field_does_not_unlock_the_chat(self, post, locked_first):
+        # One answer can carry the conversation as @lid (locked) and as the
+        # phone JID (no field): the lock wins, in either order. The chat is
+        # already known, so its record is not the answer's entry object.
+        lid = "123456789012345@lid"
+        stub = _make()
+        stub._phone_to_lid = {self.JID: lid}
+        stub._lid_to_phone = {lid: self.JID}
+        known = {self.JID: {"remoteJid": self.JID, "t": 1700000000, "unreadCount": 0,
+                            "messages": {"messages": {"records": []}}}}
+        entries = [_chat(lid, isLocked=True), _chat("5511900000001@c.us")]
+        post["payload"] = entries if locked_first else entries[::-1]
+        stub.get_remote_chats(known, persist_full=False, notify_errors=False)
+        assert stub._phone_lock_fp(lid) in stub._phone_locked_chats
+        assert stub._phone_lock_fp(self.JID) in stub._phone_locked_chats

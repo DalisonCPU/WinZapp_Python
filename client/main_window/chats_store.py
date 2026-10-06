@@ -1157,6 +1157,7 @@ class ChatsStoreMixin:
                 db_changed = False
                 archive_changed = False
                 phone_lock_changed = False
+                locked_in_answer = self._phone_locked_in_answer(response_data)
                 for chat in response_data:
                     if not isinstance(chat, dict):
                         continue
@@ -1226,7 +1227,8 @@ class ChatsStoreMixin:
                     # This poll is the only path that sees a lock or unlock made
                     # on the phone during a session (normalize_chats() runs only
                     # while (re)connecting).
-                    if self._sync_phone_chat_lock(chat, jid, chats, absent_means_unlocked=True):
+                    if self._sync_phone_chat_lock(chat, jid, chats, absent_means_unlocked=True,
+                                                  locked_in_answer=locked_in_answer):
                         phone_lock_changed = True
 
                     # Check if the JID starts with "0@" (official WhatsApp/system account)

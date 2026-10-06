@@ -65,8 +65,21 @@ class PhoneChatLockMixin:
             alt = getattr(self, "_phone_to_lid", {}).get(jid, "")
         return self._normalize_jid(alt) if alt else ""
 
+    def _phone_locked_in_answer(self, response_data) -> set:
+        """Every name (normalized JID and its LID/phone counterpart) of a chat
+        some entry of this list answer states as locked."""
+        locked = set()
+        for chat in response_data or ():
+            if phone_chat_lock.stated_flag(chat) is not True:
+                continue
+            jid = self._normalize_jid(chat.get("remoteJid", ""))
+            if jid:
+                locked.update(n for n in (jid, self._phone_lock_counterpart(jid)) if n)
+        return locked
+
     def _sync_phone_chat_lock(self, chat, jid: str, chats: dict,
-                              absent_means_unlocked: bool = False) -> bool:
+                              absent_means_unlocked: bool = False,
+                              locked_in_answer=frozenset()) -> bool:
         """Mirror a chat record's stated ``isLocked`` onto the records and the
         persisted set. True when the set changed (the caller then persists).
 
@@ -76,8 +89,15 @@ class PhoneChatLockMixin:
         own list answer (*absent_means_unlocked*): an unlocked chat may simply
         omit the field there, and keeping it in the set would hide it for good,
         with nothing in WinZapp able to bring it back.
+
+        One answer can carry the same conversation twice (its @lid entry and
+        its phone entry). When another entry of it is locked
+        (*locked_in_answer*, from _phone_locked_in_answer()), the lock wins:
+        the twin that does not say true must not unlock both names.
         """
         flag = phone_chat_lock.stated_flag(chat)
+        if jid in locked_in_answer and flag is not True:
+            return False
         if flag is None and absent_means_unlocked:
             flag = False
         if flag is None:

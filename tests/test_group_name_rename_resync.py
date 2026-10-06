@@ -103,7 +103,8 @@ def _make(chats=None):
                  "_last_received_jid", "_group_name_from_chat_dict",
                  "_note_server_unread",
                  "_sync_phone_chat_lock", "_persist_phone_locked_chats",
-                 "_phone_lock_counterpart", "_phone_lock_fp"):
+                 "_phone_lock_counterpart", "_phone_lock_fp",
+                 "_phone_locked_in_answer"):
         raw = inspect.getattr_static(MainWindow, name)
         if isinstance(raw, staticmethod):
             setattr(stub, name, raw.__func__)

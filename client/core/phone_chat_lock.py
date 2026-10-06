@@ -23,21 +23,6 @@ def stated_flag(chat):
     return parse_bool_flag(chat.get("isLocked"))
 
 
-def is_locked(flag, candidates: Iterable[str], members: set) -> bool:
-    """Whether a chat is locked on the phone.
-
-    *flag* is what the chat record states (see stated_flag). When the record
-    states something, that is the server's truth and settles it. *members* is
-    the persisted set of locked JIDs, consulted only when the record says
-    nothing: after a restart no list has been fetched yet, and without the set
-    a chat locked on the phone would show as unlocked until the first sync
-    answers.
-    """
-    if flag is not None:
-        return flag
-    return any(candidate in members for candidate in candidates)
-
-
 def apply_flag(members: set, jids: Iterable[str], flag) -> bool:
     """Bring *members* in line with a chat record's stated *flag*.
 
