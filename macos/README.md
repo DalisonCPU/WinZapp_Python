@@ -22,6 +22,7 @@ and adapts WinZapp's UI to how Mac apps and VoiceOver behave:
 | `keymap_mac.py` | Shortcuts follow one rule — Ctrl becomes Command, Alt becomes Command-Option, Ctrl+Alt becomes Control-Command — with exceptions where the rule would hit a macOS command (e.g. Exit is Command-Q, archive is Control-Command-A). Menus, hints and the shortcuts help speak the Mac keys. Option+letter keeps typing characters. |
 | `menubar_mac.py` | Settings, About and Quit in the application menu; Chats and Messages menus mirroring the selected row's context menu; the Windows self-updater is off. |
 | `notify_mac.py` | Native notifications with reply and quick reactions as actions; Focus modes apply. |
+| `launch_mac.py` | Ends wxWidgets 3.2's launch wait as soon as macOS finishes launching (it otherwise idles inside `wx.App()` until an unrelated event arrives, the fix wxWidgets 3.3.2 made) and logs `[STARTUP_TIMING] wx.App:` lines for each phase of `wx.App()`. |
 | `lifecycle_mac.py` | Closing the window keeps WinZapp running (it still receives messages); the Dock icon brings it back; quitting leaves the Dock immediately. |
 | `server_mac.py` | Stops the Node server on quit (the Mac equivalent of `taskkill /F /T`). |
 | `paths_mac.py` | Data and the paired session live in `~/Library/Application Support/WinZapp`; the app installs its bundled server runtime there at launch. |
