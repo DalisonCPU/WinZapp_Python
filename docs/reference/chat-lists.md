@@ -29,7 +29,8 @@ The implementation targets the repository's pinned WA-JS **4.6.1**:
   read lists. An empty list snapshot does not prevent creating the first list.
   Reads also return an optional fixed `editingReason`: `account_disabled`
   only for a native false result, `runtime_incomplete` for a missing function,
-  or `capability_check_failed` for an exception or a non-boolean result.
+  or `capability_check_failed` for an exception, a non-boolean result, or a
+  not-yet-ready WPP on the pinned WA-JS version.
   The manager shows and announces the corresponding translated explanation.
   Older servers without the reason keep the generic read-only message;
   unknown reasons are discarded. No native error text is returned or shown.
