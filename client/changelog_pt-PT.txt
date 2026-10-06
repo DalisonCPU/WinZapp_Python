@@ -28,6 +28,8 @@ CORREÇÕES
 
 - Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
 
+- Ficheiros de áudio enviados como anexo: um ficheiro WAV ou OGG Vorbis em estéreo ou surround (5.1, 7.1) chega agora com todos os canais e a mesma taxa de amostragem, como áudio normal. Antes chegava em mono, a parecer uma mensagem de voz
+
 V2.0.0.0
 
 A grande novidade desta versão são as chamadas: agora é possível fazer, atender e recusar chamadas de voz e de vídeo no próprio WinZapp, sem pegar no telemóvel, com uma janela de chamada acessível, atalhos de teclado, definições de áudio próprias e o histórico no novo separador Chamadas. Chegaram também as conversas trancadas, a pesquisa nas conversas arquivadas, os idiomas turco e romeno e várias melhorias de utilização, além de correções em situações em que o WinZapp pedia para emparelhar de novo sem necessidade. Por baixo, o código do programa passou por uma grande reorganização: não muda nada na utilização, mas torna o WinZapp mais fácil de manter e de corrigir daqui para a frente.
