@@ -37,7 +37,10 @@ def test_the_updater_no_longer_offers_the_running_release(monkeypatch, unstamped
     own release as newer on every check. Checked on that copy, as imported
     after version_mac.install(), not on version.__version__."""
     monkeypatch.setattr(um, "_info", lambda: TAGGED)
-    monkeypatch.delitem(sys.modules, "updater", raising=False)  # restored on teardown
+    # setitem records the original module, or its absence, for teardown;
+    # delitem would record nothing when updater was not imported yet.
+    monkeypatch.setitem(sys.modules, "updater", None)
+    del sys.modules["updater"]
     version_mac.install()
     import updater
     assert updater.__version__ == "2.1.0.4050alpha"

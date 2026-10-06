@@ -99,17 +99,17 @@ one of our tags and its commit must not install.
 
 **The running version is the official tag the app was built from**
 (Info.plist `WinZappReleaseTag`, written by `build_app.py` before signing,
-next to `WinZappSourceCommit`). It is never `client/version.py`, which is the
-unstamped placeholder in every tagged commit (CI stamps it only at build), so an old
-genuine release would otherwise count as newer. A build without a valid
+next to `WinZappSourceCommit`). It is never `client/version.py`, which is
+the unstamped placeholder in every tagged commit (CI stamps it only at
+build), so an old genuine release would otherwise count as newer. A build without a valid
 `WinZappReleaseTag` (a development build) offers and installs no update, and
 the log says why. Versions compare as integers; an alpha or beta is older
 than the stable of the same number; an equal tag is not newer. The same tag,
 without its `v`, is the version the whole app shows and uses: `version_mac`
-sets `version.__version__` from it at startup (About, the update
-check's User-Agent, `UpdateChecker`'s "is it newer" check), and `build_app.py` writes its
-numbers (no `alpha`/`beta`, which Apple's integer format does not allow) as
-`CFBundleShortVersionString`. Without it, the unstamped `version.py` of the
+sets `version.__version__` from it at startup (About, the update check's
+User-Agent, `UpdateChecker`'s "is it newer" check), and `build_app.py`
+writes its numbers (no `alpha`/`beta`, which Apple's integer format does
+not allow) as `CFBundleShortVersionString`. Without it, the unstamped `version.py` of the
 tag's checkout would make `UpdateChecker` offer the running release on every
 check.
 

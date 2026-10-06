@@ -464,7 +464,8 @@ def finish_bundle(source=None):
         plist["WinZappMacReleasesRepo"] = os.environ["WINZAPP_MAC_RELEASES_REPO"]
     # The official tag and commit this app is built from: the tag is the
     # running version for the updater's downgrade check (client/version.py
-    # is the unstamped placeholder in every tagged commit), the commit is refused as an update.
+    # is the unstamped placeholder in every tagged commit), the commit is
+    # refused as an update.
     plist.pop("WinZappSourceCommit", None)
     plist.pop("WinZappReleaseTag", None)
     if source:
