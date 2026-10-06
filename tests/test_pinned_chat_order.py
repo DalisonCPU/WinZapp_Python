@@ -301,6 +301,19 @@ def test_a_retired_worker_cannot_write_the_previous_accounts_order():
     assert win.db.data == {}
 
 
+def test_a_list_build_from_before_an_account_wipe_saves_nothing():
+    win = window()
+    sync_pinned_order(win)
+    captured = win._pinned_chats  # what an in-flight _compute_chat_lists holds
+    win._pinned_chats = set()  # clear_local_data(wipe_metadata=True)
+    reset_pinned_order(win)
+    win.db.data.clear()
+    assert pinned_chat_ranks(win, captured) == {}
+    assert win.db.data == {}
+    assert sync_pinned_order(win) == ()
+    assert win.db.data == {}
+
+
 def test_a_failed_metadata_write_is_retried_without_reordering(monkeypatch):
     win = window()
     original_write = win.db.set_metadata_json

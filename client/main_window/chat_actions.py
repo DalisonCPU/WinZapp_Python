@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import wx
+from core.pinned_chat_order import sync_pinned_order
 from core.utils import (
     parse_bool_flag as _parse_bool_flag,
     clear_chat_applied,
@@ -849,18 +850,15 @@ class ChatActionsMixin:
 
         if hasattr(self, "db") and self.db is not None:
             self.db.set_metadata_json("pinned_chats", list(self._pinned_chats))
-        from core.pinned_chat_order import sync_pinned_order
         sync_pinned_order(self)
         self._schedule_set_chats()
 
     def pin_chat(self, jid: str):
-        from core.pinned_chat_order import sync_pinned_order
         previous_order = sync_pinned_order(self)
         self._apply_pin_state(jid, True)
         self._sync_pin_to_server(jid, pinned=True, previous_order=previous_order)
 
     def unpin_chat(self, jid: str):
-        from core.pinned_chat_order import sync_pinned_order
         previous_order = sync_pinned_order(self)
         self._apply_pin_state(jid, False)
         self._sync_pin_to_server(jid, pinned=False, previous_order=previous_order)
@@ -914,7 +912,6 @@ class ChatActionsMixin:
         accept, and tell the user (runs on the wx main thread)."""
         self._apply_pin_state(jid, not attempted_pinned)
         if previous_order is not None:
-            from core.pinned_chat_order import sync_pinned_order
             sync_pinned_order(self, restore=previous_order)
         if not self.background_mode:
             self.error_sound.play()

@@ -34,7 +34,8 @@ No retries or changes to ambiguous API-failure handling are introduced.
 
 F5 preserves metadata and the rank cache. An account wipe retires the cache
 under its lock before clearing DB metadata, so an old worker cannot persist
-the previous account's ranks afterward. Reads are cached per window, writes
+the previous account's ranks afterward. The wipe also replaces the pinned
+set, and a list build that captured the old set before that saves nothing. Reads are cached per window, writes
 only occur when the order changes, and a failed write can be retried. A pin
 event that arrives before the account DB opens (a reused pairing socket) is
 not cached, so it cannot hide the saved order once the DB is there. Server
