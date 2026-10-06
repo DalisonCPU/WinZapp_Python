@@ -144,8 +144,8 @@ def caret_value_index(text: str, position: int, newline_width: int = 1, utf16: b
     """Convert a native caret position to an index into GetValue() text.
 
     Two ways the native count differs from Python's: a Windows multiline
-    control counts a line break as two positions (the same reason as
-    core.spell_checker.value_index), and both the Windows edit control and
+    control counts a line break as two positions while GetValue() reports a
+    bare "\\n", and both the Windows edit control and
     macOS's NSTextView count in UTF-16 units, so every emoji outside the BMP
     — 🙂 itself, once one has been converted — takes two. Ignoring the
     second would put the caret one character further left for every emoji

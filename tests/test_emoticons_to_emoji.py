@@ -451,3 +451,27 @@ class TestSendPath:
         panel.on_send_message(None)
         assert panel.edited == ["fixed it :D"]
         assert panel.sent == []
+
+
+class TestSpellCueWithEmoji:
+    def test_the_caret_counts_an_emoji_as_two_native_units(self, monkeypatch):
+        from ui.conversation_panel import composer
+        monkeypatch.setattr(composer, "platform_counts_utf16", lambda: True)
+        seen = []
+
+        class _SpellChecker:
+            def caret_moved(self, text, index):
+                seen.append(index)
+
+        class _CuePanel:
+            _cue_spelling_at_caret = ConversationsPanel._cue_spelling_at_caret
+
+            def _spell_check_enabled(self):
+                return True
+
+        panel = _CuePanel()
+        panel._spell_checker = _SpellChecker()
+        panel.message_field = _NativeField("🙂 helo")
+        panel.message_field.caret = 3  # 🙂 is two native units, then the space
+        panel._cue_spelling_at_caret()
+        assert seen == [2]  # the "h" of "helo", not the "e"

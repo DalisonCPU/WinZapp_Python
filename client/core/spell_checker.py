@@ -433,22 +433,6 @@ def word_span_at(text: str, index: int) -> tuple[int, int] | None:
     return start, end
 
 
-def value_index(text: str, position: int, newline_width: int = 1) -> int:
-    """Convert a control caret position to an index into GetValue() text.
-
-    On Windows a multiline wx.TextCtrl counts a line break as two positions
-    while GetValue() reports a bare "\\n"; pass newline_width=2 then.
-    """
-    if newline_width == 1:
-        return position
-    native = 0
-    for i, char in enumerate(text):
-        if native >= position:
-            return i
-        native += newline_width if char == "\n" else 1
-    return len(text)
-
-
 class WindowsSpellChecker:
     """Lightweight checker invoked by the message editor after whitespace."""
 
