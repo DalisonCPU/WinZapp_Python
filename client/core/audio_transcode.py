@@ -100,10 +100,11 @@ def encode_system_audio_to_m4a(ffmpeg: str, source_wav: str) -> str | None:
     return None
 
 
-# AAC-LC's own sample-rate table (ISO/IEC 14496-3); ffmpeg's encoder refuses
-# anything else.
+# AAC-LC's own sample-rate table (ISO/IEC 14496-3; ffmpeg's encoder refuses
+# anything else), stopping at 48 kHz: Android only has to decode AAC-LC up to
+# 48 kHz, so a 96 kHz file might not play on the recipient's phone.
 _AAC_SAMPLE_RATES = (8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100,
-                     48000, 64000, 88200, 96000)
+                     48000)
 # Per channel, so stereo lands on the 192k encode_system_audio_to_m4a already
 # uses and 5.1 on 576k — never below the old 64k mono Opus for any channel.
 _AAC_BITRATE_PER_CHANNEL_K = 96
@@ -179,8 +180,8 @@ def aac_encode_args(channels: int | None, sample_rate: int | None) -> list[str]:
     There is deliberately no ``-ac``: the source's channel count and layout
     survive (5.1 stays 5.1). The sample rate is kept when AAC supports it and
     otherwise raised to the next rate it does (ffmpeg's own negotiation would
-    pick the nearest one *below*); only rates above AAC's 96 kHz ceiling go
-    down, to that ceiling.
+    pick the nearest one *below*); only rates above 48 kHz go down, to 48 kHz,
+    the highest rate every phone has to decode.
     """
     bitrate_channels = channels or _AAC_FALLBACK_CHANNELS
     args = ["-c:a", "aac", "-profile:a", "aac_low",

@@ -74,11 +74,11 @@ class TestAacEncodeArgs:
         assert args[args.index("-b:a") + 1] == bitrate
 
     @pytest.mark.parametrize("source,target", [
-        (44100, "44100"), (48000, "48000"), (96000, "96000"),
+        (44100, "44100"), (48000, "48000"),
         # Not an AAC rate: go up, never down to 32000 as ffmpeg would.
         (37800, "44100"),
-        # Above AAC's ceiling there is nowhere higher to go.
-        (192000, "96000"),
+        # Above 48 kHz, down to 48 kHz: phones only have to decode AAC-LC up to it.
+        (88200, "48000"), (96000, "48000"), (192000, "48000"),
     ])
     def test_keeps_the_sample_rate_or_raises_it_to_the_next_aac_rate(self, source, target):
         args = aac_encode_args(2, source)
