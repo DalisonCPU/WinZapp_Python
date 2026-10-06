@@ -32,14 +32,16 @@ def test_a_release_build_runs_as_its_tag(monkeypatch, unstamped):
 
 
 def test_the_updater_no_longer_offers_the_running_release(monkeypatch, unstamped):
-    """The bug: UpdateChecker compares the latest release against
-    version.__version__, so an unstamped 2.1.0.0 saw its own release as
-    newer on every check."""
-    import updater
+    """The bug: UpdateChecker compares the latest release against the copy
+    of __version__ updater bound at import, so an unstamped 2.1.0.0 saw its
+    own release as newer on every check. Checked on that copy, as imported
+    after version_mac.install(), not on version.__version__."""
     monkeypatch.setattr(um, "_info", lambda: TAGGED)
-    assert updater.is_newer("2.1.0.4050alpha", version.__version__)
+    monkeypatch.delitem(sys.modules, "updater", raising=False)  # restored on teardown
     version_mac.install()
-    assert not updater.is_newer("2.1.0.4050alpha", version.__version__)
+    import updater
+    assert updater.__version__ == "2.1.0.4050alpha"
+    assert not updater.is_newer("2.1.0.4050alpha", updater.__version__)
 
 
 @pytest.mark.parametrize("info", [{}, {"WinZappReleaseTag": ""},
@@ -58,14 +60,20 @@ def test_running_from_source_keeps_version_py(monkeypatch, unstamped):
     assert version.__version__ == PLACEHOLDER
 
 
-def test_installed_before_the_modules_that_copy_the_version():
+def test_installed_before_the_modules_that_copy_the_version(monkeypatch):
     """`from version import __version__` binds a copy at import, so the
     swap must come right after paths_mac, before any install() that imports
     WinZapp modules."""
-    path = os.path.join(ROOT, "macos", "winzapp_mac", "__init__.py")
-    with open(path, encoding="utf-8") as fh:
-        calls = [line.split("(")[0].strip() for line in fh if ".install()" in line]
-    assert calls[:2] == ["paths_mac.install", "version_mac.install"]
+    import importlib
+    import pkgutil
+    import winzapp_mac
+    order = []
+    for info in pkgutil.iter_modules(winzapp_mac.__path__):
+        mod = importlib.import_module(f"winzapp_mac.{info.name}")
+        if callable(getattr(mod, "install", None)):
+            monkeypatch.setattr(mod, "install", lambda name=info.name: order.append(name))
+    winzapp_mac.install()
+    assert order[:2] == ["paths_mac", "version_mac"]
 
 
 def _top_level_imports(body):
@@ -85,7 +93,7 @@ def _top_level_imports(body):
 
 def test_no_layer_module_copies_the_version_on_import():
     """winzapp_mac/__init__.py imports every layer module before
-    version_mac.install() runs: one that imported version, updater or
+    version_mac.install() runs: one that imported version, updater, main or
     main_window at module level would bind the placeholder version first."""
     layer = os.path.join(ROOT, "macos", "winzapp_mac")
     found = []
@@ -95,6 +103,6 @@ def test_no_layer_module_copies_the_version_on_import():
         with open(os.path.join(layer, name), encoding="utf-8") as fh:
             tree = ast.parse(fh.read(), filename=name)
         for module in _top_level_imports(tree.body):
-            if module.split(".")[0] in ("version", "updater", "main_window"):
+            if module.split(".")[0] in ("version", "updater", "main", "main_window"):
                 found.append(f"{name}: {module}")
     assert found == []

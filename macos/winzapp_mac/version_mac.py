@@ -3,8 +3,8 @@
 A Mac release is built from a clean checkout of an official tag
 (provenance.py, build_app.py), where client/version.py is the unstamped
 placeholder ("2.1.0.0"): CI stamps it only at build, and the Mac build may
-not touch a tracked file. Left alone, About, the window title and the
-updater's User-Agent would show that placeholder, and UpdateChecker would
+not touch a tracked file. Left alone, About and the updater's
+User-Agent would show that placeholder, and UpdateChecker would
 compare it against the latest release, offer the very release that is
 running on every check, and then fail its install with "release is not
 newer than the running version".
