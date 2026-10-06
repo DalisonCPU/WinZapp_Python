@@ -52,6 +52,10 @@ class TestReadAudioHeaderFormat:
         junk = b"JUNK" + struct.pack("<I", 27) + b"\x00" * 28  # odd size → pad byte
         assert read_audio_header_format(_wav_header(2, 48000, junk)) == (2, 48000)
 
+    def test_reads_rf64_and_bw64_wavs(self):
+        assert read_audio_header_format(b"RF64" + _wav_header(6, 48000)[4:]) == (6, 48000)
+        assert read_audio_header_format(b"BW64" + _wav_header(6, 48000)[4:]) == (6, 48000)
+
     def test_reads_a_vorbis_identification_header(self):
         assert read_audio_header_format(_vorbis_header(6, 48000)) == (6, 48000)
 
@@ -204,6 +208,8 @@ class TestMoreChannelsThanAac:
 
     @pytest.mark.parametrize("name,header,expected", [
         ("nine.wav", _wav_header(9, 48000), True),
+        # A 7.1.4 Atmos bed in a broadcast (BW64) WAV.
+        ("atmos.wav", b"BW64" + _wav_header(12, 48000)[4:], True),
         ("sixteen.ogg", _vorbis_header(16, 48000), True),
         ("eight.wav", _wav_header(8, 48000), False),
         ("surround.wav", _wav_header(6, 44100), False),

@@ -122,7 +122,9 @@ def read_audio_header_format(header: bytes) -> tuple[int, int] | None:
     ffprobe, and these are the only two formats prepare_audio_for_whatsapp()
     ever re-encodes.
     """
-    if len(header) >= 12 and header[:4] in (b"RIFF", b"RF64") and header[8:12] == b"WAVE":
+    # BW64 (ITU-R BS.2088) is the broadcast WAV of ADM/Atmos beds, the usual
+    # source of a .wav with more than AAC's 8 channels.
+    if len(header) >= 12 and header[:4] in (b"RIFF", b"RF64", b"BW64") and header[8:12] == b"WAVE":
         # Walk the chunks: a broadcast WAV puts bext/JUNK/ds64 before fmt.
         offset = 12
         while offset + 8 <= len(header):
