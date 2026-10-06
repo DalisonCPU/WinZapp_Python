@@ -118,6 +118,8 @@ YENİLİKLER
 
 DÜZELTMELER
 
+- Aramalar, işlemcisi eski olan veya sanal makineyle sınırlanan bilgisayarlarda artık "NumPy was built with baseline optimizations" ve ardından "cannot load module more than once per process" hatasıyla başarısız olmuyor. WinZapp artık her 64 bit işlemcide çalışan bir NumPy sürümü içeriyor.
+
 - Aramalar: sesli veya görüntülü arama başlatılırken görünebilen "cannot load module more than once per process" hatası düzeltildi. WhatsApp'ın arama motoru artık her arama eyleminde yeniden başlatılmak yerine yalnızca bir kez başlatılıp paylaşılıyor.
 
 - Kişilerinde kayıtlı olmayan ve WhatsApp profilinde adı bulunmayan birine mesaj yazdığında, sohbet kişinin telefon numarası yerine senin kendi adını göstermeye başlıyordu. Artık gerçek adı bulunana kadar telefon numarasını göstermeye devam ediyor.
