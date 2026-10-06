@@ -18,7 +18,7 @@ NOVIDADES
 
 - Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que te responde, como o Alt+Shift+M faz com as menções. Premir de novo recua pelas respostas e, depois da mais antiga, volta à mais recente. Também consta de "Atalhos de teclado" (F1)
 
-- "A escrever" na lista de mensagens: enquanto a pessoa da conversa aberta (ou, num grupo, um participante) está a escrever ou a gravar áudio, uma última linha temporária, como "Ana está a escrever...", aparece no fim da lista de mensagens. Desaparece quando a pessoa para ou quando a mensagem chega. Nunca move o foco por si só (só se estiveres na linha quando ela desaparecer és levado para a última mensagem) e não é lida sozinha, por isso o anúncio de escrita continua exatamente como era. Não é uma mensagem: não tem menu de contexto nem ações. Pode ser desativada em "Mostrar quem está a escrever ou a gravar áudio como última linha da lista de mensagens", no separador Interface do utilizador das Definições
+- "A escrever" na lista de mensagens: enquanto a pessoa da conversa aberta (ou, num grupo, um participante) está a escrever ou a gravar áudio, uma última linha temporária, como "Ana está a escrever...", aparece no fim da lista de mensagens. Desaparece quando a pessoa para ou quando a mensagem chega. Nunca move o foco por si só (só se estiveres na linha quando ela desaparecer és levado para a última mensagem) e não é lida sozinha, por isso o anúncio de escrita continua exatamente como era. Não é uma mensagem: não tem menu de contexto nem ações. Está desativada por predefinição; para a ativar, marca "Mostrar quem está a escrever ou a gravar áudio como última linha da lista de mensagens", no separador Interface do utilizador das Definições
 
 - Os emoticons passam a emojis enquanto escreve, como no WhatsApp Web: ":)" passa a 🙂, ":D" a 😃, "<3" a ❤️ e assim por diante, ao escrever um espaço ou uma pontuação a seguir, ou ao enviar a mensagem logo a seguir a um. Só é convertido um emoticon isolado, nunca um dentro de um link, de uma palavra ou de `código`. Premir Backspace logo após a conversão repõe o que escreveu. Pode ser desativado em Definições, separador "Geral", "Converter emoticons como :D em emojis ao escrever"
 
@@ -35,6 +35,8 @@ CORREÇÕES
 - Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
 
 - Ficheiros de áudio enviados como anexo: um ficheiro WAV ou OGG Vorbis em estéreo ou surround (5.1, 7.1) chega agora com todos os canais, como áudio normal, e mantém a taxa de amostragem até 48 kHz (uma taxa superior é enviada a 48 kHz). Antes chegava em mono, a parecer uma mensagem de voz. Um ficheiro com mais de 8 canais, que o AAC não suporta, é enviado sem alterações como documento.
+
+- Atualizar o WinZapp já não desfaz uma atualização da WPPConnect. Depois de atualizar a WPPConnect para uma versão mais recente do que a que vem com o WinZapp (pelo aviso de atualização ou por "Forçar reinstalação da WPPConnect" no menu Ajuda), a atualização seguinte do WinZapp voltava a pô-la na versão antiga, e a mesma atualização da WPPConnect voltava a ser oferecida
 
 V2.0.0.0
 
