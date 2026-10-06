@@ -93,7 +93,7 @@ def _watch_launch():
             if _post_needed:
                 post_wake_event()
             logging.info("[STARTUP_TIMING] wx.App: +%.3fs macOS finished launching%s", _since_start(),
-                         "; wake-up event posted" if _post_needed else "")
+                         "; wake-up event posted" if _post_needed else "; wx posts its own wake-up event")
         except Exception:
             logging.exception("[launch_mac] could not post the launch wake-up event")
 
@@ -153,9 +153,10 @@ def install():
     if _installed:
         return
     _installed = True
+    # Not logged here: install() runs before WinZapp's setup_logging(), so
+    # the launch-finished line in did_finish_launching says which case ran.
     if wx_posts_its_own_wake_event(wx.version()):
         _post_needed = False
-        logging.info("[launch_mac] %s posts its own launch wake-up event; only timing it", wx.version())
     _orig["app_init"] = wx.App.__init__
     _orig["on_pre_init"] = wx.App.OnPreInit
     _orig["on_init"] = wx.App.OnInit

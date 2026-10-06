@@ -177,6 +177,22 @@ def test_installing_after_another_onpreinit_wrapper_keeps_it(monkeypatch):
     assert calls == ["other"]
 
 
+def test_accessibility_installed_after_launch_mac_keeps_both(monkeypatch):
+    # The order winzapp_mac.install() uses: launch_mac first, then
+    # accessibility_mac wraps the OnPreInit launch_mac installed.
+    from winzapp_mac import accessibility_mac
+    _fresh_install(monkeypatch)
+    monkeypatch.setattr(wx.App, "FilterEvent", getattr(wx.App, "FilterEvent", None), raising=False)
+    calls = []
+    launch_mac.install()
+    monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: calls.append("wx"))
+    accessibility_mac._install_filter()
+    stub = _Stub()
+    stub.SetCallFilterEvent = lambda on: calls.append(("filter", on))
+    wx.App.OnPreInit(stub)
+    assert calls == ["wx", ("filter", True)]
+
+
 @pytest.mark.parametrize("text, wx_posts", [
     ("4.2.4 osx-cocoa (phoenix) wxWidgets 3.2.8", False),
     ("4.3.0 osx-cocoa (phoenix) wxWidgets 3.3.1", False),
@@ -192,13 +208,11 @@ def test_a_fixed_wxwidgets_is_timed_but_not_woken(appkit, monkeypatch, caplog):
     center, app = appkit
     _fresh_install(monkeypatch)
     monkeypatch.setattr(wx, "version", lambda: "4.3.0 osx-cocoa (phoenix) wxWidgets 3.3.2")
-    with caplog.at_level(logging.INFO):
-        launch_mac.install()
+    launch_mac.install()
     monkeypatch.setitem(launch_mac._orig, "app_init", _wx_app_init(center, []))
     monkeypatch.setitem(launch_mac._orig, "on_pre_init", lambda self: None)
     monkeypatch.setitem(launch_mac._orig, "on_init", lambda self: True)
     with caplog.at_level(logging.INFO):
         launch_mac.app_init(_Stub())
     assert app.posted == []
-    assert "macOS finished launching" in caplog.text
-    assert caplog.text.count("posts its own launch wake-up event") == 1
+    assert "macOS finished launching; wx posts its own wake-up event" in caplog.text
