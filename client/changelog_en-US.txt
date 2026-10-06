@@ -10,11 +10,13 @@ WHAT'S NEW
 
 - A separate sound plays when someone reacts to your message. Change its file or turn it off in Settings > Sound Events.
 
-- WhatsApp custom lists: refresh and filter by your lists, create or rename a list, and add or remove selected chats. List editing depends on WhatsApp account support. Locked and locally unavailable chats are excluded from selection; other memberships remain unchanged. Unverified changes are reported without automatic retries.
+- WhatsApp custom lists: refresh and filter by your lists, create or rename a list, and add or remove selected chats. List editing depends on WhatsApp account support. Locked and locally unavailable chats are excluded from selection; other memberships remain unchanged. Unverified changes are reported without automatic retries. When editing is unavailable, the manager explains whether WhatsApp has disabled it, this version lacks support or the support check failed.
 
 - Contacts synced with the phone: when you add a contact (in "Chat info", in "New chat" or from a contact message) there are now two tabs, "WinZapp local contact" (only in WinZapp) and "Contact synced with the phone", which saves the name in WhatsApp and in the phone's address book. The synced tab opens by default, a number that is already in the phone's address book shows only that tab, and deleting a synced contact also removes it from WhatsApp and the phone
 
 - New shortcut Alt+Shift+P in the messages list: jump to the previous message that replies to you, like Alt+Shift+M does for mentions. Repeated presses go back through them and wrap to the newest. It is also listed in "Keyboard shortcuts" (F1)
+
+- "Is typing" in the messages list: while the person in the open chat (or, in a group, a participant) is typing or recording audio, a temporary last row such as "Ana is typing..." appears at the end of the messages list. It goes away when they stop or when their message arrives. It never moves the focus on its own (only if you are on the row when it goes away are you moved to the last message) and is not read out on its own, so the typing announcement stays exactly as it was. It is not a message: it has no context menu and no actions. It can be turned off with "Show who is typing or recording audio as the last row of the messages list" in the User Interface tab of Settings
 
 - Emoticons become emoji as you type, like in WhatsApp Web: ":)" turns into 🙂, ":D" into 😃, "<3" into ❤️ and so on, when you type a space or punctuation after them, or send the message right after one. Only an emoticon standing on its own is converted, never one inside a link, a word or `code`. Pressing Backspace right after a conversion puts back what you typed. It can be turned off in Settings, "General" tab, "Convert emoticons like :D to emoji while typing"
 
@@ -29,6 +31,8 @@ FIXES
 - "Describe" button on media messages. On a photo, sticker or video (and on audio and PDFs too, when the AI features are on), a button appears right after "Save as", reachable with Tab, that does the same as the Ctrl+Shift+I shortcut; in the context menu the item now sits with the other media actions, also showing Ctrl+Shift+I. The button and the item only appear on messages that can be described.
 
 - "Automatic (recommended)" model in each AI provider window (Transcriptions and Descriptions). Checked by default for providers where you had not picked a model, the box makes WinZapp always use the model it recommends, which follows updates; uncheck it to pick or type a fixed model.
+
+- Audio files sent as an attachment: a WAV or OGG Vorbis file in stereo or surround (5.1, 7.1) now arrives with all its channels, as ordinary audio, and keeps its sample rate up to 48 kHz (a higher one is sent at 48 kHz). It used to arrive in mono, looking like a voice message. A file with more than 8 channels, which AAC cannot carry, is sent untouched as a document instead.
 
 V2.0.0.0
 

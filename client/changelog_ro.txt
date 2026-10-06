@@ -10,11 +10,13 @@ NOUTĂȚI
 
 - Se redă un sunet distinct când cineva reacționează la mesajul dumneavoastră. Schimbați fișierul sau dezactivați sunetul în Setări > Evenimente sonore.
 
-- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată.
+- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată. Când editarea nu este disponibilă, administratorul indică dacă WhatsApp a dezactivat-o, dacă lipsesc funcții din această versiune sau dacă verificarea a eșuat.
 
 - Contacte sincronizate cu telefonul: la adăugarea unui contact (în "Informații despre conversație", în "Conversație nouă" sau dintr-un mesaj cu un contact) există acum două file, "Contact local WinZapp" (doar în WinZapp) și "Contact sincronizat cu telefonul", care salvează numele în WhatsApp și în agenda telefonului. Fila sincronizată se deschide implicit, un număr care este deja în agenda telefonului arată doar acea filă, iar ștergerea unui contact sincronizat îl elimină și din WhatsApp și de pe telefon
 
 - Comandă rapidă nouă Alt+Shift+P în lista de mesaje: accesați mesajul anterior care vă răspunde, ca Alt+Shift+M pentru mențiuni. Apăsările repetate merg înapoi prin ele și revin la cel mai recent. Apare și în "Comenzi rapide de la tastatură" (F1)
+
+- "Tastează" în lista de mesaje: cât timp persoana din conversația deschisă (sau, într-un grup, un participant) tastează sau înregistrează un mesaj vocal, la sfârșitul listei de mesaje apare un ultim rând temporar, de exemplu "Ana tastează...". Dispare când persoana se oprește sau când sosește mesajul ei. Nu mută niciodată focusul de la sine (doar dacă vă aflați pe rând când dispare, sunteți mutat pe ultimul mesaj) și nu este citit singur, așa că anunțul de tastare rămâne exact ca înainte. Nu este un mesaj: nu are meniu contextual și nici acțiuni. Poate fi dezactivat cu "Afișează cine tastează sau înregistrează un mesaj vocal ca ultim rând al listei de mesaje" din fila Interfață utilizator a Setărilor
 
 - Emoticoanele devin emoji în timp ce tastați, ca în WhatsApp Web: ":)" devine 🙂, ":D" devine 😃, "<3" devine ❤️ și așa mai departe, când tastați un spațiu sau un semn de punctuație după ele ori trimiteți mesajul imediat după unul. Se convertește doar un emoticon de sine stătător, niciodată unul dintr-un link, dintr-un cuvânt sau din `cod`. Apăsarea tastei Backspace imediat după conversie readuce ce ați tastat. Se poate dezactiva în Setări, fila "Generale", "Convertiți emoticoanele precum :D în emoji în timpul tastării"
 
@@ -29,6 +31,8 @@ CORECTĂRI
 - Buton „Descrieți” la mesajele cu conținut media. La o fotografie, un autocolant sau un videoclip (și la audio și PDF, când funcțiile AI sunt pornite) apare un buton chiar după „Salvați ca”, accesibil cu Tab, care face același lucru ca scurtătura Ctrl+Shift+I; în meniul contextual, elementul stă acum lângă celelalte acțiuni media și arată tot Ctrl+Shift+I. Butonul și elementul apar doar la mesajele care pot fi descrise.
 
 - Modelul „Automat (recomandat)” în fereastra fiecărui furnizor AI (Transcrieri și descrieri). Bifată implicit la furnizorii la care nu ați ales încă un model, caseta face ca WinZapp să folosească mereu modelul pe care îl recomandă, care urmează actualizările; debifați-o pentru a alege sau a scrie un model fix.
+
+- Fișiere audio trimise ca atașament: un fișier WAV sau OGG Vorbis stereo sau surround (5.1, 7.1) ajunge acum cu toate canalele, ca audio obișnuit, și își păstrează frecvența de eșantionare până la 48 kHz (una mai mare este redusă la 48 kHz). Înainte ajungea mono și arăta ca un mesaj vocal. Un fișier cu mai mult de 8 canale, pe care AAC nu le poate transporta, este trimis neschimbat ca document.
 
 V2.0.0.0
 

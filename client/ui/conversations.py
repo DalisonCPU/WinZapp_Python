@@ -144,6 +144,7 @@ from ui.conversation_panel.media_files import MediaFilesMixin
 from ui.conversation_panel.links import LinksMixin
 from ui.conversation_panel.mentions import MentionsMixin
 from ui.conversation_panel.unread_separator import UnreadSeparatorMixin
+from ui.conversation_panel.typing_row import TypingRowMixin, sync_typing_row
 from ui.conversation_panel.history_loading import HistoryLoadingMixin
 from ui.conversation_panel.chat_selection import ChatSelectionMixin
 from ui.conversation_panel.message_rows import MessageRowsMixin
@@ -183,6 +184,7 @@ class ConversationsPanel(
     LinksMixin,
     MentionsMixin,
     UnreadSeparatorMixin,
+    TypingRowMixin,
     HistoryLoadingMixin,
     ChatSelectionMixin,
     MessageRowsMixin,
@@ -249,6 +251,13 @@ class ConversationsPanel(
         # nao — ver _on_conversation_focused() e
         # _restore_conversation_selection().
         self._last_list_focus_jid = ""
+
+        # The "X is typing..." last row of the messages list — only in the
+        # control, never in _sorted_messages (see conversation_panel/typing_row.py).
+        self._typing_row_list = None
+        self._typing_row_text = ""
+        self._typing_row_chat = None
+        self._typing_row_dismissed = set()
 
         # ── Audio / video player state ──────────────────────────────────────
         self._sorted_messages = []
@@ -1154,6 +1163,10 @@ class ConversationsPanel(
             if total:
                 for index, msg in enumerate(self._sorted_messages):
                     new_list.Append((self._render_message_line(msg, index=index, total=total),))
+            # The typing row lived in the old control (which is cleared the
+            # next time it is switched to); add it back to this one.
+            self._typing_row_list = None
+            sync_typing_row(self)
         finally:
             new_list.Thaw()
 

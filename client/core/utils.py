@@ -1072,6 +1072,7 @@ DEFAULT_SETTINGS = {
         "voice_record_focus": "send",
         "message_list_mode": "classic",
         "show_listbox_item_count": False,
+        "show_typing_row": True,
         "page_up_down_step": 15,
         "self_reference_mode": "eu",
         "self_reference_custom_word": "",

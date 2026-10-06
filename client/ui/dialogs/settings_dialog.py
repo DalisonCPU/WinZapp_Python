@@ -524,6 +524,14 @@ class SettingsDialog(wx.Dialog):
 
         ui_sizer.Add(msg_list_mode_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
+        # The temporary "X is typing..." last row of the messages list
+        # (ui/conversation_panel/typing_row.py). Read on every presence
+        # update; Apply refreshes the open conversation at once.
+        self._show_typing_row_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_show_typing_row")
+        )
+        ui_sizer.Add(self._show_typing_row_cb, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
 
         self._self_ref_box = wx.StaticBox(
             self._ui_page, label=i18n.t("ui_self_reference_label")
@@ -1671,6 +1679,11 @@ class SettingsDialog(wx.Dialog):
         )
         self._show_listbox_count_cb.SetValue(bool(show_listbox_count))
         self._sync_listbox_count_visibility()
+
+        show_typing_row = self.main_window.settings.get("user_interface", {}).get(
+            "show_typing_row", True
+        )
+        self._show_typing_row_cb.SetValue(bool(show_typing_row))
 
         show_delivery_status = self.main_window.settings.get("user_interface", {}).get(
             "show_delivery_status_in_chat_list", True
@@ -3021,6 +3034,9 @@ class SettingsDialog(wx.Dialog):
         ui_settings["message_list_mode"] = new_message_list_mode
         ui_settings["show_listbox_item_count"] = new_show_listbox_count
         self.main_window.settings.setdefault("user_interface", {})[
+            "show_typing_row"
+        ] = self._show_typing_row_cb.GetValue()
+        self.main_window.settings.setdefault("user_interface", {})[
             "show_delivery_status_in_chat_list"
         ] = self._show_delivery_status_cb.GetValue()
         old_keep_pinned_order = ui_settings.get("keep_pinned_chat_order", False)
@@ -3396,6 +3412,10 @@ class SettingsDialog(wx.Dialog):
         listbox_count_changed = new_show_listbox_count != old_show_listbox_count
         if cp is not None and (message_list_mode_changed or listbox_count_changed):
             cp.apply_message_list_mode(new_message_list_mode)
+        # Show or remove the typing row at once if "show typing row" changed;
+        # a no-op otherwise (it only writes when the row's text changes).
+        if cp is not None and hasattr(cp, "refresh_typing_row"):
+            cp.refresh_typing_row()
 
         # Re-render the open conversation's message list, and the conversation
         # list's last-message previews (which also embed the self-reference
@@ -3564,6 +3584,7 @@ class SettingsDialog(wx.Dialog):
         self._msg_list_mode_classic_rb.SetLabel(i18n.t("ui_message_list_mode_classic"))
         self._msg_list_mode_listbox_rb.SetLabel(i18n.t("ui_message_list_mode_listbox"))
         self._show_listbox_count_cb.SetLabel(i18n.t("ui_show_listbox_item_count"))
+        self._show_typing_row_cb.SetLabel(i18n.t("ui_show_typing_row"))
         self._self_ref_box.SetLabel(i18n.t("ui_self_reference_label"))
         self._self_ref_eu_rb.SetLabel(i18n.t("ui_self_reference_eu"))
         self._self_ref_voce_rb.SetLabel(i18n.t("ui_self_reference_voce"))
