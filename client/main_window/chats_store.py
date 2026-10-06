@@ -13,6 +13,7 @@ import threading
 import time
 import wx
 from core.conversation_view import conversation_in_view
+from core.pinned_chat_order import keep_pinned_order, reset_pinned_order, sync_pinned_order
 from main_window.log_files import (
     _LazyLogFile,
     _consolidate_legacy_log_dir,
@@ -208,6 +209,7 @@ class ChatsStoreMixin:
             self._deleted_chats = set()
             self._archived_chats = set()
             self._pinned_chats = set()
+            reset_pinned_order(self)
             self._muted_chats = {}
             self._blocked_contacts = set()
             self._presence_pushname_map = {}
@@ -1296,6 +1298,10 @@ class ChatsStoreMixin:
                     self.db.set_metadata_json("pinned_chats", list(self._pinned_chats))
                 if archive_changed and hasattr(self, "db") and self.db is not None:
                     self.db.set_metadata_json("archived_chats", list(self._archived_chats))
+
+                if db_changed and (keep_pinned_order(self) or
+                                   getattr(self, "_pinned_order_state", None) is not None):
+                    sync_pinned_order(self, chats=response_data)
 
                 perms_changed = False
                 groups_total = groups_with_metadata = 0
