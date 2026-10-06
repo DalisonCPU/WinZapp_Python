@@ -10,7 +10,7 @@ YENİLİKLER
 
 - Mesajınıza tepki geldiğinde ayrı bir ses çalar. Ayarlar > Ses Olayları bölümünden sesi değiştirebilir veya kapatabilirsiniz.
 
-- Özel WhatsApp listeleri: listeleri yenileme ve listeye göre filtreleme, liste oluşturma veya yeniden adlandırma, seçilen sohbetleri ekleme ve çıkarma. Liste düzenleme, WhatsApp hesabının desteğine bağlıdır. Kilitli veya yerelde bulunmayan sohbetler seçimde gösterilmez; diğer üyelikler korunur. Doğrulanamayan değişiklikler otomatik tekrarlanmadan bildirilir.
+- Özel WhatsApp listeleri: listeleri yenileme ve listeye göre filtreleme, liste oluşturma veya yeniden adlandırma, seçilen sohbetleri ekleme ve çıkarma. Liste düzenleme, WhatsApp hesabının desteğine bağlıdır. Kilitli veya yerelde bulunmayan sohbetler seçimde gösterilmez; diğer üyelikler korunur. Doğrulanamayan değişiklikler otomatik tekrarlanmadan bildirilir. Düzenleme kullanılamıyorsa yönetim penceresi, WhatsApp izninin kapalı olduğunu, sürümde gereken desteğin bulunmadığını veya destek kontrolünün başarısız olduğunu açıklar.
 
 - Telefonla eşitlenen kişiler: kişi eklerken ("Sohbet bilgisi" içinde, "Yeni sohbet" içinde veya bir kişi mesajından) artık iki sekme var: "WinZapp yerel kişisi" (yalnızca WinZapp'ta) ve adı WhatsApp'a ve telefonun rehberine kaydeden "Telefonla eşitlenen kişi". Eşitlenen sekme varsayılan olarak açılır, telefonun rehberinde zaten bulunan bir numara yalnızca o sekmeyi gösterir ve eşitlenen bir kişiyi silmek onu WhatsApp'tan ve telefondan da kaldırır
 

@@ -10,7 +10,7 @@ NOWOŚCI
 
 - Gdy ktoś zareaguje na Twoją wiadomość, odtwarzany jest osobny dźwięk. Zmień plik lub wyłącz dźwięk w Ustawieniach > Zdarzenia dźwiękowe.
 
-- Własne listy WhatsApp: odświeżanie i filtrowanie według list, tworzenie lub zmiana nazwy listy oraz dodawanie i usuwanie wybranych czatów. Edycja zależy od obsługi konta WhatsApp. Czaty zamknięte w sejfie lub niedostępne lokalnie nie pojawiają się w wyborze; pozostali członkowie są zachowywani. Niepotwierdzone zmiany są zgłaszane bez automatycznego ponawiania.
+- Własne listy WhatsApp: odświeżanie i filtrowanie według list, tworzenie lub zmiana nazwy listy oraz dodawanie i usuwanie wybranych czatów. Edycja zależy od obsługi konta WhatsApp. Czaty zamknięte w sejfie lub niedostępne lokalnie nie pojawiają się w wyborze; pozostali członkowie są zachowywani. Niepotwierdzone zmiany są zgłaszane bez automatycznego ponawiania. Gdy edycja jest niedostępna, menedżer informuje, czy WhatsApp ją wyłączył, czy w tej wersji brakuje potrzebnych funkcji, czy też sprawdzenie obsługi się nie powiodło.
 
 - Kontakty synchronizowane z telefonem: przy dodawaniu kontaktu (w "Informacje o czacie", w "Nowy czat" lub z wiadomości z kontaktem) są teraz dwie karty, "Kontakt lokalny WinZappa" (tylko w WinZappie) i "Kontakt zsynchronizowany z telefonem", która zapisuje nazwę w WhatsAppie i w książce adresowej telefonu. Karta synchronizowana otwiera się domyślnie, numer, który już jest w książce adresowej telefonu, pokazuje tylko tę kartę, a usunięcie kontaktu zsynchronizowanego usuwa go też z WhatsAppa i z telefonu
 
