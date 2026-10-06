@@ -1,6 +1,7 @@
 import ctypes
 import os
 import wx
+from wx.lib.scrolledpanel import ScrolledPanel
 from core.chat_lock_vault import AUTO_LOCK_MINUTE_OPTIONS
 from core.i18n import LANGUAGE_NAMES
 from core.combo_search import bind_incremental_search
@@ -13,6 +14,7 @@ from core.audio_devices import (
     enumerate_output_devices, enumerate_input_devices, test_input_device,
 )
 from core.spell_checker import SPELL_CHECK_MODES, spell_check_mode
+from core.emoticons import emoticon_setting_enabled
 from core.notification_manager import NOTIFICATION_CONTENT_LEVELS
 from core.attachment_types import PASTED_AUDIO_MODES
 from core.reaction_shortcuts import (
@@ -329,6 +331,13 @@ class SettingsDialog(wx.Dialog):
         )
         gen_sizer.Add(self._spell_check_radio, 0, wx.EXPAND | wx.ALL, 8)
 
+        # Next to spell checking: both act on what is typed in the message
+        # field. Read live by ConversationsPanel on every keystroke.
+        self._convert_emoticons_check = wx.CheckBox(
+            self._general_page, label=i18n.t("convert_emoticons_label")
+        )
+        gen_sizer.Add(self._convert_emoticons_check, 0, wx.ALL, 8)
+
         # Radio group, not a checkbox: the two folding levels are different
         # trades, not "more of the same", so the user picks one rather than
         # discovering NFKD's extra rewrites by surprise (see
@@ -416,7 +425,14 @@ class SettingsDialog(wx.Dialog):
         self._notebook.AddPage(self._general_page, i18n.t("tab_general"))
 
         # ── User Interface tab ───────────────────────────────────────────────
-        self._ui_page = wx.Panel(self._notebook)
+        # Scrollable, like the AI page: this tab holds more options than a
+        # screen is tall. On a plain panel the sizer then squeezes whatever is
+        # past the bottom edge down to a height of zero, and NVDA, which
+        # decides by geometry which group box a control sits in, no longer
+        # finds the radio buttons inside their box and finds the NEXT control
+        # inside it instead: "Posição para anunciar itens selecionados" was
+        # read on the checkbox after the group and not on its radio buttons.
+        self._ui_page = ScrolledPanel(self._notebook)
         ui_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Both labels are kept on self: they name the edit fields below them
@@ -508,6 +524,14 @@ class SettingsDialog(wx.Dialog):
 
         ui_sizer.Add(msg_list_mode_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
+        # The temporary "X is typing..." last row of the messages list
+        # (ui/conversation_panel/typing_row.py). Read on every presence
+        # update; Apply refreshes the open conversation at once.
+        self._show_typing_row_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_show_typing_row")
+        )
+        ui_sizer.Add(self._show_typing_row_cb, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
 
         self._self_ref_box = wx.StaticBox(
             self._ui_page, label=i18n.t("ui_self_reference_label")
@@ -549,6 +573,11 @@ class SettingsDialog(wx.Dialog):
             self._ui_page, label=i18n.t("ui_show_delivery_status_in_chat_list")
         )
         ui_sizer.Add(self._show_delivery_status_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
+
+        self._keep_pinned_order_cb = wx.CheckBox(
+            self._ui_page, label=i18n.t("ui_keep_pinned_chat_order")
+        )
+        ui_sizer.Add(self._keep_pinned_order_cb, 0, wx.LEFT | wx.TOP | wx.RIGHT, 8)
 
         self._preserve_typed_caption_cb = wx.CheckBox(
             self._ui_page, label=i18n.t("ui_preserve_typed_text_as_caption")
@@ -752,6 +781,8 @@ class SettingsDialog(wx.Dialog):
         )
 
         self._ui_page.SetSizer(ui_sizer)
+        # scrollIntoView: Tab brings the focused option on screen.
+        self._ui_page.SetupScrolling(scroll_x=False, rate_y=15, scrollIntoView=True)
         self._notebook.AddPage(self._ui_page, i18n.t("tab_ui"))
 
         # ── Accessibility tab ────────────────────────────────────────────────
@@ -1558,6 +1589,9 @@ class SettingsDialog(wx.Dialog):
 
         self._apply_spell_check_mode()
 
+        convert_emoticons = self.main_window.settings.get("general", {}).get("convert_emoticons", True)
+        self._convert_emoticons_check.SetValue(emoticon_setting_enabled(convert_emoticons))
+
         # "off" unless the user chose otherwise — including for installs
         # whose settings.json predates the option and has no key at all.
         _mode = search_normalization_mode(
@@ -1646,10 +1680,20 @@ class SettingsDialog(wx.Dialog):
         self._show_listbox_count_cb.SetValue(bool(show_listbox_count))
         self._sync_listbox_count_visibility()
 
+        show_typing_row = self.main_window.settings.get("user_interface", {}).get(
+            "show_typing_row", True
+        )
+        self._show_typing_row_cb.SetValue(bool(show_typing_row))
+
         show_delivery_status = self.main_window.settings.get("user_interface", {}).get(
             "show_delivery_status_in_chat_list", True
         )
         self._show_delivery_status_cb.SetValue(bool(show_delivery_status))
+
+        keep_pinned_order = self.main_window.settings.get("user_interface", {}).get(
+            "keep_pinned_chat_order", False
+        )
+        self._keep_pinned_order_cb.SetValue(bool(keep_pinned_order))
 
         preserve_typed_caption = self.main_window.settings.get("user_interface", {}).get(
             "preserve_typed_text_as_attachment_caption", True
@@ -2990,8 +3034,15 @@ class SettingsDialog(wx.Dialog):
         ui_settings["message_list_mode"] = new_message_list_mode
         ui_settings["show_listbox_item_count"] = new_show_listbox_count
         self.main_window.settings.setdefault("user_interface", {})[
+            "show_typing_row"
+        ] = self._show_typing_row_cb.GetValue()
+        self.main_window.settings.setdefault("user_interface", {})[
             "show_delivery_status_in_chat_list"
         ] = self._show_delivery_status_cb.GetValue()
+        old_keep_pinned_order = ui_settings.get("keep_pinned_chat_order", False)
+        self.main_window.settings.setdefault("user_interface", {})[
+            "keep_pinned_chat_order"
+        ] = self._keep_pinned_order_cb.GetValue()
         self.main_window.settings.setdefault("user_interface", {})[
             "preserve_typed_text_as_attachment_caption"
         ] = self._preserve_typed_caption_cb.GetValue()
@@ -3212,6 +3263,11 @@ class SettingsDialog(wx.Dialog):
             SPELL_CHECK_MODES[self._spell_check_radio.GetSelection()]
         )
 
+        # Emoticon -> emoji in the message field; read live, like the above.
+        self.main_window.settings.setdefault("general", {})["convert_emoticons"] = (
+            self._convert_emoticons_check.GetValue()
+        )
+
         # Unicode folding in searches
         _sel = self._search_norm_radio.GetSelection()
         self.main_window.settings.setdefault("general", {})["search_normalization"] = (
@@ -3330,6 +3386,8 @@ class SettingsDialog(wx.Dialog):
 
         # Persist and propagate
         self.main_window.save_settings()
+        from core.pinned_chat_order import refresh_after_order_setting_change
+        refresh_after_order_setting_change(self.main_window, old_keep_pinned_order)
         self._offer_to_delete_profile_snapshots()
         # Reload sound objects so per-event enabled/path changes (and the new
         # alert-tone defaults) take effect immediately, without a restart.
@@ -3354,6 +3412,10 @@ class SettingsDialog(wx.Dialog):
         listbox_count_changed = new_show_listbox_count != old_show_listbox_count
         if cp is not None and (message_list_mode_changed or listbox_count_changed):
             cp.apply_message_list_mode(new_message_list_mode)
+        # Show or remove the typing row at once if "show typing row" changed;
+        # a no-op otherwise (it only writes when the row's text changes).
+        if cp is not None and hasattr(cp, "refresh_typing_row"):
+            cp.refresh_typing_row()
 
         # Re-render the open conversation's message list, and the conversation
         # list's last-message previews (which also embed the self-reference
@@ -3477,6 +3539,7 @@ class SettingsDialog(wx.Dialog):
             "spell_check_mode_off",
         )):
             self._spell_check_radio.SetItemLabel(_i, i18n.t(_key))
+        self._convert_emoticons_check.SetLabel(i18n.t("convert_emoticons_label"))
         self._search_norm_radio.SetLabel(i18n.t("search_normalization_label"))
         for _i, _key in enumerate((
             "search_normalization_off",
@@ -3521,12 +3584,14 @@ class SettingsDialog(wx.Dialog):
         self._msg_list_mode_classic_rb.SetLabel(i18n.t("ui_message_list_mode_classic"))
         self._msg_list_mode_listbox_rb.SetLabel(i18n.t("ui_message_list_mode_listbox"))
         self._show_listbox_count_cb.SetLabel(i18n.t("ui_show_listbox_item_count"))
+        self._show_typing_row_cb.SetLabel(i18n.t("ui_show_typing_row"))
         self._self_ref_box.SetLabel(i18n.t("ui_self_reference_label"))
         self._self_ref_eu_rb.SetLabel(i18n.t("ui_self_reference_eu"))
         self._self_ref_voce_rb.SetLabel(i18n.t("ui_self_reference_voce"))
         self._self_ref_other_rb.SetLabel(i18n.t("ui_self_reference_other"))
         self._self_ref_custom_label.SetLabel(i18n.t("ui_self_reference_custom_label"))
         self._show_delivery_status_cb.SetLabel(i18n.t("ui_show_delivery_status_in_chat_list"))
+        self._keep_pinned_order_cb.SetLabel(i18n.t("ui_keep_pinned_chat_order"))
         self._show_link_previews_cb.SetLabel(i18n.t("ui_show_link_previews_label"))
         self._show_yesterday_label_cb.SetLabel(i18n.t("ui_show_yesterday_label"))
         self._forwarded_prefix_cb.SetLabel(i18n.t("ui_forwarded_prefix_label"))
@@ -3650,6 +3715,8 @@ class SettingsDialog(wx.Dialog):
         show = self._msg_list_mode_listbox_rb.GetValue()
         self._show_listbox_count_cb.Show(show)
         self._ui_page.Layout()
+        # The page scrolls: what it scrolls over just changed height.
+        self._ui_page.FitInside()
         self.Layout()
 
     def _on_message_list_mode_toggle(self, event):

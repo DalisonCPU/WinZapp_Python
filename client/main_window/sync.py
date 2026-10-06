@@ -395,7 +395,8 @@ class SyncMixin:
             settings_dirty = True
         else:
             self._archived_chats = set(self.db.get_metadata_json("archived_chats", []))
-            
+        self._load_phone_locked_chats()
+
         # 4. pinned_chats
         if self.db.get_metadata("pinned_chats") is None and "pinned_chats" in self.settings:
             self._pinned_chats = set(self.settings.pop("pinned_chats", []))
@@ -571,6 +572,10 @@ class SyncMixin:
         self.chats = self.normalize_chats(self.chats)
         self.contacts = self.get_contacts()
         self._clean_contacts_cached()
+        # Needs the contacts AND the bridge (_load_local_lid_cache() and
+        # _build_lid_to_phone_cache() above): the scan a few lines up ran
+        # while self.contacts was still empty and could move nothing.
+        self._follow_contacts_saved_under_lids_at_startup()
         # One-time cleanup: slim bloated quoted-message payloads left behind by
         # older versions (full thumbnails / mediaKeys / URLs), which made
         # conversations with many replies slow to open. Runs now that chats,

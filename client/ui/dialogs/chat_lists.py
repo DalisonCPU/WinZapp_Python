@@ -4,7 +4,7 @@ import re
 
 import wx
 from core.chat_lists import list_contains
-from ui.conversation_panel.chat_lists import list_result_text
+from ui.conversation_panel.chat_lists import list_editing_unavailable_text, list_result_text
 
 
 def _manage_title(i18n):
@@ -107,8 +107,9 @@ class WhatsAppListsDialog(wx.Dialog):
             self._busy = False
             self._refresh_list_manager()
             text = list_result_text(self._mw.i18n, result.outcome)
-            if result.outcome == "loaded" and not self._mw._wa_lists_state().can_edit:
-                text += " " + self._mw.i18n.t("wa_lists_read_only")
+            snapshot = self._mw._wa_lists_state()
+            if result.outcome == "loaded" and not snapshot.can_edit:
+                text += " " + list_editing_unavailable_text(self._mw.i18n, snapshot)
             self._status.SetLabel(text)
             self.Layout()
             self._mw.output(text)

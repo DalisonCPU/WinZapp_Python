@@ -1011,6 +1011,11 @@ DEFAULT_SETTINGS = {
         # Eventos Sonoros; "off" turns the checking itself off, which is
         # also what stops the COM/dictionary work from ever being done.
         "spell_check_mode": "windows",
+        # Emoticons like ":)" become emoji in the message field as they are
+        # typed, and a trailing one at send (core/emoticons.py). An install
+        # without the key gets it from backfill_missing_defaults(), so no
+        # migration: nobody has an older value to keep.
+        "convert_emoticons": True,
         "first_run": True,
         "api_type_first_run_asked": False,
         "hotkey_first_run_asked": False,
@@ -1067,10 +1072,12 @@ DEFAULT_SETTINGS = {
         "voice_record_focus": "send",
         "message_list_mode": "classic",
         "show_listbox_item_count": False,
+        "show_typing_row": True,
         "page_up_down_step": 15,
         "self_reference_mode": "eu",
         "self_reference_custom_word": "",
         "show_delivery_status_in_chat_list": True,
+        "keep_pinned_chat_order": False,
         "preserve_typed_text_as_attachment_caption": True,
         "bulk_action_shortcuts": True,
         "confirm_mark_all_read": True,

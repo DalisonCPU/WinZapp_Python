@@ -18,7 +18,7 @@ import unicodedata
 import ctypes
 from ctypes import POINTER, c_int, c_ulong, wintypes
 from typing import Callable
-from core.text_offsets import text_index
+from core.emoticons import caret_value_index
 
 
 try:
@@ -293,6 +293,7 @@ if comtypes is not None:
             ),
         ]
 
+
     class ISpellCheckerFactory(IUnknown):
         _iid_ = IID_ISPELL_CHECKER_FACTORY
         _methods_ = [
@@ -453,22 +454,6 @@ def word_span_at(text: str, index: int) -> tuple[int, int] | None:
     return start, end
 
 
-def value_index(text: str, position: int, newline_width: int = 1) -> int:
-    """Convert a control caret position to an index into GetValue() text.
-
-    On Windows a multiline wx.TextCtrl counts a line break as two positions
-    while GetValue() reports a bare "\\n"; pass newline_width=2 then.
-    """
-    if newline_width == 1:
-        return position
-    native = 0
-    for i, char in enumerate(text):
-        if native >= position:
-            return i
-        native += newline_width if char == "\n" else 1
-    return len(text)
-
-
 class WindowsSpellChecker:
     """Lightweight checker invoked by the message editor after whitespace."""
 
@@ -508,8 +493,6 @@ class WindowsSpellChecker:
         self.language = ""
         self._checker = None
         self._initialized = False
-
-        self._caret_word = None
 
     def _play_error_sound(self) -> None:
         """Notify the host, falling back to the old Windows system cue."""
@@ -593,7 +576,10 @@ class WindowsSpellChecker:
                 continue
             if length > 0:
                 # The Windows API reports UTF-16 units, not Python indices.
-                errors.append((text_index(text, start), text_index(text, start + length)))
+                errors.append((
+                    caret_value_index(text, start, utf16=True),
+                    caret_value_index(text, start + length, utf16=True),
+                ))
         return errors
 
     @staticmethod
@@ -617,10 +603,10 @@ class WindowsSpellChecker:
     def suggestions_for_word(self, word: str, limit: int = 5) -> list[str]:
         """Return Windows' replacement suggestions for *word*.
 
-        The checker is optional, so a missing dictionary, COM failure, or an
-        older test double simply produces an empty list.  The small fallback
-        to ``Next()`` keeps the method friendly to the fake enumerators used
-        by the unit tests while the real IEnumString uses ``Next(1)``.
+        The checker is optional, so a missing dictionary or a COM failure
+        simply produces an empty list.  ``IEnumString.Next(1)`` returns
+        ``(value, fetched)``; S_FALSE is a success code, so the end of the
+        enumeration arrives as ``(None, 0)`` rather than as an exception.
         """
         word = str(word or "")
         if not word or limit <= 0:
@@ -633,17 +619,10 @@ class WindowsSpellChecker:
         except (COMError, OSError, RuntimeError, TypeError, AttributeError):
             return []
         suggestions = []
-        while enumeration is not None and len(suggestions) < limit:
+        while enumeration and len(suggestions) < limit:
             try:
-                try:
-                    result = enumeration.Next(1)
-                except TypeError:
-                    result = enumeration.Next()
-            except COMError as error:
-                if getattr(error, "hresult", None) == S_FALSE:
-                    break
-                break
-            except (OSError, RuntimeError, TypeError, AttributeError):
+                result = enumeration.Next(1)
+            except (COMError, OSError, RuntimeError, TypeError, AttributeError, ValueError):
                 break
             value = self._suggestion_value(result)
             if not value:

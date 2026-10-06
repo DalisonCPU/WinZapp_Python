@@ -6,23 +6,35 @@ NOVIDADES
 
 - O submenu de contexto "Ortografia" do campo de mensagem oferece sugestões do dicionário do Windows. O editor mantém a navegação padrão do leitor de ecrã e o som de erro ortográfico do WinZapp.
 
+- "Manter a ordem das conversas afixadas" no separador Interface do utilizador das Definições. Quando ativado, novas mensagens não alteram a posição das conversas afixadas e a ordem mantém-se ao reiniciar. Está desativado por predefinição; as conversas não afixadas continuam a subir com novas mensagens.
+
 - Transcreva e descreva conteúdo com IA. O novo separador "Transcrições e Descrições" nas Definições ativa as funcionalidades de IA (começam desativadas) e recebe a chave de API de um ou mais fornecedores — Gemini, OpenAI, Claude, Groq e OpenRouter —, que são tentados pela ordem que definir; assim, quando um falha ou fica sem quota, responde o seguinte. No menu de contexto de uma mensagem, ou com Ctrl+Shift+I, "Transcrever" transforma uma mensagem de voz em texto, "Descrever" descreve uma fotografia ou um vídeo, "Descrever figurinha" descreve uma figurinha e "Converter em texto acessível" transforma um PDF em texto simples e legível. O resultado abre numa janela com o texto e, para fotografias e vídeos, pode fazer perguntas de acompanhamento nela. O WinZapp pergunta antes de enviar conteúdo a um fornecedor e volta a perguntar de cada vez nas conversas bloqueadas; as suas chaves ficam cifradas no seu computador e só são enviadas ao fornecedor a que pertencem. Um som de espera toca enquanto o fornecedor trabalha, e as respostas podem ser lidas em voz alta automaticamente. O texto segue o idioma da aplicação.
 
-- Listas personalizadas do WhatsApp: atualizar e filtrar pelas suas listas, criar ou mudar o nome de uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os restantes membros são preservados. Alterações não confirmadas são comunicadas sem repetição automática.
+- É reproduzido um som diferente quando alguém reage à sua mensagem. Altere o ficheiro ou desative o som em Definições > Eventos de Som.
+
+- Listas personalizadas do WhatsApp: atualizar e filtrar pelas suas listas, criar ou mudar o nome de uma lista e adicionar ou remover conversas selecionadas. A edição depende do suporte da conta WhatsApp. Conversas bloqueadas pelo cofre ou indisponíveis localmente não aparecem na seleção; os restantes membros são preservados. Alterações não confirmadas são comunicadas sem repetição automática. Quando não é possível editar, o gestor informa se o WhatsApp desativou a edição, se faltam funções nesta versão ou se a verificação do suporte falhou.
 
 - Contactos sincronizados com o telemóvel: ao adicionar um contacto (em "Detalhes da conversa", em "Nova conversa" ou a partir de uma mensagem de contacto) há agora dois separadores, "Contacto local do WinZapp" (só no WinZapp) e "Contacto sincronizado com o telemóvel", que guarda o nome no WhatsApp e na agenda do telemóvel. O separador sincronizado abre por predefinição, um número que já está na agenda do telemóvel mostra só esse separador, e apagar um contacto sincronizado também o remove do WhatsApp e do telemóvel
 
 - Novo atalho Alt+Shift+P na lista de mensagens: ir para a mensagem anterior que te responde, como o Alt+Shift+M faz com as menções. Premir de novo recua pelas respostas e, depois da mais antiga, volta à mais recente. Também consta de "Atalhos de teclado" (F1)
 
+- "A escrever" na lista de mensagens: enquanto a pessoa da conversa aberta (ou, num grupo, um participante) está a escrever ou a gravar áudio, uma última linha temporária, como "Ana está a escrever...", aparece no fim da lista de mensagens. Desaparece quando a pessoa para ou quando a mensagem chega. Nunca move o foco por si só (só se estiveres na linha quando ela desaparecer és levado para a última mensagem) e não é lida sozinha, por isso o anúncio de escrita continua exatamente como era. Não é uma mensagem: não tem menu de contexto nem ações. Pode ser desativada em "Mostrar quem está a escrever ou a gravar áudio como última linha da lista de mensagens", no separador Interface do utilizador das Definições
+
+- Os emoticons passam a emojis enquanto escreve, como no WhatsApp Web: ":)" passa a 🙂, ":D" a 😃, "<3" a ❤️ e assim por diante, ao escrever um espaço ou uma pontuação a seguir, ou ao enviar a mensagem logo a seguir a um. Só é convertido um emoticon isolado, nunca um dentro de um link, de uma palavra ou de `código`. Premir Backspace logo após a conversão repõe o que escreveu. Pode ser desativado em Definições, separador "Geral", "Converter emoticons como :D em emojis ao escrever"
+
 CORREÇÕES
 
 - Menções: uma pessoa mencionada pelo nome juntamente com @todos mantém a sua ligação nas menções da mensagem, e uma menção a si, na notificação e na pré-visualização da lista de conversas, usa a palavra escolhida em "Como se referir a mim?" em vez de uma palavra fixa
+
+- Definições, separador "Interface do utilizador": o separador passa a ter deslocamento, e os grupos de opções no fim voltam a ser lidos no sítio certo. Em ecrãs mais pequenos, o leitor de ecrã anunciava "Posição para anunciar itens selecionados" na caixa de verificação seguinte, e não nos botões de opção do grupo
 
 - Conteúdo com IA: repor todas as chaves também limpa as autorizações de envio memorizadas, mesmo ao introduzir uma nova chave antes de aplicar. Transcrições e textos de PDF longos apresentam agora um erro de limite de texto, em vez de perderem o final silenciosamente; não é tentado outro fornecedor automaticamente por este limite.
 
 - Botão "Descrever" nas mensagens com multimédia. Numa foto, autocolante ou vídeo (e também em áudios e PDFs, quando as funcionalidades de IA estão ativas), aparece um botão logo a seguir a "Guardar como", acessível com Tab, que faz o mesmo que o atalho Ctrl+Shift+I; no menu de contexto, o item fica junto das ações de multimédia, também a mostrar Ctrl+Shift+I. O botão e o item só aparecem nas mensagens que podem ser descritas.
 
 - Modelo "Automático (recomendado)" na janela de cada fornecedor de IA (Transcrições e Descrições). Marcada por predefinição nos fornecedores em que ainda não tinha escolhido um modelo, a caixa faz o WinZapp usar sempre o modelo que recomenda, que acompanha as atualizações; desmarque-a para escolher ou escrever um modelo fixo.
+
+- Ficheiros de áudio enviados como anexo: um ficheiro WAV ou OGG Vorbis em estéreo ou surround (5.1, 7.1) chega agora com todos os canais, como áudio normal, e mantém a taxa de amostragem até 48 kHz (uma taxa superior é enviada a 48 kHz). Antes chegava em mono, a parecer uma mensagem de voz. Um ficheiro com mais de 8 canais, que o AAC não suporta, é enviado sem alterações como documento.
 
 V2.0.0.0
 
@@ -116,7 +128,11 @@ MELHORIAS
 
 - Reencaminhar passa a confirmar quando correu bem. Antes só a falha era avisada; agora, no fim, aparece uma caixa a dizer "Mensagem reencaminhada." ou quantas mensagens foram reencaminhadas.
 
+- As conversas que tranca no telemóvel com o Chat Lock do WhatsApp passam também a ficar escondidas no WinZapp. Saem da lista de conversas e aparecem só em "Conversas trancadas" (Alt+7), depois do seu PIN do WinZapp; se nunca criou um, o WinZapp oferece-se para o criar na primeira vez. Só o telemóvel as pode destrancar, por isso o WinZapp não oferece "Destrancar conversa" para essas conversas, e uma conversa que destranca no telemóvel volta sozinha à lista.
+
 CORREÇÕES
+
+- As chamadas deixam de falhar com o erro "NumPy was built with baseline optimizations", seguido de "cannot load module more than once per process", em computadores com um processador mais antigo ou limitado por uma máquina virtual. O WinZapp passa a incluir uma versão do NumPy que funciona em qualquer processador de 64 bits.
 
 - Chamadas: corrigido o erro "cannot load module more than once per process" que podia aparecer ao iniciar uma chamada de voz ou de vídeo. O motor de chamadas do WhatsApp passa a ser iniciado uma única vez e partilhado, em vez de ser iniciado de novo a cada ação de chamada.
 

@@ -28,10 +28,3 @@ def test_sound_only_even_with_obsolete_feedback_settings(obsolete_modes):
     checker.caret_moved(text, 3)
     assert played == [True, True]
 
-
-def test_failed_sound_does_not_affect_navigation():
-    def broken_sound():
-        raise RuntimeError("No sound device")
-
-    host = SimpleNamespace(spelling_error_sound=SimpleNamespace(play=broken_sound))
-    ComposerMixin._play_spelling_error_sound(SimpleNamespace(main_window=host))

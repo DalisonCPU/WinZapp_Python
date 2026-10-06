@@ -20,7 +20,8 @@ from tests.mnemonics import load_strings, mnemonic
 from tests.test_local_contact_sync import _Mw as _RealContactsWindow
 from ui.dialogs import new_contact
 from ui.dialogs.new_contact import (
-    MODE_LOCAL, MODE_PHONE, NewContactDialog, resolve_initial_mode)
+    MODE_LOCAL, MODE_PHONE, NewContactDialog, asked_fields, fixed_jid_of, known_jid,
+    resolve_initial_mode)
 
 JID = "5511999999999@s.whatsapp.net"
 JID_8 = "551199999999@s.whatsapp.net"      # the same number without the 9th digit
@@ -75,13 +76,14 @@ class _Dialog:
     _set_busy = NewContactDialog._set_busy
     _on_add = NewContactDialog._on_add
     _save_synced = NewContactDialog._save_synced
-    _jid_of = staticmethod(NewContactDialog._jid_of)
 
-    def __init__(self, mode=MODE_PHONE, mw=None):
+    def __init__(self, mode=MODE_PHONE, mw=None, fixed_jid=""):
         self._mw = mw or _MW()
         self._modes = (MODE_LOCAL, MODE_PHONE)
         self._notebook = _Notebook(self._modes.index(mode))
-        self._fields = {m: {"name": _Field(), "surname": _Field(), "phone": _Field()}
+        self._fixed_jid = fixed_jid
+        # The fields _build_page() creates: the same asked_fields() decides.
+        self._fields = {m: {key: _Field() for key, _label in asked_fields(fixed_jid)}
                         for m in self._modes}
         self._ok_btn, self._cancel_btn, self._status = _Control(), _Control(), _Control()
         self._busy = False
@@ -95,7 +97,8 @@ class _Dialog:
 
     def fill(self, mode, name="Ana", surname="Silva", phone="+55 11 99999-9999"):
         for key, value in (("name", name), ("surname", surname), ("phone", phone)):
-            self._fields[mode][key].value = value
+            if key in self._fields[mode]:
+                self._fields[mode][key].value = value
 
     def saving(self):
         """A dialog whose synced tab was filled and submitted."""
@@ -199,11 +202,14 @@ class TestSyncedTab:
         assert jid == JID_8 and entry["remoteJid"] == JID_8
         assert d.result_jid == JID_8
 
-    def test_a_save_whose_sync_was_not_confirmed_is_not_called_synced(self, boxes):
+    def test_a_sync_that_was_not_confirmed_is_said_so_but_the_contact_is_whatsapps(self, boxes):
+        """The announcement is honest about it; the record is still handled
+        as a contact that lives in WhatsApp, which it does."""
         d = _Dialog(MODE_PHONE).saving()
         d._mw.on_done(_ok(synced=False))
         (_jid, entry), = d._mw.local_saved
-        assert phone_contacts.is_phone_synced(entry) is False and entry["isSaved"] is True
+        assert phone_contacts.is_phone_synced(entry) is True
+        assert entry["syncToAddressbook"] is False
         assert d._mw.spoken[-1] == "new_contact_phone_saved_unconfirmed"
         assert d.ended == [wx.ID_OK]
 
@@ -295,9 +301,11 @@ class TestANumberAlreadyInThePhoneBook:
         d._on_add(None)
         assert len(d._mw.local_saved) == 1 and d.ended == [wx.ID_OK]
 
-    def test_the_jid_a_typed_number_names(self):
-        assert NewContactDialog._jid_of("+55 (11) 99999-9999") == JID
-        assert NewContactDialog._jid_of("") == ""
+    def test_the_jid_a_prefilled_number_names(self):
+        """What the dialog looks up when it opens, to offer only the synced
+        tab for a number already in the phone's address book."""
+        assert known_jid("", "+55 (11) 99999-9999") == JID
+        assert known_jid("", "") == ""
 
 
 class TestMnemonics:
@@ -321,3 +329,62 @@ class TestMnemonics:
         assert letter is not None
         assert letter not in {mnemonic(strings[k]) for k in (
             "close", "new_group", "search_name_or_number")}
+
+
+LID = "123456789012345@lid"
+
+
+class TestAConversationKnownOnlyByItsLid:
+    """No phone number is known for it. Its digits are not one: typed into a
+    phone field they named nobody ("this number is not on WhatsApp", about
+    someone the user is talking to) or a stranger."""
+
+    def test_only_an_lid_fixes_the_jid(self):
+        assert fixed_jid_of(LID) == LID
+        for other in (JID, "5511999999999@c.us", "", None):
+            assert fixed_jid_of(other) == ""
+
+    def test_the_dialog_takes_the_conversations_jid(self):
+        assert "contact_jid" in inspect.signature(NewContactDialog).parameters
+
+    def test_no_phone_is_asked_for(self):
+        """The decision _build_page() builds its fields from."""
+        assert [key for key, _label in asked_fields(LID)] == ["name", "surname"]
+        assert [key for key, _label in asked_fields("")] == ["name", "surname", "phone"]
+        assert dict(asked_fields(""))["phone"] == "phone_label"
+
+    def test_the_lid_is_what_the_dialog_looks_up_whatever_was_prefilled(self):
+        """The @lid's digits are not a phone number to look anything up by."""
+        assert known_jid(LID, "123456789012345") == LID
+        assert known_jid(LID, "") == LID
+
+    def test_the_synced_tab_saves_under_the_lid_without_asking_for_a_number(self, boxes):
+        d = _Dialog(MODE_PHONE, fixed_jid=LID).saving()
+        assert boxes == []                                   # no "check the number"
+        assert d._mw.requests == [(LID, "Ana", "Silva")]
+        d._mw.on_done(_ok(jid=LID))
+        (jid, entry), = d._mw.local_saved
+        assert jid == LID and entry["remoteJid"] == LID
+        assert phone_contacts.is_phone_synced(entry) and d.result_jid == LID
+
+    def test_the_request_carries_the_whole_lid(self):
+        """What the mixin then sends for that JID."""
+        assert phone_contacts.wire_id(LID) == LID
+
+    def test_the_local_tab_files_it_under_the_lid_too(self, boxes):
+        d = _Dialog(MODE_LOCAL, fixed_jid=LID)
+        d.fill(MODE_LOCAL)
+        d._on_add(None)
+        assert d._mw.local_saved == [(LID, phone_contacts.local_entry(LID, "Ana Silva"))]
+        assert d.ended == [wx.ID_OK] and d.result_jid == LID
+
+    def test_a_name_is_still_required(self, boxes):
+        d = _Dialog(MODE_PHONE, fixed_jid=LID)
+        d.fill(MODE_PHONE, name="")
+        d._on_add(None)
+        assert len(boxes) == 1 and d._mw.requests == []
+
+    def test_a_refusal_puts_the_focus_on_a_field_that_exists(self, boxes):
+        d = _Dialog(MODE_PHONE, fixed_jid=LID).saving()
+        d._mw.on_done(SaveResult(False, "new_contact_phone_failed", LID, False))
+        assert d._fields[MODE_PHONE]["name"].focused and d.ended == []

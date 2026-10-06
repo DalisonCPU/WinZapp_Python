@@ -19,11 +19,16 @@ from core.utils import (
     normalize_line_separators,
     to_editor_line_endings,
 )
+from core.emoticons import (
+    caret_value_index,
+    native_newline_width,
+    native_position,
+    platform_counts_utf16,
+)
 from core.spell_checker import (
     spell_check_active,
     windows_spellcheck_enabled,
 )
-from core.text_offsets import native_offset, text_index
 
 
 # Keys that move the caret in the message field; each may land on a
@@ -31,6 +36,16 @@ from core.text_offsets import native_offset, text_index
 _CARET_KEYS = frozenset((
     wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_UP, wx.WXK_DOWN, wx.WXK_HOME,
     wx.WXK_END, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN,
+))
+
+
+# Pressed on their own, these neither type nor delete anything, so they must
+# not cancel the Backspace undo of an emoticon conversion — a screen reader
+# user may press Shift or Control just to stop speech.
+_MODIFIER_KEYS = frozenset((
+    wx.WXK_SHIFT, wx.WXK_CONTROL, wx.WXK_ALT, wx.WXK_RAW_CONTROL,
+    wx.WXK_WINDOWS_LEFT, wx.WXK_WINDOWS_RIGHT, wx.WXK_INSERT,
+    wx.WXK_NUMPAD_INSERT, wx.WXK_CAPITAL,
 ))
 
 
@@ -62,11 +77,14 @@ class ComposerMixin:
         return spell_check_active(general, windows_spellcheck_enabled())
 
     def _play_spelling_error_sound(self):
-        """Use only WinZapp's sound, without affecting screen-reader speech."""
-        try:
-            self.main_window.spelling_error_sound.play()
-        except Exception:
-            pass
+        """Play the currently configured spelling-error Sound Event."""
+        self.main_window.spelling_error_sound.play()
+
+    @staticmethod
+    def _value_index(text: str, position: int) -> int:
+        """Native caret position -> index into GetValue() (UTF-16 aware)."""
+        return caret_value_index(
+            text, position, native_newline_width(text), platform_counts_utf16())
 
     def _cue_spelling_at_caret(self, *_):
         """Play the error sound on arrival at a misspelled word."""
@@ -75,30 +93,42 @@ class ComposerMixin:
             return
         text = self.message_field.GetValue()
         position = self.message_field.GetInsertionPoint()
-        width = 2 if os.name == "nt" and "\r\n" not in text else 1
-        index = text_index(text, position, width) if os.name == "nt" else position
-        spell_checker.caret_moved(text, index)
+        spell_checker.caret_moved(text, self._value_index(text, position))
 
     def _cue_spelling_at_caret_on_click(self, event):
         event.Skip()
         wx.CallAfter(self._cue_spelling_at_caret)
 
-    @staticmethod
-    def _editor_position(text: str, offset: int) -> int:
-        """Convert a GetValue() offset to the native Windows edit offset."""
-        offset = max(0, min(len(text), int(offset)))
-        if os.name != "nt":
-            return offset
-        return native_offset(text, offset, 2)
-
     def _replace_spelling_word(self, start: int, end: int, replacement: str):
-        text = self.message_field.GetValue()
-        self.message_field.SetSelection(
-            self._editor_position(text, start),
-            self._editor_position(text, end),
+        """Replace GetValue() span [start, end) with *replacement*."""
+        field = self.message_field
+        text = field.GetValue()
+        width = native_newline_width(text)
+        utf16 = platform_counts_utf16()
+        field.SetSelection(
+            native_position(text, start, width, utf16),
+            native_position(text, end, width, utf16),
         )
-        self.message_field.WriteText(replacement)
-        self.message_field.SetFocus()
+        field.WriteText(replacement)
+        field.SetFocus()
+
+    def _spelling_menu_position(self, event) -> int:
+        """Native position the context menu was asked for.
+
+        A right-click carries a screen point, which may be on another word
+        than the caret; the Applications key carries none, so the caret is
+        the target.
+        """
+        field = self.message_field
+        screen = event.GetPosition()
+        if screen != wx.DefaultPosition:
+            try:
+                result, position = field.HitTestPos(field.ScreenToClient(screen))
+            except Exception:
+                result = wx.TE_HT_UNKNOWN
+            if result != wx.TE_HT_UNKNOWN:
+                return position
+        return field.GetInsertionPoint()
 
     def _on_message_field_context_menu(self, event):
         """Offer Windows spelling suggestions from Applications/right-click."""
@@ -106,15 +136,15 @@ class ComposerMixin:
         if checker is None or not self._spell_check_enabled():
             event.Skip()
             return
-        text = self.message_field.GetValue()
-        position = self.message_field.GetInsertionPoint()
-        width = 2 if os.name == "nt" and "\r\n" not in text else 1
-        index = text_index(text, position, width) if os.name == "nt" else position
-        result = checker.suggestions_at(text, index)
+        field = self.message_field
+        text = field.GetValue()
+        position = self._spelling_menu_position(event)
+        result = checker.suggestions_at(text, self._value_index(text, position))
         if result is None:
             event.Skip()
             return
         start, end, suggestions = result
+        t = self.main_window.i18n.t
         menu = wx.Menu()
         suggestion_ids = {}
         suggestions_menu = wx.Menu()
@@ -122,43 +152,46 @@ class ComposerMixin:
             item_id = wx.NewIdRef()
             suggestions_menu.Append(item_id, suggestion.replace("&", "&&"))
             suggestion_ids[int(item_id)] = suggestion
-        menu.AppendSubMenu(
-            suggestions_menu,
-            self.main_window.i18n.t("spell_orthography"),
-        )
+        menu.AppendSubMenu(suggestions_menu, t("spell_orthography"))
         menu.AppendSeparator()
-        # Keep the standard edit commands available alongside the suggestions.
-        for command_id in (
-            wx.ID_UNDO, wx.ID_CUT, wx.ID_COPY, wx.ID_PASTE,
-            wx.ID_DELETE, wx.ID_SELECTALL,
-        ):
-            menu.Append(command_id)
+        # Keep the standard edit commands next to the suggestions. The labels
+        # come from the locale files: wx stock labels would be English, as the
+        # client never creates a wx.Locale.
+        edit_commands = (
+            (wx.ID_UNDO, t("spell_menu_undo"), field.CanUndo(), field.Undo),
+            (wx.ID_CUT, t("spell_menu_cut"), field.CanCut(), field.Cut),
+            (wx.ID_COPY, t("spell_menu_copy"), field.CanCopy(), field.Copy),
+            (wx.ID_PASTE, t("spell_menu_paste"), field.CanPaste(), field.Paste),
+            (wx.ID_DELETE, t("spell_menu_delete"), field.CanCut(),
+             lambda: field.Remove(*field.GetSelection())),
+            (wx.ID_SELECTALL, t("spell_menu_select_all"), True, field.SelectAll),
+        )
+        edit_actions = {}
+        for command_id, label, enabled, action in edit_commands:
+            menu.Append(command_id, label)
+            menu.Enable(command_id, bool(enabled))
+            edit_actions[command_id] = action
 
         def on_menu(command_event):
             command_id = command_event.GetId()
             replacement = suggestion_ids.get(command_id)
             if replacement is not None:
                 self._replace_spelling_word(start, end, replacement)
-            elif command_id == wx.ID_UNDO:
-                self.message_field.Undo()
-            elif command_id == wx.ID_CUT:
-                self.message_field.Cut()
-            elif command_id == wx.ID_COPY:
-                self.message_field.Copy()
-            elif command_id == wx.ID_PASTE:
-                self.message_field.Paste()
-            elif command_id == wx.ID_DELETE:
-                self.message_field.Remove(
-                    self.message_field.GetSelection()[0],
-                    self.message_field.GetSelection()[1],
-                )
-            elif command_id == wx.ID_SELECTALL:
-                self.message_field.SelectAll()
+            elif command_id in edit_actions:
+                edit_actions[command_id]()
 
         suggestions_menu.Bind(wx.EVT_MENU, on_menu)
         menu.Bind(wx.EVT_MENU, on_menu)
+        screen = event.GetPosition()
+        if screen != wx.DefaultPosition:
+            popup_at = field.ScreenToClient(screen)
+        else:
+            popup_at = field.PositionToCoords(field.GetInsertionPoint())
         try:
-            self.message_field.PopupMenu(menu)
+            if popup_at == wx.DefaultPosition:
+                field.PopupMenu(menu)
+            else:
+                field.PopupMenu(menu, popup_at)
         finally:
             menu.Destroy()
 
@@ -417,6 +450,12 @@ class ComposerMixin:
         wx's native multiline edit control only inserts a literal newline on
         Ctrl+Enter, with no Shift+Enter equivalent of its own (issue #16)."""
         kc = event.GetKeyCode()
+        if kc == wx.WXK_BACK:
+            if self._undo_emoticon_conversion():
+                return  # consume — the undo replaced the emoji and boundary
+        elif kc not in _MODIFIER_KEYS:
+            # Undo is for the keystroke right after a conversion only.
+            self._emoticon_undo = None
         if kc == wx.WXK_DOWN and self._mention_panel.IsShown():
             if self._mention_list.GetCount() > 0:
                 self._mention_list.SetFocus()
@@ -435,6 +474,9 @@ class ComposerMixin:
             # so the caret landed one character short, between the \r and
             # the \n. NVDA then kept announcing everything typed next as
             # still on the previous line (issue #48).
+            # WriteText() raises no EVT_CHAR, so the newline ends an
+            # emoticon here rather than in _on_message_field_char().
+            self._convert_emoticon_before_caret("\n")
             self.message_field.WriteText("\n")
             self.on_change_message_field(None)
             return  # consume — don't send and don't double-insert
@@ -470,6 +512,11 @@ class ComposerMixin:
     def _on_message_field_char(self, event):
         if self._is_phantom_nvda_char(event):
             return  # veto — do not insert, do not Skip()
+        key = event.GetUnicodeKey()
+        if key != wx.WXK_NONE:
+            # Before Skip(): the native control inserts the character after
+            # this returns, so it lands after the emoji.
+            self._convert_emoticon_before_caret(chr(key))
         event.Skip()
 
     def _on_text_field_paste(self, event):
