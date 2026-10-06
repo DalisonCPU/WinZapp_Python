@@ -109,6 +109,12 @@ class TestSaveContact:
         post = _Post(_resp(400, {"status": "error", "code": "contact_invalid"}))
         assert pc.save_contact("b", "t", PHONE, "Ana", post=post).error_key == pc.ERR_INVALID
 
+    def test_an_lid_whose_phone_whatsapp_does_not_know_yet(self):
+        """Not "try again": nothing to retry now, the local tab is the way."""
+        post = _Post(_resp(400, {"status": "error", "code": "contact_lid_without_phone"}))
+        result = pc.save_contact("b", "t", "123456789012345@lid", "Ana", post=post)
+        assert (result.ok, result.error_key) == (False, pc.ERR_LID_WITHOUT_PHONE)
+
     def test_any_other_failure_is_the_generic_message(self):
         for response in (_resp(502, {"code": "contact_operation_failed"}),
                          _resp(404, {"status": "Disconnected"}),
@@ -124,7 +130,8 @@ class TestSaveContact:
     def test_the_error_keys_are_the_ones_the_locales_define(self):
         with open(resource_path("languages", "pt-BR.json"), encoding="utf-8") as f:
             strings = json.load(f)
-        assert {pc.ERR_INVALID, pc.ERR_NOT_ON_WHATSAPP, pc.ERR_FAILED} <= set(strings)
+        assert {pc.ERR_INVALID, pc.ERR_NOT_ON_WHATSAPP, pc.ERR_LID_WITHOUT_PHONE,
+                pc.ERR_FAILED} <= set(strings)
 
 
 class TestRemoveContact:
@@ -167,11 +174,80 @@ class TestRecords:
         entry = pc.local_entry(PHONE, "Ana")
         assert entry["isSaved"] is True and pc.SYNCED_KEY not in entry
 
-    def test_a_save_without_a_confirmed_sync_is_not_marked_either(self):
-        entry = pc.saved_entry(PHONE, "Ana", synced=False)
-        assert entry["isSaved"] is True and entry["isMyContact"] is True
-        assert pc.is_phone_synced(entry) is False
-        assert pc.is_phone_synced(pc.saved_entry(PHONE, "Ana", synced=True)) is True
+    def test_a_save_whose_sync_was_not_confirmed_yet_is_marked_all_the_same(self):
+        """It was asked for with the sync and accepted, and it is in WhatsApp
+        either way: handled as a local contact, deleting it would remove it
+        from WinZapp only. The next contact list corrects the mark if needed."""
+        entry = pc.synced_entry(PHONE, "Ana", confirmed=False)
+        assert entry["syncToAddressbook"] is False and entry["isMyContact"] is True
+        assert pc.is_phone_synced(entry) is True
+
+    def test_and_the_next_list_takes_the_mark_away_when_it_really_did_not_sync(self):
+        contacts = {PHONE: pc.synced_entry(PHONE, "Ana", confirmed=False)}
+        later = pc.now() + 60
+        assert pc.clear_stale_marks(contacts, [_server(PHONE, True, False)], later) == [PHONE]
+        assert pc.is_phone_synced(contacts[PHONE]) is False
+
+    def test_unmark_takes_the_flags_with_the_mark(self):
+        record = pc.synced_entry(PHONE, "Ana")
+        pc.unmark(record, True, False)
+        assert pc.is_phone_synced(record) is False and record["isMyContact"] is True
+
+    def test_the_http_client_is_not_loaded_just_to_read_a_mark(self):
+        """core/database.py imports this module for SYNCED_KEY alone. Checked
+        in a fresh interpreter: in this one something else has loaded it."""
+        import subprocess
+        import sys
+        code = ("import sys; import core.phone_contacts; "
+                "print('core.api_client' in sys.modules, 'requests' in sys.modules)")
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                             cwd=resource_path(), timeout=60)
+        assert out.stdout.split() == ["False", "False"], out.stderr
+
+    @pytest.mark.parametrize("jid, twin", [
+        ("5511999999999@s.whatsapp.net", "551199999999@s.whatsapp.net"),
+        ("551199999999@s.whatsapp.net", "5511999999999@s.whatsapp.net"),
+        ("5511899999999@s.whatsapp.net", ""),      # 13 digits, the 5th is not a 9
+        ("4915112345678@s.whatsapp.net", ""),      # not Brazilian
+        ("123456789012345@lid", ""),
+        ("5511999999999@c.us", ""),                # contacts are keyed by @s.whatsapp.net
+        ("", ""), (None, ""),
+    ])
+    def test_the_other_form_of_a_brazilian_mobile_number(self, jid, twin):
+        assert pc.other_digit_form(jid) == twin
+
+    def test_the_leftovers_of_deleted_local_contacts(self):
+        """An @lid record still marked as saved, a known phone behind it, and
+        no saved contact for that phone under either digit form."""
+        lid_a, lid_b, lid_c, lid_d = "1@lid", "2@lid", "3@lid", "4@lid"
+        phone_c, phone_c8 = "5511999999999@s.whatsapp.net", "551199999999@s.whatsapp.net"
+        contacts = {
+            lid_a: {"name": "Apagado", "isSaved": True},            # the leftover
+            "a@s.whatsapp.net": {"name": "pushname"},
+            lid_b: {"name": "Ana", "isSaved": True},                # copy of a live contact
+            "b@s.whatsapp.net": pc.local_entry("b@s.whatsapp.net", "Ana"),
+            lid_c: {"name": "Bia", "isSaved": True},                # saved under the other form
+            phone_c8: pc.local_entry(phone_c8, "Bia"),
+            lid_d: {"name": "cache", "isSaved": False},             # never the user's
+            "5@lid": {"name": "No bridge", "isSaved": True},        # no known phone
+        }
+        bridge = {lid_a: "a@s.whatsapp.net", lid_b: "b@s.whatsapp.net",
+                  lid_c: phone_c, lid_d: "d@s.whatsapp.net"}
+        assert pc.orphaned_saved_lid_copies(contacts, bridge) == [lid_a]
+        assert pc.orphaned_saved_lid_copies({}, bridge) == []
+        assert pc.orphaned_saved_lid_copies(contacts, {}) == []
+
+    def test_who_made_the_record(self):
+        """The user's own records keep their name and follow the person."""
+        assert pc.user_saved(pc.local_entry(PHONE, "Ana")) is True
+        assert pc.user_saved(pc.synced_entry(PHONE, "Ana")) is True
+        assert pc.user_saved({"isMyContact": True, "syncToAddressbook": True}) is False
+        # What the database gives back for a contact added on the phone: the
+        # mark is restored for the whole address book, so it cannot be what
+        # says "the user made this".
+        assert pc.user_saved({"isSaved": False, pc.SYNCED_KEY: True}) is False
+        assert pc.user_saved({"name": "aninha"}) is False
+        assert pc.user_saved(None) is False
 
     def test_is_phone_synced(self):
         assert pc.is_phone_synced(pc.synced_entry("j", "n")) is True
@@ -197,6 +273,14 @@ class TestWhichContactsAreInThePhoneBook:
         mw.contacts = {PHONE_8: entry}
         assert pc.existing_contact(mw, PHONE) is entry
         assert pc.key_of(mw, entry, PHONE) == PHONE_8
+
+    def test_an_lid_has_no_lid_of_its_own(self):
+        """_lid_for_local_contact() is also called with the @lid a contact was
+        saved under; its digits must not be compared with phone numbers."""
+        mw = _Mw()
+        mw._phone_to_lid = {"123456789012345@s.whatsapp.net": "999@lid"}
+        assert mw._lid_for_local_contact("123456789012345@lid") == ""
+        assert mw._lid_for_local_contact("123456789012345@s.whatsapp.net") == "999@lid"
 
     def test_the_key_of_a_record_that_is_not_stored_is_the_default(self):
         mw = _Mw()
@@ -267,17 +351,33 @@ class TestWhatsAppsListIsTheTruth:
         assert pc.clear_stale_marks(contacts, [], pc.now()) == []
         assert pc.clear_stale_marks(contacts, None, pc.now()) == []
 
-    def test_the_lid_copy_loses_the_mark_with_the_phone_record(self):
-        """Through the real MainWindow methods."""
+    def test_a_number_absent_from_the_list_keeps_its_mark(self):
+        """On purpose: while WhatsApp Web is still loading its store everyone
+        is absent, and reading that as "removed" would unmark them all."""
+        contacts = {PHONE: {pc.SYNCED_KEY: True}}
+        other = _server("5511888888888@s.whatsapp.net", True, True)
+        assert pc.clear_stale_marks(contacts, [other], pc.now()) == []
+        assert contacts[PHONE][pc.SYNCED_KEY] is True
+
+    def test_the_lid_copy_stops_reading_as_synced_with_the_phone_record(self, monkeypatch):
+        """Through the real MainWindow methods, on the records save_local_contact()
+        really makes: the copy carries the two WhatsApp flags as well as the
+        mark, and either would bring "synced" back."""
+        monkeypatch.setattr(main.wx, "CallAfter", lambda fn, *a, **k: fn(*a, **k))
 
         class _Window(_Mw):
             _clear_stale_phone_sync_marks = ContactsMixin._clear_stale_phone_sync_marks
 
         mw = _Window()
-        mw.contacts = {PHONE: {pc.SYNCED_KEY: True}, LID: {pc.SYNCED_KEY: True}}
+        entry = pc.synced_entry(PHONE, "Ana")
+        entry[pc.SYNCED_AT_KEY] = 0             # saved long before this list
+        mw.save_local_contact(PHONE, entry)
+        assert pc.is_phone_synced(mw.contacts[LID])
+
         mw._clear_stale_phone_sync_marks([_server(PHONE, False, False)], pc.now())
-        assert mw.contacts[PHONE][pc.SYNCED_KEY] is False
-        assert mw.contacts[LID][pc.SYNCED_KEY] is False
+
+        assert pc.is_phone_synced(mw.contacts[PHONE]) is False
+        assert pc.is_phone_synced(mw.contacts[LID]) is False
 
 
 class TestASyncedContactReplacesTheLocalOne:
@@ -341,7 +441,10 @@ class TestTheContactSyncAppliesIt:
 
         def __init__(self):
             super().__init__()
-            self.chats = {}             # no open chat keeps the number listed
+            # The server lists saved contacts and numbers with an open chat;
+            # _Mw has a chat with PHONE, which is why a number that is no
+            # longer a contact is still in the answer.
+            assert PHONE in self.chats
             self.saved = []
 
         def _schedule_save(self, **kwargs):

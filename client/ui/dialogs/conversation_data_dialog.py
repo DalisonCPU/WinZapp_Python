@@ -160,6 +160,9 @@ class ConversationDataDialog(wx.Dialog):
             )
         self._jid    = jid
         self._name   = name
+        # True while a synced contact is being removed from WhatsApp, so a
+        # second press of Delete starts nothing (_on_delete_contact()).
+        self._deleting_contact = False
         self._is_group = is_group
         # Parallel lists describing each participant row, populated by
         # _populate_group(). Index matches the row index in _part_list.
@@ -1687,9 +1690,12 @@ class ConversationDataDialog(wx.Dialog):
         jid = self._resolve_contact_phone_jid()
         dlg = NewContactDialog(
             self._mw, self,
-            prefill_phone=format_number(jid),
+            prefill_phone="" if jid.endswith("@lid") else format_number(jid),
             prefill_name=p_name,
             prefill_surname=p_sur,
+            # Still an @lid when no phone number is known for this chat: the
+            # dialog then saves under it instead of asking for a number.
+            contact_jid=jid,
         )
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -1714,11 +1720,12 @@ class ConversationDataDialog(wx.Dialog):
         synced = phone_contacts.is_phone_synced(contact)
         dlg = NewContactDialog(
             self._mw, self,
-            prefill_phone=format_number(jid),
+            prefill_phone="" if jid.endswith("@lid") else format_number(jid),
             prefill_name=p_name,
             prefill_surname=p_sur,
             initial_mode=MODE_PHONE if synced else MODE_LOCAL,
             modes=(MODE_PHONE,) if synced else (MODE_LOCAL, MODE_PHONE),
+            contact_jid=jid,
         )
         dlg.SetTitle(self._i18n.t("edit_contact_local").replace("&", ""))
         result = dlg.ShowModal()

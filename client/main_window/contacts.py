@@ -133,8 +133,12 @@ class ContactsMixin:
         for jid in cleared:
             lid = self._lid_for_local_contact(jid)
             lid_record = self.contacts.get(lid) if lid else None
-            if lid_record is not None and lid_record.get(phone_contacts.SYNCED_KEY):
-                lid_record[phone_contacts.SYNCED_KEY] = False
+            if lid_record is not None and phone_contacts.is_phone_synced(lid_record):
+                # The copy carries the two WhatsApp flags as well as the mark;
+                # left there, they would read as synced and bring it back.
+                record = self.contacts[jid]
+                phone_contacts.unmark(lid_record, record.get("isMyContact"),
+                                      record.get("syncToAddressbook"))
         if cleared:
             logging.info("[get_remote_contacts] %d contact(s) no longer in the "
                          "phone's address book.", len(cleared))
@@ -175,6 +179,10 @@ class ContactsMixin:
         the 9th digit the lid mapping was learned without (or the reverse), so
         an exact lookup is tried first and the digit-equivalent one after it.
         """
+        if not jid.endswith("@s.whatsapp.net"):
+            # Called with an @lid too (a contact saved for a chat with no
+            # known phone): its digits are not a phone number to compare.
+            return ""
         phone_to_lid = getattr(self, "_phone_to_lid", {}) or {}
         lid = phone_to_lid.get(jid, "")
         if lid:
