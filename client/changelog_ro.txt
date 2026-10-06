@@ -10,7 +10,7 @@ NOUTĂȚI
 
 - Se redă un sunet distinct când cineva reacționează la mesajul dumneavoastră. Schimbați fișierul sau dezactivați sunetul în Setări > Evenimente sonore.
 
-- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată.
+- Liste WhatsApp personalizate: reîmprospătare și filtrare după liste, creare sau redenumire și adăugare ori eliminare a conversațiilor selectate. Editarea depinde de suportul contului WhatsApp. Conversațiile blocate în seif sau indisponibile local sunt excluse din selecție; ceilalți membri sunt păstrați. Modificările neconfirmate sunt raportate fără repetare automată. Când editarea nu este disponibilă, administratorul indică dacă WhatsApp a dezactivat-o, dacă lipsesc funcții din această versiune sau dacă verificarea a eșuat. S-a corectat crearea și editarea listelor pentru conturile personale compatibile când WhatsApp Web nu mai oferă vechea funcție de permisiune pentru editare.
 
 - Contacte sincronizate cu telefonul: la adăugarea unui contact (în "Informații despre conversație", în "Conversație nouă" sau dintr-un mesaj cu un contact) există acum două file, "Contact local WinZapp" (doar în WinZapp) și "Contact sincronizat cu telefonul", care salvează numele în WhatsApp și în agenda telefonului. Fila sincronizată se deschide implicit, un număr care este deja în agenda telefonului arată doar acea filă, iar ștergerea unui contact sincronizat îl elimină și din WhatsApp și de pe telefon
 
