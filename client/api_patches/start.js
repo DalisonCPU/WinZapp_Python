@@ -905,7 +905,7 @@ async function fetchLiveWhatsappDocument() {
   }
 }
 
-const whatsappVersion = timedStartup('whatsapp_catalogue', resolveWhatsappVersion);
+const whatsappVersion = resolveWhatsappVersion();
 
 // ── Serving the pinned HTML without breaking WhatsApp Web's workers ─────────
 //

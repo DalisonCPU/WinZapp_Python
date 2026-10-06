@@ -200,16 +200,6 @@ class UpdatesMixin:
             return stage(target_tag, on_finished)
         api_dir = resource_path("api")
         build_dir = staged_dir or api_staging.staging_dir_for(api_dir)
-        if not staged_dir and not api_staging.has_room_for_staging(api_dir):
-            # Building over the old API would lose the rollback copy. Refuse
-            # before stopping it when there is no room for a second build.
-            logging.error("[wpp_update] Insufficient space to retain the current API")
-            self.error_sound.play()
-            text = self.i18n.t("wpp_update_not_enough_space")
-            message_box(self, text, self.i18n.t("update_error_title"), wx.OK | wx.ICON_ERROR,
-                        announce=lambda: self.output(text, interrupt=True))
-            return False
-
         logging.info("[wpp_update] Stopping WPPConnect Server before update to %s...", target_tag)
         # Spoken in a background start too: the user just accepted the prompt,
         # so they are listening for what happens next.
@@ -222,13 +212,22 @@ class UpdatesMixin:
         self._wpp_updating = True
         backup = ""
         stop_failed = False
+        no_room = False
 
         @timed_step("api_stop_phase")
         def _stop_phase():
-            nonlocal stop_failed
+            nonlocal stop_failed, no_room
             try:
                 if not staged_dir:
-                    timed_call("staging_cleanup", api_staging.discard, build_dir)
+                    # What an interrupted build left counts against the free
+                    # space, so it goes first (as in the background path).
+                    timed_call("staging_cleanup", self._discard_wpp_staging_leftovers)
+                    if not api_staging.has_room_for_staging(api_dir):
+                        # Building over the old API would lose the rollback
+                        # copy. Refuse before stopping it when there is no room
+                        # for a second build.
+                        no_room = True
+                        return
                 timed_call("api_stop", self._stop_wpp_server)
                 self.wpp_process = None
 
@@ -292,6 +291,13 @@ class UpdatesMixin:
         def _after_stop():
             deferred = False
             try:
+                if no_room:
+                    logging.error("[wpp_update] Insufficient space to retain the current API")
+                    self.error_sound.play()
+                    text = self.i18n.t("wpp_update_not_enough_space")
+                    message_box(self, text, self.i18n.t("update_error_title"), wx.OK | wx.ICON_ERROR,
+                                announce=lambda: self.output(text, interrupt=True))
+                    return
                 if stop_failed:
                     restart_api_after_update(self, api_dir, "", lambda _ok: _validated(False))
                     deferred = True
@@ -312,6 +318,12 @@ class UpdatesMixin:
                             wx.OK | wx.ICON_ERROR,
                             announce=lambda: self.output(self.i18n.t("wpp_update_failed_msg"), interrupt=True),
                         )
+                    if not staged_dir:
+                        # A failed or cancelled build leaves its half-built tree
+                        # behind; it would count against the room check of
+                        # every later update.
+                        threading.Thread(target=api_staging.discard, args=(build_dir,),
+                                         daemon=True).start()
                     # Normally the previous API is intact. The bundled minimum
                     # is still the last resort for an already-missing server.
                     minimum = homologated_wpp_tag(resource_path("wpp_minimum_version.txt"))

@@ -237,6 +237,33 @@ class TestTheBuildHappensBehindARunningServer:
 
         assert env.api + "_staging" in env.discarded and env.api + "_old" in env.discarded
 
+    def test_in_place_measures_the_room_after_the_leftovers_are_gone(self, env):
+        """An interrupted foreground build's tree must not make every later
+        update refuse for lack of room: it is swept before the measurement."""
+        _started(env, _Window(background=False))
+        assert env.order[:3] == ["discard", "discard", "measure"]
+
+    def test_in_place_without_room_refuses_before_stopping_the_server(self, env):
+        env.room = False
+        finished = []
+        window = _Window(background=False)
+
+        assert _started(env, window, finished) is True
+
+        assert env.modal == [] and "stop" not in window.events
+        assert env.boxes == ["wpp_update_not_enough_space"]
+        assert finished == [False] and _busy(window) is False
+
+    def test_a_cancelled_in_place_build_does_not_leave_its_tree_behind(self, env, monkeypatch):
+        monkeypatch.setattr(api_setup.ApiSetupDialog, "ShowModal",
+                            lambda self: wx.ID_CANCEL, raising=False)
+        window = _Window(background=False)
+
+        _started(env, window)
+        env.run_threads()
+
+        assert env.discarded.count(env.api + "_staging") >= 2
+
     def test_startup_deletes_only_what_a_swap_moved_aside(self, env):
         """api_old and api_staging belong to an update in progress, possibly
         another account's; only the .stale-* directories are safe at startup."""

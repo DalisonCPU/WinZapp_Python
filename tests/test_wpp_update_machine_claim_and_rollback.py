@@ -243,6 +243,9 @@ class _Window:
     def output(self, text, interrupt=False):
         self.spoken.append(text)
 
+    def _discard_wpp_staging_leftovers(self):
+        pass
+
     def _stop_wpp_server(self):
         pass
 

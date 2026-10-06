@@ -16,8 +16,8 @@ enquanto instala. O roteiro não altera números de versão nem inicia o aplicat
    ser anunciada depois que `/healthz` e `/winzapp/identity` forem validados.
 6. Confira se a conta reconecta e se uma mensagem pode ser enviada e recebida.
 
-A instalação é preparada em `client/api_staging`. Durante a troca, a versão
-anterior fica em `client/api_old`. Depois da validação, ela é renomeada para
+A instalação é preparada em `api_staging` (ao lado de `client/api`). Durante a troca, a versão
+anterior fica em `api_old`. Depois da validação, ela é renomeada para
 uma pasta exclusiva e removida em segundo plano após a reconexão (com limite
 de 90 segundos de espera).
 Se a nova API não iniciar ou não passar na validação, o fluxo tenta restaurar

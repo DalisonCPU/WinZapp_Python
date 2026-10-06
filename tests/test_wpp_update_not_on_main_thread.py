@@ -103,6 +103,9 @@ class _Stub:
     def output(self, text, interrupt=False):
         self.spoken.append(text)
 
+    def _discard_wpp_staging_leftovers(self):
+        pass
+
     def _stop_wpp_server(self):
         self.flag_during_stop = self._wpp_updating
         self.events.append("stop")
