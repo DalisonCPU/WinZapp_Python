@@ -930,6 +930,7 @@
   "ui_selected_announce_position_start": "Mesajın veya sohbetin başında \"seçildi\" duyur",
   "ui_selected_announce_position_end": "Mesajın veya sohbetin sonunda \"seçildi\" duyur",
   "ui_show_yesterday_label": "Dünkü mesajları tarihi atlayarak göster (dün)",
+  "ui_show_typing_row": "Yazan veya ses kaydeden kişiyi mesaj listesinin son satırı olarak göster",
   "ui_show_link_previews_label": "Mesaj listesinde bağlantı önizlemelerini göster",
   "ui_forwarded_prefix_label": "Mesajın başında, göndericiden önce \"İletildi\" duyur",
   "ui_forward_voice_as_voice": "Sesli mesajları ses dosyası yerine sesli mesaj olarak ilet (yine iletildi olarak işaretlenir)",

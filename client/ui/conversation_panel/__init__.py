@@ -24,6 +24,7 @@ Where to look (and where new code goes):
     message_rendering        a message record -> its row text
     message_rows             writing rows into the list one by one, never clearing it
     unread_separator         the unread-messages separator row
+    typing_row               the temporary "X is typing..." last row (not a message)
     history_loading          loading older history into the open conversation
     message_menu             message context menu and read-only actions
     message_actions          star, pin, delete, cancel, edit, resend
