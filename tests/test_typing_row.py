@@ -275,10 +275,15 @@ def _focus_recording_suppression(panel):
     return seen
 
 
-@pytest.mark.parametrize("present", [False, True], ids=["away", "looking"])
-def test_cursor_moved_off_the_row_marks_read_only_for_a_present_user(present):
+@pytest.mark.parametrize("active,shown,present", [
+    (False, True, False),   # window in the tray or inactive
+    (True, False, False),   # conversation hidden behind another panel
+    (True, True, True),     # the user is looking at it
+], ids=["away", "hidden", "looking"])
+def test_cursor_moved_off_the_row_marks_read_only_for_a_present_user(active, shown, present):
     panel = _Panel()
-    panel.main_window._allow_ui_focus_changes = lambda: present
+    panel.main_window._allow_ui_focus_changes = lambda: active
+    panel.conversation_panel = type("P", (), {"IsShown": lambda self: shown})()
     panel.typing(CONTACT, CONTACT)
     panel.refresh_typing_row()
     panel.messages_list.focused = 3              # the cursor rests on the row
