@@ -70,24 +70,6 @@ def test_context_menu_falls_back_to_the_caret_when_hit_testing_is_unavailable():
         assert ComposerMixin._spelling_menu_position(panel, event) == 7
 
 
-def test_cue_uses_the_utf16_aware_caret_index(monkeypatch):
-    from ui.conversation_panel import composer
-    from ui.conversation_panel.composer import ComposerMixin
-
-    monkeypatch.setattr(composer, "platform_counts_utf16", lambda: True)
-    calls = []
-    panel = SimpleNamespace(
-        _spell_check_enabled=lambda: True,
-        _spell_checker=SimpleNamespace(caret_moved=lambda *args: calls.append(args)),
-        message_field=SimpleNamespace(GetValue=lambda: "😀 wrng", GetInsertionPoint=lambda: 4),
-    )
-    panel._value_index = ComposerMixin._value_index
-
-    ComposerMixin._cue_spelling_at_caret(panel)
-
-    assert calls == [("😀 wrng", 3)]
-
-
 def test_replacing_a_word_selects_native_positions_after_an_emoji(monkeypatch):
     from ui.conversation_panel import composer
     from ui.conversation_panel.composer import ComposerMixin

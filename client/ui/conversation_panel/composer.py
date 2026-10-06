@@ -31,6 +31,12 @@ from core.spell_checker import (
 )
 
 
+def _value_index(text: str, position: int) -> int:
+    """Native caret position -> index into GetValue() (UTF-16 aware)."""
+    return caret_value_index(
+        text, position, native_newline_width(text), platform_counts_utf16())
+
+
 # Keys that move the caret in the message field; each may land on a
 # misspelled word.
 _CARET_KEYS = frozenset((
@@ -80,12 +86,6 @@ class ComposerMixin:
         """Play the currently configured spelling-error Sound Event."""
         self.main_window.spelling_error_sound.play()
 
-    @staticmethod
-    def _value_index(text: str, position: int) -> int:
-        """Native caret position -> index into GetValue() (UTF-16 aware)."""
-        return caret_value_index(
-            text, position, native_newline_width(text), platform_counts_utf16())
-
     def _cue_spelling_at_caret(self, *_):
         """Play the error sound on arrival at a misspelled word."""
         spell_checker = getattr(self, "_spell_checker", None)
@@ -93,7 +93,7 @@ class ComposerMixin:
             return
         text = self.message_field.GetValue()
         position = self.message_field.GetInsertionPoint()
-        spell_checker.caret_moved(text, self._value_index(text, position))
+        spell_checker.caret_moved(text, _value_index(text, position))
 
     def _cue_spelling_at_caret_on_click(self, event):
         event.Skip()
@@ -139,7 +139,7 @@ class ComposerMixin:
         field = self.message_field
         text = field.GetValue()
         position = self._spelling_menu_position(event)
-        result = checker.suggestions_at(text, self._value_index(text, position))
+        result = checker.suggestions_at(text, _value_index(text, position))
         if result is None:
             event.Skip()
             return
