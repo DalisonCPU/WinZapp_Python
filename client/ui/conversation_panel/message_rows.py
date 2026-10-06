@@ -81,10 +81,11 @@ class MessageRowsMixin:
         texts = [self._render_message_line(m) for m in new_rows]
         # The typing row, when showing, is one row past old_rows and stays
         # there: every delete/insert index below is within the message rows.
-        if message_row_count(self) != len(old_rows):
+        control_rows = message_row_count(self)
+        if control_rows != len(old_rows):
             logging.warning(
                 "[_sync_message_rows] list out of step (control=%d, backing=%d) "
-                "— resyncing from scratch", message_row_count(self), len(old_rows))
+                "— resyncing from scratch", control_rows, len(old_rows))
             typing_text = self._typing_row_text if typing_row_shown(self) else ""
             lst.DeleteAllItems()
             for text in texts:

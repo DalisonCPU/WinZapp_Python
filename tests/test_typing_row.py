@@ -262,6 +262,45 @@ def test_removing_the_focused_row_puts_the_cursor_on_the_last_message(listbox):
     assert panel.messages_list.focused == 2
 
 
+def _focus_recording_suppression(panel):
+    """Record _suppress_selection_side_effects at each Focus() — the flag
+    _on_message_focused() reads to skip mark-as-read."""
+    seen = []
+    focus = panel.messages_list.Focus
+
+    def recording_focus(index):
+        seen.append(getattr(panel, "_suppress_selection_side_effects", False))
+        focus(index)
+    panel.messages_list.Focus = recording_focus
+    return seen
+
+
+@pytest.mark.parametrize("present", [False, True], ids=["away", "looking"])
+def test_cursor_moved_off_the_row_marks_read_only_for_a_present_user(present):
+    panel = _Panel()
+    panel.main_window._allow_ui_focus_changes = lambda: present
+    panel.typing(CONTACT, CONTACT)
+    panel.refresh_typing_row()
+    panel.messages_list.focused = 3              # the cursor rests on the row
+    seen = _focus_recording_suppression(panel)
+
+    msg = _msg("new")
+    panel._sorted_messages.append(msg)
+    append_message_row(panel, "new")
+    dismiss_typing_row_for_message(panel, msg)
+
+    assert panel.messages_list.focused == 3      # the cursor is on "new"
+    # Away (tray, inactive window): no read receipts for an unseen message.
+    assert seen == [not present]
+    assert getattr(panel, "_suppress_selection_side_effects", False) is False
+
+
+def test_duplicate_phrases_are_said_once():
+    text = typing_row_text([("Unnamed", "composing"), ("Unnamed", "composing")],
+                           _I18n().t)
+    assert text == "Unnamed is typing..."
+
+
 def test_incoming_message_lands_above_and_takes_the_sender_off(listbox):
     panel = _Panel(listbox=listbox)
     panel.typing(CONTACT, CONTACT)

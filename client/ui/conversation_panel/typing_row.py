@@ -38,6 +38,8 @@ attribute is read with a default so such a stub needs nothing new.
 
 import logging
 
+from core.conversation_view import conversation_in_view
+
 
 def typing_row_text(entries, t) -> str:
     """The row's text for *entries* — ``[(name, action), ...]``, action being
@@ -58,7 +60,10 @@ def typing_row_text(entries, t) -> str:
             key = "recording_text"
         else:
             continue
-        parts.append(t(key).format(name=name))
+        phrase = t(key).format(name=name)
+        # Two unnamed @lid participants read as the same phrase: say it once.
+        if phrase not in parts:
+            parts.append(phrase)
     return " ".join(parts)
 
 
@@ -138,11 +143,24 @@ def _remove_typing_row(panel) -> None:
     # was right above it. Not while no conversation is open: the panel is
     # hidden then, and a Focus() would only run the focused-row side effects
     # (history paging, mark-as-read) for a conversation that is gone.
+    #
+    # This runs from the incoming-message path too, which must not mark the
+    # conversation read for a user who is not looking (window in the tray or
+    # inactive, conversation hidden behind another panel): the cursor still
+    # moves, but the focused-row side effects are suppressed then.
     if was_focused and getattr(panel, "conversation", None) is not None:
         last = lst.GetItemCount() - 1
         if last >= 0 and lst.GetFocusedItem() != last:
-            lst.Focus(last)
-            lst.Select(last)
+            mw = getattr(panel, "main_window", None)
+            present = bool(getattr(mw, "_allow_ui_focus_changes", lambda: False)()) \
+                and conversation_in_view(panel)
+            previous = getattr(panel, "_suppress_selection_side_effects", False)
+            panel._suppress_selection_side_effects = previous or not present
+            try:
+                lst.Focus(last)
+                lst.Select(last)
+            finally:
+                panel._suppress_selection_side_effects = previous
 
 
 def sync_typing_row(panel, chat_jid_norm: str = "", fresh=()) -> None:
