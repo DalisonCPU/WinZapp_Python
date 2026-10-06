@@ -1226,7 +1226,7 @@ class ChatsStoreMixin:
                     # This poll is the only path that sees a lock or unlock made
                     # on the phone during a session (normalize_chats() runs only
                     # while (re)connecting).
-                    if self._sync_phone_chat_lock(chat, jid, chats):
+                    if self._sync_phone_chat_lock(chat, jid, chats, absent_means_unlocked=True):
                         phone_lock_changed = True
 
                     # Check if the JID starts with "0@" (official WhatsApp/system account)

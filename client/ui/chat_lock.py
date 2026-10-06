@@ -440,7 +440,7 @@ class LockedConversationsPanel(ChatListSelectionMixin, wx.Panel):
         self.Bind(wx.EVT_MENU, lambda evt, c=chat: self.main_window.open_locked_conversation(c), open_item)
         # A chat locked on the phone cannot be unlocked from here, so no item
         # that would only announce that it cannot.
-        if not self.main_window.is_chat_phone_locked(jid) or self.main_window._chat_lock_vault_holds(jid):
+        if self.main_window.can_unlock_chat_in_app(jid):
             unlock_item = menu.Append(wx.ID_ANY, self.main_window.i18n.t("unlock_chat"))
             self.Bind(wx.EVT_MENU, lambda evt, j=jid: self.main_window.unlock_chat(j), unlock_item)
         self.PopupMenu(menu)
