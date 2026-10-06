@@ -145,4 +145,8 @@ def pinned_chat_ranks(window, pinned=None):
 def refresh_after_order_setting_change(window, previous):
     """Apply/OK must recompute, not reuse sorted arrays."""
     if keep_pinned_order(window) != previous:
-        window._schedule_set_chats()
+        # The Settings dialog also runs against a bare frame (its own tests);
+        # only a MainWindow has a chat list to recompute.
+        schedule = getattr(window, "_schedule_set_chats", None)
+        if callable(schedule):
+            schedule()

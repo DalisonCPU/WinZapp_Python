@@ -285,6 +285,11 @@ def test_setting_change_recomputes_once_and_old_installs_stay_opt_out():
     assert defaults["user_interface"]["keep_pinned_chat_order"] is False
 
 
+def test_setting_change_tolerates_a_window_without_a_chat_list():
+    bare = SimpleNamespace(settings={"user_interface": {"keep_pinned_chat_order": True}})
+    refresh_after_order_setting_change(bare, False)  # Settings dialog on a bare frame
+
+
 def test_reconciliation_never_uses_set_iteration_as_a_saved_order():
     assert reconcile_pin_order([], {C, B, A}, seed=[A, B, C]) == [A, B, C]
     assert reconcile_pin_order([], {C, B, A}) == sorted((A, B, C))
