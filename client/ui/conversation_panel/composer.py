@@ -39,7 +39,8 @@ _CARET_KEYS = frozenset((
 # user may press Shift or Control just to stop speech.
 _MODIFIER_KEYS = frozenset((
     wx.WXK_SHIFT, wx.WXK_CONTROL, wx.WXK_ALT, wx.WXK_RAW_CONTROL,
-    wx.WXK_WINDOWS_LEFT, wx.WXK_WINDOWS_RIGHT, wx.WXK_INSERT, wx.WXK_CAPITAL,
+    wx.WXK_WINDOWS_LEFT, wx.WXK_WINDOWS_RIGHT, wx.WXK_INSERT,
+    wx.WXK_NUMPAD_INSERT, wx.WXK_CAPITAL,
 ))
 
 

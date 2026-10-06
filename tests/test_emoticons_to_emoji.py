@@ -16,6 +16,7 @@ from core.emoticons import (
     caret_value_index,
     convert_trailing_emoticon,
     emoticon_before_caret,
+    emoticon_setting_enabled,
     emoticons_enabled,
 )
 from core.utils import DEFAULT_SETTINGS
@@ -48,6 +49,14 @@ class TestEmoticonBeforeCaret:
     ])
     def test_does_not_convert_what_is_not_a_standalone_token(self, text):
         assert emoticon_before_caret(text) is None
+
+    def test_list_labels_are_never_touched(self):
+        # "B)" is deliberately not a token: "A) yes B) no" is a list, not a
+        # pair of sunglasses. "B-)" still converts.
+        assert "B)" not in EMOTICONS
+        assert emoticon_before_caret("A) yes B)") is None
+        assert convert_trailing_emoticon("A) yes B)") == "A) yes B)"
+        assert emoticon_before_caret("cool B-)") == ("B-)", "😎")
 
     def test_does_not_convert_inside_code(self):
         assert emoticon_before_caret("`x :D") is None
@@ -84,6 +93,14 @@ class TestSetting:
         assert DEFAULT_SETTINGS["general"]["convert_emoticons"] is True
         assert emoticons_enabled({}) is True
         assert emoticons_enabled(None) is True
+
+    def test_the_dialog_guard_reads_the_stored_value_like_the_composer(self):
+        # Settings loads its checkbox through this; anything but an explicit
+        # False is "on", exactly as emoticons_enabled() treats it.
+        assert emoticon_setting_enabled(True) is True
+        assert emoticon_setting_enabled(None) is True
+        assert emoticon_setting_enabled("garbage") is True
+        assert emoticon_setting_enabled(False) is False
 
     def test_explicitly_off(self):
         assert emoticons_enabled({"convert_emoticons": False}) is False
@@ -288,6 +305,15 @@ class TestComposerKeyHandling:
         assert event.skipped is True  # an ordinary Backspace for the control
         assert panel.message_field.GetValue() == "ok 😃 "
 
+    def test_numpad_insert_alone_keeps_the_undo(self, after):
+        # NVDA's modifier on a laptop layout is Caps Lock, on a desktop one
+        # Insert — either the main or the numpad one.
+        panel = self._panel()
+        _type(panel, " ", after)
+        panel._on_message_field_key_down(_KeyEvent(wx.WXK_NUMPAD_INSERT))
+        panel._on_message_field_key_down(_KeyEvent(wx.WXK_BACK))
+        assert panel.message_field.GetValue() == "ok :D "
+
     def test_shift_alone_keeps_the_undo(self, after):
         panel = self._panel()
         _type(panel, " ", after)
@@ -344,3 +370,53 @@ class TestRealTextCtrl:
             assert panel.message_field.GetInsertionPoint() == panel.message_field.GetLastPosition()
         finally:
             frame.Destroy()
+
+
+class _SendPanel(_Panel):
+    """on_send_message() on the stub, recording what would go out."""
+    on_send_message = ConversationsPanel.on_send_message
+
+    def __init__(self, text, editing=None):
+        super().__init__(text)
+        self.conversation = {"remoteJid": "5511999999999@s.whatsapp.net"}
+        self._editing_message_id = editing
+        self.main_window.ensure_meta_ai_terms = lambda jid: True
+        self.sent = []
+        self.edited = []
+
+    def _send_new_text_message(self, text, remote_jid):
+        self.sent.append(text)
+
+    def _apply_message_edit(self, text, remote_jid):
+        self.edited.append(text)
+
+
+class TestSendPath:
+    def test_enter_right_after_an_emoticon_sends_the_emoji(self):
+        panel = _SendPanel("ok :D")
+        panel.on_send_message(None)
+        assert panel.sent == ["ok 😃"]
+
+    def test_an_emoticon_undone_with_backspace_is_sent_as_typed(self, after):
+        panel = _SendPanel("ok :/")
+        _type(panel, " ", after)
+        assert panel.message_field.GetValue() == "ok 😕 "
+        assert panel._undo_emoticon_conversion() is True
+        panel.on_send_message(None)
+        assert panel.sent == ["ok :/"]
+
+    def test_the_undo_only_spares_the_text_it_left(self, after):
+        # Typing on after the undo makes a different message; a new trailing
+        # emoticon there converts as usual.
+        panel = _SendPanel("ok :/")
+        _type(panel, " ", after)
+        panel._undo_emoticon_conversion()
+        panel.message_field.type("then :D")
+        panel.on_send_message(None)
+        assert panel.sent == ["ok :/ then 😃"]
+
+    def test_an_edit_is_saved_exactly_as_typed(self):
+        panel = _SendPanel("fixed it :D", editing="MSGID")
+        panel.on_send_message(None)
+        assert panel.edited == ["fixed it :D"]
+        assert panel.sent == []

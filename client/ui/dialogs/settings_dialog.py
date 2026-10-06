@@ -14,6 +14,7 @@ from core.audio_devices import (
     enumerate_output_devices, enumerate_input_devices, test_input_device,
 )
 from core.spell_checker import SPELL_CHECK_MODES, spell_check_mode
+from core.emoticons import emoticon_setting_enabled
 from core.notification_manager import NOTIFICATION_CONTENT_LEVELS
 from core.attachment_types import PASTED_AUDIO_MODES
 from core.reaction_shortcuts import (
@@ -1581,7 +1582,7 @@ class SettingsDialog(wx.Dialog):
         self._apply_spell_check_mode()
 
         convert_emoticons = self.main_window.settings.get("general", {}).get("convert_emoticons", True)
-        self._convert_emoticons_check.SetValue(convert_emoticons)
+        self._convert_emoticons_check.SetValue(emoticon_setting_enabled(convert_emoticons))
 
         # "off" unless the user chose otherwise — including for installs
         # whose settings.json predates the option and has no key at all.

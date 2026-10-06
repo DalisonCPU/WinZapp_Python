@@ -41,9 +41,6 @@ class TextSendingMixin:
         text = normalize_line_separators(self.message_field.GetValue()).strip()
         if not text:
             return
-        # Enter right after an emoticon never typed the boundary that would
-        # have converted it in the field (emoticon_conversion.py).
-        text = self._text_with_trailing_emoticon(text)
         remote_jid = self.conversation.get("remoteJid", "")
         if not remote_jid:
             return
@@ -73,6 +70,11 @@ class TextSendingMixin:
         if not self.main_window.ensure_meta_ai_terms(remote_jid):
             self._last_sent_signature = None
             return
+        # Enter right after an emoticon never typed the boundary that would
+        # have converted it in the field (emoticon_conversion.py). New sends
+        # only: an edit keeps exactly the text the person corrected, so
+        # saving an old message ending in ":/" does not quietly change it.
+        text = self._text_with_trailing_emoticon(text)
         self._send_new_text_message(text, remote_jid)
 
     def _apply_message_edit(self, text: str, remote_jid: str):

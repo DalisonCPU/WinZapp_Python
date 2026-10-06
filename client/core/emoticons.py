@@ -47,7 +47,6 @@ EMOTICONS = {
     "<3": "❤️",
     "XD": "😆",
     "xD": "😆",
-    "B)": "😎",
     "B-)": "😎",
 }
 
@@ -61,16 +60,23 @@ _TOKENS_LONGEST_FIRST = sorted(EMOTICONS, key=len, reverse=True)
 BOUNDARY_CHARS = frozenset(" \t\n.,!?")
 
 
-def emoticons_enabled(general) -> bool:
-    """Settings > Geral > "Convert emoticons like :D to emoji while typing".
+def emoticon_setting_enabled(value) -> bool:
+    """The stored ``convert_emoticons`` value -> whether conversion is on.
 
     On unless explicitly switched off: a settings.json from before the option
     existed gets the default through backfill_missing_defaults(), and a
-    damaged section must not quietly turn the feature off either.
+    damaged value must not quietly turn the feature off either. The Settings
+    dialog loads its checkbox through this too, so the box never shows a
+    state the composer does not act on.
     """
+    return value is not False
+
+
+def emoticons_enabled(general) -> bool:
+    """Settings > Geral > "Convert emoticons like :D to emoji while typing"."""
     if not isinstance(general, dict):
         return True
-    return general.get("convert_emoticons", True) is not False
+    return emoticon_setting_enabled(general.get("convert_emoticons", True))
 
 
 def _inside_code(text_before: str) -> bool:

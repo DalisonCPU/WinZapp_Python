@@ -108,10 +108,29 @@ class EmoticonConversionMixin:
             return False
         field.SetSelection(start, end)
         field.WriteText(original)
+        # Remember the text up to and including the restored token, so the
+        # send path does not convert the very emoticon just undone: "ok :/ "
+        # + Backspace + Enter has to send ":/". The boundary is a single
+        # character in GetValue() even when it is a Windows line break.
+        text = field.GetValue()
+        newline_width = 2 if os.name == "nt" and "\r\n" not in text else 1
+        caret = caret_value_index(text, field.GetInsertionPoint(), newline_width,
+                                  platform_counts_utf16())
+        self._emoticon_undone = text[:caret - 1]
         return True
 
     def _text_with_trailing_emoticon(self, text: str) -> str:
-        """The text to send: "ok :D" + Enter goes out as "ok 😃"."""
+        """The text to send: "ok :D" + Enter goes out as "ok 😃".
+
+        Except when that trailing emoticon is one the person undid with
+        Backspace: the message is then exactly the text left by the undo
+        (anything typed since would have changed it), and converting it
+        here would redo what they explicitly took back.
+        """
+        undone = getattr(self, "_emoticon_undone", None)
+        self._emoticon_undone = None
         if not self._emoticon_conversion_enabled():
+            return text
+        if undone is not None and undone.strip() == text:
             return text
         return convert_trailing_emoticon(text)

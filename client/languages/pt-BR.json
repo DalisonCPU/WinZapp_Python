@@ -394,7 +394,7 @@
     "spell_check_mode_windows_macos": "Seguir a configuração do macOS (padrão)",
     "spell_check_mode_on": "Sempre ativada",
     "spell_check_mode_off": "Sempre desativada",
-    "convert_emoticons_label": "Converter emoticons como :D em emojis ao digitar",
+    "convert_emoticons_label": "Converter &emoticons como :D em emojis ao digitar",
     "search_normalization_label": "&Normalização Unicode nas pesquisas",
     "search_normalization_off": "Desativada (padrão): a pesquisa casa exatamente o que você digitar",
     "search_normalization_nfd": "Ignorar acentos: \"reuniao\" encontra \"reunião\"",
