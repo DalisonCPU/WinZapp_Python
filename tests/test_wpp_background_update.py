@@ -262,7 +262,7 @@ class TestTheBuildHappensBehindARunningServer:
         _started(env, window)
         env.run_threads()
 
-        assert env.discarded.count(env.api + "_staging") >= 2
+        assert env.discarded.count(env.api + "_staging") == 2
 
     def test_startup_deletes_only_what_a_swap_moved_aside(self, env):
         """api_old and api_staging belong to an update in progress, possibly

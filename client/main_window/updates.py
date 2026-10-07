@@ -264,7 +264,6 @@ class UpdatesMixin:
                                         api_dir, build_dir, attempts=4, pause=0.5)
                 except api_staging.SwapError:
                     logging.exception("[wpp_update] Could not install the staged API")
-                    threading.Thread(target=api_staging.discard, args=(build_dir,), daemon=True).start()
                     return wx.ID_CANCEL, False
             return result, user_cancelled
 
@@ -318,12 +317,6 @@ class UpdatesMixin:
                             wx.OK | wx.ICON_ERROR,
                             announce=lambda: self.output(self.i18n.t("wpp_update_failed_msg"), interrupt=True),
                         )
-                    if not staged_dir:
-                        # A failed or cancelled build leaves its half-built tree
-                        # behind; it would count against the room check of
-                        # every later update.
-                        threading.Thread(target=api_staging.discard, args=(build_dir,),
-                                         daemon=True).start()
                     # Normally the previous API is intact. The bundled minimum
                     # is still the last resort for an already-missing server.
                     minimum = homologated_wpp_tag(resource_path("wpp_minimum_version.txt"))
@@ -337,6 +330,13 @@ class UpdatesMixin:
                         else:
                             logging.error("[wpp_update] Restoring %s failed too; the "
                                           "server stays down until the next start.", minimum)
+                    # A failed or cancelled build leaves its half-built tree
+                    # behind; it would count against the room check of every
+                    # later update. After the rollback above, which builds
+                    # into the same directory. Nothing is left to delete when
+                    # that build was swapped in.
+                    threading.Thread(target=api_staging.discard, args=(build_dir,),
+                                     daemon=True).start()
                     restart_api_after_update(self, api_dir, backup,
                                              lambda _ok: _validated(False, report_failure=False))
                     deferred = True
