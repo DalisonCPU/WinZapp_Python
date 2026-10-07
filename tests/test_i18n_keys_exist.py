@@ -26,7 +26,7 @@ from tests.locales import load_strings, registered_locale_codes
 
 #: Read from language_map.json — the same source tests/test_language_files_in_sync.py
 #: uses — rather than hardcoded here. The set of locales is data, not code: a
-#: locale is added by dropping in `<code>.json` plus an entry in that map, with
+#: locale is added by a PO catalog plus an entry in that map, with
 #: no rebuild. A list repeated in this file would leave a locale added that way
 #: checked against the other locales but never against the keys the code
 #: actually asks for, which is the one gap this test exists to close.
