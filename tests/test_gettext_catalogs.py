@@ -135,8 +135,15 @@ class TestTranslatorWorkflow:
         path.parent.mkdir()
         path.write_text("invalid Python !!!", encoding="utf-8")
         assert source_references(example_root) == {
-            "first": [("client/panel.py", "1")], "message": [("client/panel.py", "2")]
+            "first": [("client/panel.py", "")], "message": [("client/panel.py", "")]
         }
+
+    def test_moving_a_call_inside_a_source_file_does_not_make_catalogs_stale(self, example_root):
+        """Line numbers are not part of the freshness check: an unrelated edit
+        above an i18n.t() call must not fail every build until regenerated."""
+        panel = example_root / "client/panel.py"
+        panel.write_text("# unrelated edit\n\n" + panel.read_text(encoding="utf-8"), encoding="utf-8")
+        check_freshness(example_root / "translations", updated_catalogs(example_root))
 
     def test_unknown_literal_key_is_rejected(self, example_root):
         (example_root / "client/missing.py").write_text("i18n.t('unknown')", encoding="utf-8")

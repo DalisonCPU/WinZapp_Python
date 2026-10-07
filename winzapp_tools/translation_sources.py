@@ -86,7 +86,11 @@ def active_entries(catalog: polib.POFile) -> dict[str, polib.POEntry]:
 
 
 def source_references(root: Path) -> dict[str, list[tuple[str, str]]]:
-    """AST scan handles single quotes and multiline calls without importing UI."""
+    """AST scan handles single quotes and multiline calls without importing UI.
+
+    References name the file only, never the line: a line number moves whenever
+    anything above the call changes, which would mark every catalog stale (and
+    fail every build) for an edit unrelated to translations."""
     refs: dict[str, set[tuple[str, str]]] = {}
     client = root / "client"
     for path in sorted(client.rglob("*.py")):
@@ -102,7 +106,5 @@ def source_references(root: Path) -> dict[str, list[tuple[str, str]]]:
                        or (isinstance(receiver, ast.Attribute) and receiver.attr == "i18n"))
             key = node.args[0]
             if is_i18n and isinstance(key, ast.Constant) and isinstance(key.value, str):
-                refs.setdefault(key.value, set()).add(
-                    (path.relative_to(root).as_posix(), str(node.lineno))
-                )
+                refs.setdefault(key.value, set()).add((path.relative_to(root).as_posix(), ""))
     return {key: sorted(places) for key, places in refs.items()}
