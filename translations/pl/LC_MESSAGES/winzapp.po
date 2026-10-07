@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:899
+#: client/main_window/window_chrome.py:910
 msgctxt "about_community_thanks"
 msgid ""
 "Fabiano Ferreira, Tadeu Junior, Wagner Soares da Silva, Eduardo Ferreira, "
@@ -23,20 +23,20 @@ msgstr ""
 "wprowadzając ulepszenia lub zgłaszając sugestie i błędy."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:902
+#: client/main_window/window_chrome.py:913
 #, python-brace-format
 msgctxt "about_current_version"
 msgid "Current version: {version}."
 msgstr "Obecna wersja: {version}."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:894
+#: client/main_window/window_chrome.py:905
 msgctxt "about_developed_by"
 msgid "Originally developed by: Gabriel Haberkamp."
 msgstr "Pierwotnie stworzony przez: Gabriel Haberkamp."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:909
+#: client/main_window/window_chrome.py:920
 msgctxt "about_dialog_title"
 msgid "About WinZapp"
 msgstr "O programie WinZapp"
@@ -49,13 +49,13 @@ msgid "About"
 msgstr "Informacje"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:903
+#: client/main_window/window_chrome.py:914
 msgctxt "about_license"
 msgid "Licensed under the GNU General Public License V3 (GPLv3)."
 msgstr "Udostępniany na licencji GNU General Public License V3 (GPLv3)."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:898
+#: client/main_window/window_chrome.py:909
 msgctxt "about_main_contributors"
 msgid ""
 "Juan Mathews Rebelo Santos, João Jorge, Gustavo Barrios, Vinícius Siqueira, "
@@ -65,13 +65,13 @@ msgstr ""
 "Matheus Cauduro, Igor Alves i Pedro Dias: główni współtwórcy."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:896
+#: client/main_window/window_chrome.py:907
 msgctxt "about_special_thanks"
 msgid "Special thanks:"
 msgstr "Szczególne podziękowania:"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:897
+#: client/main_window/window_chrome.py:908
 msgctxt "about_translation_thanks"
 msgid ""
 "Wendrill Aksenow Brandão: for translating WinZapp into European Portuguese."
@@ -79,7 +79,7 @@ msgstr ""
 "Wendrill Aksenow Brandão: za tłumaczenie WinZapp na portugalski europejski."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:900
+#: client/main_window/window_chrome.py:911
 msgctxt "about_translation_thanks_pl"
 msgid ""
 "Michał Dziwisz: for the Polish translation, multi-account support, and other"
@@ -133,14 +133,14 @@ msgid "Re&store"
 msgstr "&Przywróć"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:481
+#: client/main_window/window_chrome.py:492
 #, python-brace-format
 msgctxt "acc_close_current_done"
 msgid "Account {name} closed."
 msgstr "Konto {name} zostało zamknięte."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:470
+#: client/main_window/window_chrome.py:481
 msgctxt "acc_close_current_last_confirm"
 msgid ""
 "No other account is open. Closing this account will quit WinZapp. Do you "
@@ -218,7 +218,7 @@ msgid "Only accounts awaiting pairing can be connected."
 msgstr "Połączyć można tylko konta oczekujące na parowanie."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po client/account_ui.py:372
-#: client/main_window/window_chrome.py:471
+#: client/main_window/window_chrome.py:482
 msgctxt "acc_menu_close_current"
 msgid "Close current account"
 msgstr "Zamknij bieżące konto"
@@ -234,7 +234,7 @@ msgid "Switch account…"
 msgstr "Przełącz konto…"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:155
+#: client/main_window/window_chrome.py:166
 msgctxt "acc_menu_title"
 msgid "Accounts"
 msgstr "Konta"
@@ -377,8 +377,8 @@ msgid "Ctrl+Right"
 msgstr "Ctrl+Strzałka w prawo"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:517
-#: client/main_window/window_chrome.py:617
+#: client/main_window/window_chrome.py:528
+#: client/main_window/window_chrome.py:628
 msgctxt "account_switch_failed"
 msgid "Could not switch accounts. The other WinZapp process failed to start."
 msgstr ""
@@ -1308,7 +1308,7 @@ msgstr ""
 "zostały usunięte z tego komputera."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/wpp_server.py:394
+#: client/main_window/wpp_server.py:395
 msgctxt "api_files_missing_error"
 msgid ""
 "The essential file \"start.js\" from the \"api\" folder was not found. "
@@ -1505,7 +1505,7 @@ msgid "WinZapp | Starting WPPConnect, please wait..."
 msgstr "WinZapp | Uruchamianie WPPConnect, proszę czekać..."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/wpp_server.py:1721
+#: client/main_window/wpp_server.py:1727
 msgctxt "api_startup_warning"
 msgid "WinZapp API failed to start in time. The program will now close."
 msgstr ""
@@ -1532,9 +1532,9 @@ msgctxt "api_update_continue"
 msgid "&Continue with current WPPConnect version (not recommended)"
 msgstr "&Kontynuuj z obecną wersją WPPConnect (niezalecane)"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:247
-#: client/main_window/wpp_background_update.py:159
-#: client/main_window/wpp_server.py:790
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:274
+#: client/main_window/wpp_background_update.py:155
+#: client/main_window/wpp_server.py:791
 msgctxt "api_update_dialog_title"
 msgid "WinZapp | Downloading and updating WPPConnect"
 msgstr "WinZapp | Pobieranie i aktualizowanie WPPConnect"
@@ -2278,7 +2278,7 @@ msgstr "Ustawienia wideo połączenia"
 #: client/ui/conversation_panel/forwarding.py:354
 #: client/ui/conversation_panel/message_actions.py:157
 #: client/ui/conversation_panel/message_actions.py:248
-#: client/ui/conversation_panel/reactions.py:72
+#: client/ui/conversation_panel/reactions.py:78
 #: client/ui/dialogs/add_member_dialog.py:159
 #: client/ui/dialogs/add_member_dialog.py:312
 #: client/ui/dialogs/attach_contact_dialog.py:56
@@ -2754,7 +2754,7 @@ msgid "Clear selected chats"
 msgstr "Wyczyść zaznaczone czaty"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po client/account_ui.py:423
-#: client/main.py:1610 client/main_window/window_chrome.py:921
+#: client/main.py:1611 client/main_window/window_chrome.py:932
 #: client/status_panel.py:234 client/status_panel.py:273
 #: client/status_panel.py:509 client/status_panel.py:510
 #: client/status_tab/status_composer.py:169
@@ -2816,7 +2816,7 @@ msgctxt "connection_custom_api_label"
 msgid "Use custom API (remote server)"
 msgstr "Użyj niestandardowego API (serwer zdalny)"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1166
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1167
 #: client/ui/dialogs/connect.py:1031 client/ui/dialogs/connect.py:1068
 #: client/ui/dialogs/connect.py:1244 client/ui/dialogs/connect.py:1638
 #: client/ui/dialogs/connect.py:1653
@@ -2837,7 +2837,7 @@ msgid "Internet connection lost."
 msgstr "Utracono połączenie z internetem."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/connection.py:961
+#: client/main_window/connection.py:968
 msgctxt "connection_restored"
 msgid "Internet connection restored."
 msgstr "Połączenie z internetem przywrócone."
@@ -3056,7 +3056,7 @@ msgctxt "copy_caption"
 msgid "Copy caption"
 msgstr "Kopiuj podpis"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1605
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1606
 msgctxt "copy_error_text"
 msgid "&Copy error text to clipboard"
 msgstr "&Kopiuj tekst błędu do schowka"
@@ -3406,7 +3406,7 @@ msgid "Remove as group admin"
 msgstr "Odbierz uprawnienia administratora grupy"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/core/websocket_client.py:1443 client/main.py:1155
+#: client/core/websocket_client.py:1443 client/main.py:1156
 #: client/main_window/account_link.py:975
 msgctxt "device_logged_out"
 msgid ""
@@ -3423,7 +3423,7 @@ msgid "Discard voice message"
 msgstr "Odrzuć wiadomość głosową"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:938
+#: client/main_window/window_chrome.py:949
 msgctxt "disconnect_confirm_msg"
 msgid ""
 "Are you sure you want to disconnect? This will remove the pairing and local "
@@ -3433,7 +3433,7 @@ msgstr ""
 " lokalnych tego konta."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:939
+#: client/main_window/window_chrome.py:950
 msgctxt "disconnect_confirm_title"
 msgid "Disconnect"
 msgstr "Rozłącz"
@@ -3688,7 +3688,7 @@ msgstr "&Wpisz swój numer telefonu"
 #: translations/en-US/LC_MESSAGES/winzapp.po client/account_ui.py:596
 #: client/core/sound_system.py:447 client/core/sound_system.py:911
 #: client/core/sound_system.py:927 client/core/websocket_client.py:1444
-#: client/core/websocket_client.py:693 client/main.py:1156 client/main.py:1584
+#: client/core/websocket_client.py:693 client/main.py:1157 client/main.py:1585
 #: client/main_window/account_link.py:976
 #: client/main_window/chat_actions.py:164
 #: client/main_window/chat_actions.py:323
@@ -3704,9 +3704,9 @@ msgstr "&Wpisz swój numer telefonu"
 #: client/main_window/settings.py:1145 client/main_window/settings.py:304
 #: client/main_window/settings.py:466 client/main_window/settings.py:672
 #: client/main_window/settings.py:862 client/main_window/sync.py:1469
-#: client/main_window/window_chrome.py:518
-#: client/main_window/window_chrome.py:618
-#: client/main_window/wpp_server.py:395
+#: client/main_window/window_chrome.py:529
+#: client/main_window/window_chrome.py:629
+#: client/main_window/wpp_server.py:396
 #: client/ui/conversation_panel/media_files.py:302
 #: client/ui/conversation_panel/media_files.py:369
 #: client/ui/conversation_panel/media_files.py:420
@@ -3736,12 +3736,12 @@ msgctxt "error"
 msgid "{app_name} Error"
 msgstr "Błąd {app_name}"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1625
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1626
 msgctxt "error_copied"
 msgid "Error text copied."
 msgstr "Tekst błędu skopiowany."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1594
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1595
 msgctxt "error_details"
 msgid "Error details:"
 msgstr "Szczegóły błędu:"
@@ -4361,7 +4361,7 @@ msgctxt "incoming_call_announcement"
 msgid "{name} is calling you."
 msgstr "{name} dzwoni do ciebie."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1202
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1203
 #: client/main_window/shortcuts.py:185
 msgctxt "incoming_call_answer_button"
 msgid "&Answer"
@@ -4406,7 +4406,7 @@ msgctxt "incoming_call_popup_title"
 msgid "Incoming call"
 msgstr "Połączenie przychodzące"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1209
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1210
 #: client/main_window/shortcuts.py:188
 msgctxt "incoming_call_reject_button"
 msgid "&Reject"
@@ -4418,7 +4418,7 @@ msgctxt "incoming_call_reject_failed"
 msgid "Could not reject the call: {error}"
 msgstr "Nie udało się odrzucić połączenia: {error}"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1216
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1217
 #: client/main_window/shortcuts.py:191
 msgctxt "incoming_call_silence_button"
 msgid "&Silence alert"
@@ -4710,7 +4710,7 @@ msgid "Don't show again"
 msgstr "Nie pokazuj ponownie"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:1034
+#: client/main_window/window_chrome.py:1045
 msgctxt "mark_all_read_none"
 msgid "There are no unread chats."
 msgstr "Brak nieprzeczytanych czatów."
@@ -4989,128 +4989,128 @@ msgid "Mentions in this message"
 msgstr "Wzmianki w tej wiadomości"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:220
-#: client/main_window/window_chrome.py:863
+#: client/main_window/window_chrome.py:231
+#: client/main_window/window_chrome.py:874
 msgctxt "menu_about"
 msgid "About the program"
 msgstr "O programie"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:813
-#: client/main_window/window_chrome.py:99
+#: client/main_window/window_chrome.py:110
+#: client/main_window/window_chrome.py:824
 msgctxt "menu_disconnect"
 msgid "&Disconnect"
 msgstr "&Rozłącz"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:104
-#: client/main_window/window_chrome.py:816
+#: client/main_window/window_chrome.py:115
+#: client/main_window/window_chrome.py:827
 msgctxt "menu_exit"
 msgid "E&xit"
 msgstr "Za&kończ"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:807
-#: client/main_window/window_chrome.py:94
+#: client/main_window/window_chrome.py:105
+#: client/main_window/window_chrome.py:818
 msgctxt "menu_export_settings"
 msgid "&Export settings..."
 msgstr "&Eksportuj ustawienia..."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:106
-#: client/main_window/window_chrome.py:799
+#: client/main_window/window_chrome.py:117
+#: client/main_window/window_chrome.py:810
 msgctxt "menu_file"
 msgid "&File"
 msgstr "&Plik"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:217
-#: client/main_window/window_chrome.py:857
+#: client/main_window/window_chrome.py:228
+#: client/main_window/window_chrome.py:868
 msgctxt "menu_force_reinstall_wpp"
 msgid "Force reinstall &WPPConnect"
 msgstr "Wymuś ponowną instalację &WPPConnect"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:216
-#: client/main_window/window_chrome.py:854
+#: client/main_window/window_chrome.py:227
+#: client/main_window/window_chrome.py:865
 msgctxt "menu_force_reinstall_zip"
 msgid "Force reinstall from &ZIP file"
 msgstr "Wymuś ponowną instalację z pliku &ZIP"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:215
-#: client/main_window/window_chrome.py:851
+#: client/main_window/window_chrome.py:226
+#: client/main_window/window_chrome.py:862
 msgctxt "menu_force_update"
 msgid "&Check for updates"
 msgstr "&Sprawdź aktualizacje"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:221
-#: client/main_window/window_chrome.py:836
-#: client/main_window/window_chrome.py:846
+#: client/main_window/window_chrome.py:232
+#: client/main_window/window_chrome.py:847
+#: client/main_window/window_chrome.py:857
 msgctxt "menu_help"
 msgid "&Help"
 msgstr "Pomo&c"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:810
-#: client/main_window/window_chrome.py:95
+#: client/main_window/window_chrome.py:106
+#: client/main_window/window_chrome.py:821
 msgctxt "menu_import_settings"
 msgid "&Import settings..."
 msgstr "&Importuj ustawienia..."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:801
-#: client/main_window/window_chrome.py:84
+#: client/main_window/window_chrome.py:812
+#: client/main_window/window_chrome.py:95
 msgctxt "menu_mark_all_read"
 msgid "Mark all chats as read"
 msgstr "Oznacz wszystkie czaty jako przeczytane"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:112
-#: client/main_window/window_chrome.py:820
+#: client/main_window/window_chrome.py:123
+#: client/main_window/window_chrome.py:831
 msgctxt "menu_resync_all"
 msgid "&Resync all chats"
 msgstr "&Zsynchronizuj ponownie wszystkie czaty"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:116
-#: client/main_window/window_chrome.py:823
+#: client/main_window/window_chrome.py:127
+#: client/main_window/window_chrome.py:834
 msgctxt "menu_resync_conversation"
 msgid "Resync this &chat"
 msgstr "Zsynchronizuj ponownie ten &czat"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:804
-#: client/main_window/window_chrome.py:89
+#: client/main_window/window_chrome.py:100
+#: client/main_window/window_chrome.py:815
 msgctxt "menu_settings"
 msgid "&Settings"
 msgstr "&Ustawienia"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:212
-#: client/main_window/window_chrome.py:848
+#: client/main_window/window_chrome.py:223
+#: client/main_window/window_chrome.py:859
 msgctxt "menu_shortcuts"
 msgid "Keyboard shortcuts"
 msgstr "Skróty klawiszowe"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:127
-#: client/main_window/window_chrome.py:818
+#: client/main_window/window_chrome.py:138
+#: client/main_window/window_chrome.py:829
 msgctxt "menu_sync"
 msgid "S&ync"
 msgstr "S&ynchronizacja"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:120
-#: client/main_window/window_chrome.py:826
+#: client/main_window/window_chrome.py:131
+#: client/main_window/window_chrome.py:837
 msgctxt "menu_sync_media"
 msgid "&Download media"
 msgstr "Synchronizuj &multimedia"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:219
-#: client/main_window/window_chrome.py:860
+#: client/main_window/window_chrome.py:230
+#: client/main_window/window_chrome.py:871
 msgctxt "menu_whats_new"
 msgid "&What's New"
 msgstr "&Nowości"
@@ -5931,20 +5931,20 @@ msgid "Offline Mode"
 msgstr "Tryb offline"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/connection.py:1075
-#: client/main_window/window_chrome.py:1170
+#: client/main_window/connection.py:1082
+#: client/main_window/window_chrome.py:1191
 msgctxt "offline_mode_auto_enabled"
 msgid "No connection to WhatsApp. Offline mode enabled automatically."
 msgstr "Brak połączenia z WhatsApp. Tryb offline włączony automatycznie."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:1172
+#: client/main_window/window_chrome.py:1193
 msgctxt "offline_mode_disabled"
 msgid "Offline mode disabled."
 msgstr "Tryb offline wyłączony."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:1162
+#: client/main_window/window_chrome.py:1183
 msgctxt "offline_mode_enabled"
 msgid "Offline mode enabled. Some features may be unavailable."
 msgstr "Tryb offline włączony. Niektóre funkcje mogą być niedostępne."
@@ -6166,7 +6166,7 @@ msgid "Play recorded audio"
 msgstr "Odtwórz nagrane audio"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:1098
+#: client/main_window/window_chrome.py:1119
 msgctxt "preparing_to_sync"
 msgid "Preparing to sync..."
 msgstr "Przygotowywanie do synchronizacji..."
@@ -6464,13 +6464,13 @@ msgid "quoted message"
 msgstr "cytowana wiadomość"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/ui/conversation_panel/reactions.py:52
+#: client/ui/conversation_panel/reactions.py:58
 msgctxt "react_dialog_hint"
 msgid "Reaction emojis. Select one to react."
 msgstr "Emoji reakcji. Wybierz jedno, aby zareagować."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/ui/conversation_panel/reactions.py:52
+#: client/ui/conversation_panel/reactions.py:58
 msgctxt "react_dialog_hint_remove"
 msgid ""
 "Reaction emojis. The checked one is your current reaction — select it again "
@@ -6480,14 +6480,14 @@ msgstr ""
 " je usunąć."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/ui/conversation_panel/reactions.py:67
+#: client/ui/conversation_panel/reactions.py:73
 msgctxt "react_dialog_more"
 msgid "Add more reactions"
 msgstr "Dodaj więcej reakcji"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/ui/conversation_panel/reactions.py:43
-#: client/ui/conversation_panel/reactions.py:57
+#: client/ui/conversation_panel/reactions.py:49
+#: client/ui/conversation_panel/reactions.py:63
 msgctxt "react_dialog_title"
 msgid "React to message"
 msgstr "Zareaguj na wiadomość"
@@ -8619,7 +8619,7 @@ msgstr ""
 "Brak kont dostępnych do uruchomienia. Menedżer kont nie jest jeszcze "
 "dostępny."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1660
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1661
 #, python-brace-format
 msgctxt "startup_critical_message"
 msgid ""
@@ -8637,7 +8637,7 @@ msgstr ""
 "\n"
 "{details}"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1659
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1660
 msgctxt "startup_critical_title"
 msgid "WinZapp — Startup error"
 msgstr "WinZapp — Błąd uruchamiania"
@@ -9364,8 +9364,8 @@ msgid "total"
 msgstr "łącznie"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:900
-#: client/main_window/connection.py:1018 client/main_window/connection.py:1054
-#: client/main_window/connection.py:973
+#: client/main_window/connection.py:1025 client/main_window/connection.py:1061
+#: client/main_window/connection.py:980
 msgctxt "tray_connecting"
 msgid "connecting..."
 msgstr "łączenie..."
@@ -9381,9 +9381,9 @@ msgid "no unread messages"
 msgstr "brak nieprzeczytanych wiadomości"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po client/core/tray_manager.py:156
-#: client/core/tray_manager.py:191 client/main_window/window_chrome.py:1136
-#: client/main_window/window_chrome.py:124
-#: client/main_window/window_chrome.py:829
+#: client/core/tray_manager.py:191 client/main_window/window_chrome.py:1157
+#: client/main_window/window_chrome.py:135
+#: client/main_window/window_chrome.py:840
 msgctxt "tray_offline_mode"
 msgid "Offline mode"
 msgstr "Tryb offline"
@@ -9414,8 +9414,8 @@ msgid "1 unread message from {names}"
 msgstr "1 nieprzeczytana wiadomość od {names}"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/core/websocket_client.py:606 client/main.py:1171 client/main.py:1181
-#: client/main_window/connection.py:1061 client/main_window/connection.py:973
+#: client/core/websocket_client.py:606 client/main.py:1172 client/main.py:1182
+#: client/main_window/connection.py:1068 client/main_window/connection.py:980
 msgctxt "tray_wa_disconnected"
 msgid "WhatsApp disconnected"
 msgstr "WhatsApp rozłączony"
@@ -9832,7 +9832,7 @@ msgctxt "unblock_contact_failed"
 msgid "This contact could not be unblocked. Please try again in a moment."
 msgstr "Nie udało się odblokować tego kontaktu. Spróbuj ponownie za chwilę."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1590
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1591
 #, python-brace-format
 msgctxt "unexpected_error_message"
 msgid ""
@@ -10064,17 +10064,18 @@ msgstr ""
 "\n"
 "Czy chcesz spróbować ponownie?"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:188
-#: client/main_window/updates.py:277 client/main_window/updates.py:74
-#: client/main_window/wpp_background_update.py:138
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:192
+#: client/main_window/updates.py:297 client/main_window/updates.py:316
+#: client/main_window/updates.py:367 client/main_window/updates.py:79
+#: client/main_window/wpp_background_update.py:134
 #: client/update_background.py:147 client/updater.py:1502
 #: client/updater.py:1636 client/updater.py:1944
 msgctxt "update_error_title"
 msgid "Update error"
 msgstr "Błąd aktualizacji"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:71
-#: client/main_window/updates.py:73
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:76
+#: client/main_window/updates.py:78
 msgctxt "update_failed_previous"
 msgid ""
 "The last WinZapp update did not complete: the program files could not be "
@@ -10237,7 +10238,7 @@ msgctxt "voice_call_device_switch_failed"
 msgid "Could not open the new call audio device."
 msgstr "Nie udało się otworzyć nowego urządzenia audio dla połączenia."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1265
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1266
 #: client/main_window/shortcuts.py:201
 msgctxt "voice_call_end_button"
 msgid "Hang up"
@@ -10263,7 +10264,7 @@ msgctxt "voice_call_individual_only"
 msgid "Voice calling is not available in this chat."
 msgstr "Połączenie głosowe nie jest dostępne w tym czacie."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1267
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1268
 msgctxt "voice_call_mute_button"
 msgid "Mute microphone"
 msgstr "Wycisz mikrofon"
@@ -10273,7 +10274,7 @@ msgctxt "voice_call_playback_devices"
 msgid "Playback devices"
 msgstr "Urządzenia odtwarzania"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1271
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1272
 #: client/main_window/calls.py:1523
 msgctxt "voice_call_promote_video_button"
 msgid "Switch to video call"
@@ -10289,7 +10290,7 @@ msgctxt "voice_call_recording_devices"
 msgid "Recording devices"
 msgstr "Urządzenia nagrywania"
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1266
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1267
 #: client/main_window/shortcuts.py:204
 msgctxt "voice_call_settings_button"
 msgid "Settings"
@@ -10328,7 +10329,7 @@ msgctxt "voice_call_upgraded_to_video"
 msgid "The call is now a video call."
 msgstr "Połączenie zostało przełączone na wideo."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1272
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1273
 msgctxt "voice_call_video_off_button"
 msgid "Turn video off"
 msgstr "Wyłącz wideo"
@@ -10358,7 +10359,7 @@ msgstr ""
 "rozwiązać problem. Jeśli problem się powtarza, wybierz \"{option}\" w menu "
 "{menu}."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1255
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1256
 #: client/main_window/shortcuts.py:206
 msgctxt "voice_call_window_title"
 msgid "Voice call"
@@ -10662,7 +10663,7 @@ msgstr ""
 "Nie udało się potwierdzić zmiany. Odśwież listy przed ponowną próbą; zmiana "
 "mogła już zostać zastosowana."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1165
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main.py:1166
 #: client/ui/dialogs/connect.py:1031
 msgctxt "websocket_failed_reconnect"
 msgid ""
@@ -10690,13 +10691,13 @@ msgid "&Close"
 msgstr "&Zamknij"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:883
+#: client/main_window/window_chrome.py:894
 msgctxt "whats_new_none_message"
 msgid "No changelog is available for this version."
 msgstr "Brak dziennika zmian dla tej wersji."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/window_chrome.py:884
+#: client/main_window/window_chrome.py:895
 msgctxt "whats_new_none_title"
 msgid "No news"
 msgstr "Brak nowości"
@@ -10710,13 +10711,12 @@ msgstr "Co nowego w WinZapp"
 #, python-brace-format
 msgctxt "wpp_force_reinstall_confirm_msg"
 msgid ""
-"This will stop WPPConnect (if running), delete the current installation, and"
-" download and install the latest version (v{version}), without checking "
-"whether it's already the installed one. Continue?"
+"This will temporarily interrupt WPPConnect and download and reinstall the "
+"latest version (v{version}), even if it is already installed. Continue?"
 msgstr ""
-"Spowoduje to zatrzymanie WPPConnect (jeśli działa), usunięcie bieżącej "
-"instalacji oraz pobranie i zainstalowanie najnowszej wersji (v{version}), "
-"bez sprawdzania, czy jest to już zainstalowana wersja. Kontynuować?"
+"Spowoduje to tymczasowe przerwanie działania WPPConnect oraz pobranie i "
+"ponowną instalację najnowszej wersji (v{version}), nawet jeśli jest już "
+"zainstalowana. Kontynuować?"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po client/updater.py:1956
 msgctxt "wpp_force_reinstall_confirm_title"
@@ -10769,7 +10769,7 @@ msgid "WPPConnect update available"
 msgstr "Dostępna aktualizacja WPPConnect"
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/wpp_background_update.py:157
+#: client/main_window/wpp_background_update.py:153
 #, python-brace-format
 msgctxt "wpp_update_background_ready_msg"
 msgid ""
@@ -10779,7 +10779,7 @@ msgstr ""
 "Aktualizacja WPPConnect {version} została pobrana. WinZapp przejdzie na "
 "chwilę w tryb offline, aby ją zainstalować i ponownie uruchomić WPPConnect."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:171
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:175
 msgctxt "wpp_update_background_running"
 msgid ""
 "A WPPConnect update is already downloading in the background. You will be "
@@ -10789,7 +10789,7 @@ msgstr ""
 "gdy będzie gotowa do instalacji."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/wpp_background_update.py:92
+#: client/main_window/wpp_background_update.py:88
 msgctxt "wpp_update_background_started"
 msgid ""
 "Downloading the WPPConnect update in the background. You will be told when "
@@ -10798,14 +10798,14 @@ msgstr ""
 "Pobieranie aktualizacji WPPConnect w tle. Otrzymasz powiadomienie, gdy "
 "będzie gotowa do instalacji."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:316
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:374
 msgctxt "wpp_update_complete"
 msgid "WPPConnect updated and restarted successfully."
 msgstr "WPPConnect zaktualizowany i uruchomiony ponownie pomyślnie."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:276
-#: client/main_window/updates.py:279
-#: client/main_window/wpp_background_update.py:137
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:315
+#: client/main_window/updates.py:318 client/main_window/updates.py:366
+#: client/main_window/wpp_background_update.py:133
 msgctxt "wpp_update_failed_msg"
 msgid ""
 "Could not update WPPConnect. The previous installation will be kept, if "
@@ -10823,13 +10823,24 @@ msgstr ""
 "Nie udało się sprawdzić najnowszej wersji WPPConnect. Sprawdź połączenie z "
 "internetem i spróbuj ponownie."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:207
-#: client/main_window/updates.py:291
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:206
+#: client/main_window/updates.py:327
 msgctxt "wpp_update_in_progress"
 msgid "Updating WPPConnect. Please wait."
 msgstr "Aktualizowanie WPPConnect. Proszę czekać."
 
-#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:187
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:296
+msgctxt "wpp_update_not_enough_space"
+msgid ""
+"There is not enough free space to prepare the update and keep the previous "
+"WPPConnect version. Free up disk space and try again. The current "
+"installation was preserved."
+msgstr ""
+"Brak wystarczającej ilości wolnego miejsca, aby przygotować aktualizację i "
+"zachować poprzednią wersję WPPConnect. Zwolnij miejsce na dysku i spróbuj "
+"ponownie. Bieżąca instalacja została zachowana."
+
+#: translations/en-US/LC_MESSAGES/winzapp.po client/main_window/updates.py:191
 msgctxt "wpp_update_other_account_msg"
 msgid ""
 "Another WinZapp account is still using the WPPConnect Server. Close the "
@@ -10839,7 +10850,7 @@ msgstr ""
 "konta i spróbuj ponownie."
 
 #: translations/en-US/LC_MESSAGES/winzapp.po
-#: client/main_window/wpp_server.py:1252
+#: client/main_window/wpp_server.py:1254
 msgctxt "wpp_version_unpinned_warning"
 msgid ""
 "Warning: could not pin the WhatsApp Web version. Sending to individual "
