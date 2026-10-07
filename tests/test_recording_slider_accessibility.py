@@ -4,11 +4,11 @@ No wx application/windows: execute production provider and composer methods.
 The fallback models the reported native label '100', not a live NVDA capture.
 """
 import ast
-import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
+from tests.locales import load_strings
 from tests.test_system_audio_ui import ROOT, bind
 
 
@@ -45,7 +45,6 @@ class RecordingSliderNameTests(unittest.TestCase):
             sliders.append(slider)
             return slider
         wx.Slider = make_slider
-        from tests.locales import load_strings
         pl = load_strings("pl")
         p = SimpleNamespace(_voice_panel=object(), _send_voice_btn=object(),
             main_window=SimpleNamespace(settings={}, i18n=SimpleNamespace(t=pl.__getitem__)),
