@@ -910,7 +910,7 @@ def assemble_staging():
 
     langs_src = os.path.join(BUILD_DIR, "languages")
     shutil.copytree(langs_src, os.path.join(STAGING_DIR, "languages"))
-    langs_count = len(os.listdir(langs_src))
+    langs_count = sum(len(files) for _root, _dirs, files in os.walk(langs_src))
     print(f"  -> languages/  ({langs_count} files)")
 
     data_dir = os.path.join(STAGING_DIR, "data")

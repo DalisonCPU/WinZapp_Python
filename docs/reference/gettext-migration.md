@@ -37,7 +37,7 @@ This regenerates the POT and merges it into every registered locale:
 - Removed messages become obsolete rather than being deleted. Reintroducing
   a key can recover its old translation; changed source still needs review.
 - Translator comments and metadata survive merges. Extracted source comments
-  (`#.` in the English PO) and Python file/line references accompany messages.
+  (`#.` in the English PO) and Python file references (never line numbers, so unrelated edits cannot make the catalogs stale) accompany messages.
 
 The key inventory includes computed keys: it is never inferred from literal
 calls alone. An AST scanner adds references to literal `i18n.t(...)` calls and
@@ -88,7 +88,7 @@ prepare and package these resources automatically, failing before compilation
 if catalogs are stale or incomplete. These changes do not alter signing or
 publication workflows.
 
-The `translations-*` aliases run through the project environment. `polib` is a pinned development/build dependency;
+The `translations-*` aliases run through the project environment. `polib` is a pinned development/build dependency (also needed to run the app from source, which reads the PO files directly);
 installed catalog loading uses Python's standard `gettext` library.
 
 ## Runtime and manual testing

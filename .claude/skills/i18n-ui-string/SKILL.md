@@ -8,7 +8,8 @@ description: Add, change or remove a user-facing string in WinZapp. Use for read
 `I18n.t()` is `translations.get(key, key)` (`client/core/i18n.py`): no
 fallback to another locale. A missing key is not an error — the screen reader
 speaks the raw key name. So **a key added anywhere is owed by every locale
-catalog listed in `client/languages/language_map.json`, before release.**
+catalog listed in `client/languages/language_map.json`, in the same change: CI and release
+builds reject a missing or fuzzy entry.**
 
 ## Procedure
 
